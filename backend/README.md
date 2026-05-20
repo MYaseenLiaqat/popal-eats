@@ -37,3 +37,18 @@ Then open:
 - http://127.0.0.1:8000/docs — Swagger UI
 
 Importing `app.database` (e.g. when you add routes that use `get_db`) requires a valid `DATABASE_URL`. The root route in `main.py` does not touch the DB.
+
+## Authentication (JWT)
+
+Endpoints:
+
+- `POST /register` — create account
+- `POST /login` — returns `access_token` and `token_type: bearer`
+
+Test in Swagger: http://127.0.0.1:8000/docs
+
+`.env` must include `SECRET_KEY`, `ALGORITHM`, `ACCESS_TOKEN_EXPIRE_MINUTES`, and `DATABASE_URL`.
+
+If password hashing fails on install, run: `pip install "bcrypt>=4.0.1,<5.0.0"` (passlib compatibility).
+
+**Do not** run `pip freeze > requirements.txt` in PowerShell — it can save UTF-16 and break `pip install -r`. Use the committed `requirements.txt` instead.
