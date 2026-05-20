@@ -1,2 +1,25 @@
-# popal-eats
-AI-Powered Food Delivery, Recommendation, Nutrition &amp; Community App
+# Popal Eats
+
+AI-Powered Food Delivery, Recommendation, Nutrition & Community App
+
+## Features
+- AI food recommendations
+- Nutrition-based suggestions
+- Multilingual review analysis
+- Sentiment analysis
+- Food ordering & delivery
+- Group recommendations
+- Chef special content
+- Community recipes & blogs
+
+## Tech Stack
+- Frontend: Flutter
+- Backend: FastAPI
+- Database: PostgreSQL
+- AI/NLP: HuggingFace Transformers
+- Cloud: Firebase + Render + Neon
+
+## Team Members
+- Muhammad Yaseen Liaqat
+- Ahsan Zulfiqar
+- Syed Ali Asjad
