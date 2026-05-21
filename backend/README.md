@@ -44,8 +44,30 @@ Endpoints:
 
 - `POST /register` — create account
 - `POST /login` — returns `access_token` and `token_type: bearer`
+- `GET /me` — current user (requires Bearer token)
 
 Test in Swagger: http://127.0.0.1:8000/docs
+
+### Protected route (`GET /me`)
+
+1. Call `POST /login` and copy `access_token`
+2. Click **Authorize** (green **Authorize** button, top right of http://127.0.0.1:8000/docs)
+3. Paste the token in the **Value** field (Swagger adds `Bearer` for you)
+4. Call `GET /me` — should return your user profile
+
+If you do not see **Authorize**, hard-refresh the docs page (`Ctrl+F5`) after restarting the server.
+
+## Restaurants, categories & dishes
+
+| Resource | Endpoints |
+|----------|-----------|
+| Categories | `POST/GET/PUT/DELETE /categories` |
+| Restaurants | `POST/GET/PUT/DELETE /restaurants` |
+| Dishes | `POST/GET/PUT/DELETE /dishes` |
+
+**Ownership:** creating a restaurant sets you as `owner_id`. Only the owner can update/delete that restaurant and its dishes.
+
+**Swagger flow:** Register → Login → Authorize → `POST /categories` → `POST /restaurants` → `POST /dishes` (use real `restaurant_id` and `category_id` from responses).
 
 `.env` must include `SECRET_KEY`, `ALGORITHM`, `ACCESS_TOKEN_EXPIRE_MINUTES`, and `DATABASE_URL`.
 

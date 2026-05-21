@@ -1,13 +1,15 @@
 """
-Authentication routes: register and login.
+Authentication routes: register, login, and protected current-user profile.
 
 Register: create user row with hashed password.
 Login: verify password, return JWT access_token for the client to store.
+GET /me: protected route — requires valid Bearer token (see get_current_user).
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.core.dependencies import get_current_user
 from app.core.security import create_access_token, hash_password, verify_password
 from app.database import get_db
 from app.models.user import User
@@ -70,3 +72,19 @@ def login(body: UserLogin, db: Session = Depends(get_db)):
     # 3) Issue JWT — client uses this on protected routes later
     access_token = create_access_token(subject=user.email)
     return Token(access_token=access_token, token_type="bearer")
+
+
+@router.get(
+    "/me",
+    response_model=UserResponse,
+    summary="Get current authenticated user (protected)",
+)
+def read_current_user(
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Protected route: only works with a valid JWT in the Authorization header.
+
+    Swagger: click Authorize (top right) → paste access_token from POST /login.
+    """
+    return current_user
