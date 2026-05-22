@@ -19,7 +19,7 @@ def get_restaurant_or_404(db: Session, restaurant_id: int) -> Restaurant:
     if not restaurant:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Restaurant not found",
+            detail=f"Restaurant id {restaurant_id} not found. Create one with POST /restaurants first.",
         )
     return restaurant
 

@@ -26,3 +26,7 @@ class User(Base):
 
     # One user (owner) can own many restaurants
     restaurants = relationship("Restaurant", back_populates="owner")
+    # One active cart per user
+    cart = relationship("Cart", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    # Orders placed by this user (customer)
+    orders = relationship("Order", back_populates="user")

@@ -9,13 +9,10 @@ Flow:
 
 from datetime import datetime, timedelta, timezone
 
+import bcrypt
 from jose import ExpiredSignatureError, JWTError, jwt
-from passlib.context import CryptContext
 
 from app.config import ALGORITHM, SECRET_KEY, ACCESS_TOKEN_EXPIRE_MINUTES
-
-# bcrypt via passlib — one-way hashing (cannot recover original password)
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 class TokenValidationError(Exception):
@@ -28,12 +25,18 @@ class TokenExpiredError(Exception):
 
 def hash_password(plain_password: str) -> str:
     """Convert a plain password into a bcrypt hash for database storage."""
-    return pwd_context.hash(plain_password)
+    return bcrypt.hashpw(plain_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_password(plain_password: str, password_hash: str) -> bool:
     """Check login password against the stored hash."""
-    return pwd_context.verify(plain_password, password_hash)
+    try:
+        return bcrypt.checkpw(
+            plain_password.encode("utf-8"),
+            password_hash.encode("utf-8"),
+        )
+    except (ValueError, TypeError):
+        return False
 
 
 def create_access_token(subject: str) -> str:

@@ -69,6 +69,37 @@ If you do not see **Authorize**, hard-refresh the docs page (`Ctrl+F5`) after re
 
 **Swagger flow:** Register → Login → Authorize → `POST /categories` → `POST /restaurants` → `POST /dishes` (use real `restaurant_id` and `category_id` from responses).
 
+## Cart, checkout & orders
+
+| Step | Endpoint |
+|------|----------|
+| Add to cart | `POST /cart/add` `{ "dish_id": 1, "quantity": 2 }` |
+| View cart | `GET /cart` |
+| Update qty | `PUT /cart/items/{id}` |
+| Remove item | `DELETE /cart/items/{id}` |
+| Clear cart | `DELETE /cart/clear` |
+| Checkout | `POST /checkout` `{ "delivery_address": "..." }` |
+| My orders | `GET /orders/my-orders` |
+| Order detail | `GET /orders/{id}` |
+| Update status | `PUT /orders/{id}/status` (restaurant owner) |
+| Restaurant orders | `GET /restaurants/{id}/orders` (owner) |
+
+**Rules:** All cart items must be from **one restaurant**. Checkout snapshots dish prices into `order_items`. Payment is **mock** (`paid` on checkout).
+
+### Troubleshooting (terminal / Swagger)
+
+| Log / response | Meaning | Fix |
+|----------------|---------|-----|
+| `(trapped) error reading bcrypt version` | Old passlib+bcrypt clash | Fixed: use `bcrypt==4.0.1` (already in requirements). Restart server. |
+| `could not translate host name` (Neon) | No internet / DNS | Connect Wi‑Fi; run `python test_db.py` |
+| `POST /dishes` **404** | Wrong `restaurant_id` or `category_id` | Use ids from **POST /categories** and **POST /restaurants** responses |
+| `POST /cart/add` **404** | Dish deleted or wrong `dish_id` | **POST /dishes** again; copy new `id` from response |
+| `POST /checkout` **400** empty cart | Nothing in cart | **POST /cart/add** succeeded first; **GET /cart** to verify |
+| `PUT /cart/items/1` **404** | No cart line with that id | **GET /cart** → use `items[].id` (not `0`) |
+| `DELETE /dishes/1` then add dish 1 | Dish gone | Create dish again — new id may differ |
+
+**Do not** run `pip freeze > requirements.txt` in PowerShell (breaks the file on Windows). Use the committed `requirements.txt`.
+
 `.env` must include `SECRET_KEY`, `ALGORITHM`, `ACCESS_TOKEN_EXPIRE_MINUTES`, and `DATABASE_URL`.
 
 If password hashing fails on install, run: `pip install "bcrypt>=4.0.1,<5.0.0"` (passlib compatibility).

@@ -35,3 +35,5 @@ class Dish(Base):
 
     restaurant = relationship("Restaurant", back_populates="dishes")
     category = relationship("Category", back_populates="dishes")
+    cart_items = relationship("CartItem", back_populates="dish")
+    order_items = relationship("OrderItem", back_populates="dish")

@@ -29,7 +29,7 @@ def _validate_category_exists(db: Session, category_id: int) -> Category:
     if not category:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Category not found",
+            detail=f"Category id {category_id} not found. Create one with POST /categories first.",
         )
     return category
 
