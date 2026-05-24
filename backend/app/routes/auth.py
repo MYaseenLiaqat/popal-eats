@@ -1,90 +1,91 @@
-"""
-Authentication routes: register, login, and protected current-user profile.
-
-Register: create user row with hashed password.
-Login: verify password, return JWT access_token for the client to store.
-GET /me: protected route — requires valid Bearer token (see get_current_user).
-"""
+"""Authentication: register, login, refresh, logout, profile."""
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.config import ACCESS_TOKEN_EXPIRE_MINUTES
 from app.core.dependencies import get_current_user
-from app.core.security import create_access_token, hash_password, verify_password
+from app.core.roles import CUSTOMER, normalize_role
+from app.core.security import (
+    create_access_token,
+    create_refresh_token,
+    hash_password,
+    revoke_refresh_token,
+    verify_password,
+    verify_refresh_token,
+)
 from app.database import get_db
 from app.models.user import User
-from app.schemas.user import Token, UserLogin, UserRegister, UserResponse
+from app.schemas.user import (
+    LogoutRequest,
+    RefreshTokenRequest,
+    Token,
+    UserLogin,
+    UserRegister,
+    UserResponse,
+)
 
 router = APIRouter(tags=["auth"])
 
 
-@router.post(
-    "/register",
-    response_model=UserResponse,
-    status_code=status.HTTP_201_CREATED,
-    summary="Create a new account",
-)
-def register(body: UserRegister, db: Session = Depends(get_db)):
-    # 1) Reject duplicate email
-    existing = db.query(User).filter(User.email == body.email).first()
-    if existing:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered",
-        )
-
-    # 2) Hash password — never save plain text
-    user = User(
-        full_name=body.full_name,
-        email=body.email.lower(),
-        password_hash=hash_password(body.password),
-        role="user",
+def _issue_tokens(db: Session, user: User) -> Token:
+    role = normalize_role(user.role)
+    access = create_access_token(user.email, role)
+    refresh = create_refresh_token(db, user.id)
+    return Token(
+        access_token=access,
+        token_type="bearer",
+        role=role,
+        refresh_token=refresh,
+        expires_in_minutes=ACCESS_TOKEN_EXPIRE_MINUTES,
     )
 
-    # 3) Persist to PostgreSQL via SQLAlchemy session
+
+@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+def register(body: UserRegister, db: Session = Depends(get_db)):
+    email = body.email.lower()
+    if db.query(User).filter(User.email == email).first():
+        raise HTTPException(status_code=400, detail="Email already registered")
+
+    user = User(
+        full_name=body.full_name,
+        email=email,
+        password_hash=hash_password(body.password),
+        role=CUSTOMER,
+    )
     db.add(user)
     db.commit()
     db.refresh(user)
     return user
 
 
-@router.post(
-    "/login",
-    response_model=Token,
-    summary="Login and receive JWT access token",
-)
+@router.post("/login", response_model=Token)
 def login(body: UserLogin, db: Session = Depends(get_db)):
-    # 1) Find user by email
     user = db.query(User).filter(User.email == body.email.lower()).first()
+    if not user or not verify_password(body.password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    return _issue_tokens(db, user)
+
+
+@router.post("/refresh", response_model=Token)
+def refresh_tokens(body: RefreshTokenRequest, db: Session = Depends(get_db)):
+    record = verify_refresh_token(db, body.refresh_token)
+    if not record:
+        raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+    user = db.query(User).filter(User.id == record.user_id).first()
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password",
-        )
-
-    # 2) Verify password against stored hash
-    if not verify_password(body.password, user.password_hash):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid email or password",
-        )
-
-    # 3) Issue JWT — client uses this on protected routes later
-    access_token = create_access_token(subject=user.email)
-    return Token(access_token=access_token, token_type="bearer")
+        raise HTTPException(status_code=401, detail="User not found")
+    revoke_refresh_token(db, body.refresh_token)
+    return _issue_tokens(db, user)
 
 
-@router.get(
-    "/me",
-    response_model=UserResponse,
-    summary="Get current authenticated user (protected)",
-)
-def read_current_user(
-    current_user: User = Depends(get_current_user),
-):
-    """
-    Protected route: only works with a valid JWT in the Authorization header.
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+def logout(body: LogoutRequest, db: Session = Depends(get_db)):
+    if body.refresh_token:
+        revoke_refresh_token(db, body.refresh_token)
+    return None
 
-    Swagger: click Authorize (top right) → paste access_token from POST /login.
-    """
+
+@router.get("/me", response_model=UserResponse)
+def read_current_user(current_user: User = Depends(get_current_user)):
     return current_user

@@ -1,11 +1,8 @@
-"""
-Dish (menu item) CRUD routes.
+"""Dish CRUD with pagination, filtering, and owner RBAC."""
 
-Dishes belong to a restaurant and a category.
-Only the restaurant owner can create/update/delete dishes.
-"""
+from decimal import Decimal
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_current_user
@@ -20,6 +17,8 @@ from app.models.category import Category
 from app.models.dish import Dish
 from app.models.user import User
 from app.schemas.dish import DishCreate, DishResponse, DishUpdate
+from app.schemas.pagination import PaginatedResponse
+from app.utils.pagination import apply_sort, build_paginated_response, paginate_query
 
 router = APIRouter(prefix="/dishes", tags=["dishes"])
 
@@ -34,12 +33,7 @@ def _validate_category_exists(db: Session, category_id: int) -> Category:
     return category
 
 
-@router.post(
-    "",
-    response_model=DishResponse,
-    status_code=status.HTTP_201_CREATED,
-    summary="Create a dish (restaurant owner only)",
-)
+@router.post("", response_model=DishResponse, status_code=status.HTTP_201_CREATED)
 def create_dish(
     body: DishCreate,
     db: Session = Depends(get_db),
@@ -56,35 +50,44 @@ def create_dish(
     return dish
 
 
-@router.get("", response_model=list[DishResponse], summary="List dishes")
+@router.get("", response_model=PaginatedResponse[DishResponse], summary="List dishes")
 def list_dishes(
-    skip: int = 0,
-    limit: int = 100,
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    search: str | None = Query(None, description="Search dish name"),
     restaurant_id: int | None = None,
     category_id: int | None = None,
     is_available: bool | None = None,
+    min_price: Decimal | None = Query(None, ge=0),
+    max_price: Decimal | None = Query(None, ge=0),
+    sort: str | None = Query(None, description="asc or desc by price"),
     db: Session = Depends(get_db),
 ):
     query = db.query(Dish)
+    if search:
+        query = query.filter(Dish.name.ilike(f"%{search}%"))
     if restaurant_id is not None:
         query = query.filter(Dish.restaurant_id == restaurant_id)
     if category_id is not None:
         query = query.filter(Dish.category_id == category_id)
     if is_available is not None:
         query = query.filter(Dish.is_available == is_available)
-    return query.offset(skip).limit(limit).all()
+    if min_price is not None:
+        query = query.filter(Dish.price >= min_price)
+    if max_price is not None:
+        query = query.filter(Dish.price <= max_price)
+
+    query = apply_sort(query, Dish.price, sort)
+    items, total = paginate_query(query, page=page, limit=limit)
+    return build_paginated_response(items, page=page, limit=limit, total_count=total)
 
 
-@router.get("/{dish_id}", response_model=DishResponse, summary="Get dish by id")
+@router.get("/{dish_id}", response_model=DishResponse)
 def get_dish(dish_id: int, db: Session = Depends(get_db)):
     return get_dish_or_404(db, dish_id)
 
 
-@router.put(
-    "/{dish_id}",
-    response_model=DishResponse,
-    summary="Update dish (restaurant owner only)",
-)
+@router.put("/{dish_id}", response_model=DishResponse)
 def update_dish(
     dish_id: int,
     body: DishUpdate,
@@ -106,11 +109,7 @@ def update_dish(
     return dish
 
 
-@router.delete(
-    "/{dish_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    summary="Delete dish (restaurant owner only)",
-)
+@router.delete("/{dish_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_dish(
     dish_id: int,
     db: Session = Depends(get_db),

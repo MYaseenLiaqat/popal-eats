@@ -1,14 +1,4 @@
-"""
-FastAPI dependencies for authentication (dependency injection).
-
-Protected route flow:
-  1. Client sends header: Authorization: Bearer <access_token>
-  2. HTTPBearer extracts the token from that header
-  3. decode_access_token() validates JWT signature and expiry
-  4. get_token_subject() reads email from `sub` claim
-  5. Database lookup returns the User row
-  6. Route handler receives `current_user` via Depends(get_current_user)
-"""
+"""FastAPI authentication dependencies."""
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -18,13 +8,12 @@ from app.core.security import (
     TokenExpiredError,
     TokenValidationError,
     decode_access_token,
+    get_token_role,
     get_token_subject,
 )
 from app.database import get_db
 from app.models.user import User
 
-# HTTPBearer: reads "Authorization: Bearer <token>" and shows a clear
-# "Authorize" button in Swagger (paste token from POST /login).
 http_bearer = HTTPBearer(
     scheme_name="BearerAuth",
     description="Paste access_token from POST /login",
@@ -38,16 +27,12 @@ def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(http_bearer),
     db: Session = Depends(get_db),
 ) -> User:
-    """
-    Dependency: resolve the authenticated user from a JWT Bearer token.
-
-    Used on protected routes, e.g. GET /me.
-    """
     token = credentials.credentials
 
     try:
         payload = decode_access_token(token)
         email = get_token_subject(payload)
+        get_token_role(payload)  # validate claim exists
     except TokenExpiredError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

@@ -2,12 +2,10 @@
 
 from datetime import datetime, time
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 
 class RestaurantCreate(BaseModel):
-    """Owner is set from the logged-in user — do not send owner_id."""
-
     name: str = Field(..., min_length=1, max_length=200)
     description: str | None = None
     address: str | None = Field(None, max_length=300)
@@ -17,7 +15,6 @@ class RestaurantCreate(BaseModel):
     opening_time: time | None = None
     closing_time: time | None = None
     is_open: bool = True
-    rating: float = Field(0.0, ge=0, le=5)
 
 
 class RestaurantUpdate(BaseModel):
@@ -30,7 +27,6 @@ class RestaurantUpdate(BaseModel):
     opening_time: time | None = None
     closing_time: time | None = None
     is_open: bool | None = None
-    rating: float | None = Field(None, ge=0, le=5)
 
 
 class RestaurantResponse(BaseModel):
@@ -47,5 +43,12 @@ class RestaurantResponse(BaseModel):
     opening_time: time | None = None
     closing_time: time | None = None
     is_open: bool
-    rating: float
+    average_rating: float = 0.0
+    total_reviews: int = 0
     created_at: datetime | None = None
+
+    @computed_field
+    @property
+    def rating(self) -> float:
+        """Backward-compatible alias for average_rating."""
+        return self.average_rating

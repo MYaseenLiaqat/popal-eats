@@ -6,6 +6,9 @@ __pycache__/
 # Environment files
 .env
 
+# Uploads
+backend/uploads/
+
 # Flutter
 .dart_tool/
 .flutter-plugins

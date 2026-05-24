@@ -1,32 +1,25 @@
-"""
-SQLAlchemy ORM model for the `users` table.
-
-Maps Python classes to PostgreSQL rows (Object-Relational Mapping).
-"""
+"""SQLAlchemy ORM model for the `users` table."""
 
 from sqlalchemy import Column, DateTime, Integer, String
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
+from app.core.roles import CUSTOMER
 from app.database import Base
 
 
 class User(Base):
-    """Registered Popal Eats user."""
-
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
     full_name = Column(String, nullable=False)
-    email = Column(String, unique=True, index=True, nullable=False)
+    email = Column(String(255), unique=True, index=True, nullable=False)
     password_hash = Column(String, nullable=False)
-    role = Column(String, default="user", nullable=False)
-    profile_image = Column(String, nullable=True)
+    role = Column(String(32), default=CUSTOMER, nullable=False, index=True)
+    profile_image = Column(String(500), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    # One user (owner) can own many restaurants
     restaurants = relationship("Restaurant", back_populates="owner")
-    # One active cart per user
+    reviews = relationship("Review", back_populates="user", cascade="all, delete-orphan")
     cart = relationship("Cart", back_populates="user", uselist=False, cascade="all, delete-orphan")
-    # Orders placed by this user (customer)
     orders = relationship("Order", back_populates="user")

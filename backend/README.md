@@ -1,59 +1,88 @@
-# Backend (FastAPI)
+# Backend (FastAPI v3)
 
 ## Install
 
-From the `backend` folder:
-
 ```powershell
-python -m venv .venv
-.\.venv\Scripts\activate
-pip install fastapi uvicorn sqlalchemy psycopg2-binary python-dotenv pydantic
+cd backend
+.\venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-(`requirements.txt` matches that set so installs stay reproducible.)
+Optional OCR: `pip install pytesseract` (and install Tesseract binary) or `pip install easyocr`  
+Optional NLP: `pip install transformers torch` + set `ENABLE_HF_SENTIMENT=true`
 
-## Configure
-
-Put your Neon (or other Postgres) URL in `backend/.env`:
+## Environment (`backend/.env`)
 
 ```env
-DATABASE_URL=postgresql://user:pass@host/dbname?sslmode=require
+DATABASE_URL=postgresql://...
+SECRET_KEY=your-secret-key
+CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:8000
+RATE_LIMIT_DEFAULT=200/minute
+LOG_LEVEL=INFO
+REDIS_URL=redis://127.0.0.1:6379/0
+RQ_QUEUE_NAME=popal_eats
+PROCESS_REVIEWS_INLINE=false
+REFRESH_TOKEN_EXPIRE_DAYS=7
+OCR_ENGINE=mock
 ```
 
-`app/config.py` loads this file from the `backend` directory automatically.
+Set `PROCESS_REVIEWS_INLINE=true` for dev without Redis.
 
-## Run the API
+## Migrations
 
-Still inside `backend` with the venv activated:
+```powershell
+alembic upgrade head
+# existing DB: python scripts/setup_db.py
+```
+
+## Workers (review AI pipeline)
+
+Terminal 1 — API:
 
 ```powershell
 python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-Then open:
+Terminal 2 — Redis + RQ worker:
 
-- http://127.0.0.1:8000 — root JSON
-- http://127.0.0.1:8000/docs — Swagger UI
+```powershell
+# Start Redis locally, then:
+rq worker popal_eats --url redis://127.0.0.1:6379/0
+```
 
-Importing `app.database` (e.g. when you add routes that use `get_db`) requires a valid `DATABASE_URL`. The root route in `main.py` does not touch the DB.
+## Admin
 
-## Authentication (JWT)
+```powershell
+python scripts/seed_admin.py admin@popaleats.com YourPassword123
+```
 
-Endpoints:
+## Validate
 
-- `POST /register` — create account
-- `POST /login` — returns `access_token` and `token_type: bearer`
-- `GET /me` — current user (requires Bearer token)
+```powershell
+$env:PYTHONPATH="."
+$env:PROCESS_REVIEWS_INLINE="true"
+python scripts/validate_api.py
+```
 
-Test in Swagger: http://127.0.0.1:8000/docs
+## Architecture
 
-### Protected route (`GET /me`)
+| Layer | Path |
+|-------|------|
+| ReviewProcessingService | `app/services/review_processing/service.py` |
+| Review queue | `app/services/review_processing/queue.py` |
+| Worker `process_next_review` | `app/workers/tasks.py` |
+| NLP / sentiment | `app/services/nlp/` |
+| OCR ETL | `app/services/ocr/` |
+| Admin APIs | `app/routes/admin/` |
+| Refresh tokens | `POST /refresh`, table `refresh_tokens` |
 
-1. Call `POST /login` and copy `access_token`
-2. Click **Authorize** (green **Authorize** button, top right of http://127.0.0.1:8000/docs)
-3. Paste the token in the **Value** field (Swagger adds `Bearer` for you)
-4. Call `GET /me` — should return your user profile
+## Validate phase
+
+```powershell
+$env:PYTHONPATH="."
+$env:PROCESS_REVIEWS_INLINE="true"
+python scripts/validate_phase.py
+```
 
 If you do not see **Authorize**, hard-refresh the docs page (`Ctrl+F5`) after restarting the server.
 

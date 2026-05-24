@@ -1,77 +1,115 @@
 """
-Popal Eats API entry point.
+Popal Eats API — production entry point.
 
-On startup: try to create all SQLAlchemy tables (does not block if DB is offline).
+Schema: Alembic migrations only.
+Workers: rq worker popal_eats (see README).
 """
 
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi.util import get_remote_address
 
-from app.database import Base, engine
-from app.models import (  # noqa: F401 — register all tables
-    Cart,
-    CartItem,
-    Category,
-    Dish,
-    Order,
-    OrderItem,
-    Restaurant,
-    User,
-)
+from app.config import get_settings
+from app.core.exceptions import register_exception_handlers
+from app.core.logging_config import setup_logging
+from app.core.middleware import RequestLoggingMiddleware
+from app.database import check_database_ready, engine
+from app.routes.admin import router as admin_router
 from app.routes.auth import router as auth_router
 from app.routes.cart import router as cart_router
 from app.routes.category import router as category_router
 from app.routes.dish import router as dish_router
+from app.routes.menu import router as menu_router
 from app.routes.order import checkout_router, restaurant_orders_router, router as order_router
 from app.routes.restaurant import router as restaurant_router
+from app.routes.review import router as review_router
 
+settings = get_settings()
+setup_logging(settings.log_level)
 logger = logging.getLogger(__name__)
+
+limiter = Limiter(key_func=get_remote_address, default_limits=[settings.rate_limit_default])
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Create tables (users, menus, carts, orders) if database is reachable."""
+    dialect = engine.dialect.name
+    driver = engine.dialect.driver
+
+    logger.info("Starting Popal Eats API v3.0.0 (debug=%s)", settings.debug)
+    logger.info("CORS origins: %s", settings.cors_origins_list)
+    logger.info("Review processing: inline=%s redis=%s", settings.process_reviews_inline, settings.redis_url)
+    logger.info("OCR engine: %s", settings.ocr_engine)
+
+    if not settings.secret_key:
+        logger.error("SECRET_KEY missing — auth will fail.")
+
     try:
-        Base.metadata.create_all(bind=engine)
-        logger.info("Database connected — tables ready.")
+        tables = check_database_ready()
+        logger.info("PostgreSQL connected (%s/%s). Tables: %s", dialect, driver, ", ".join(tables))
+        logger.info("App startup completed.")
     except Exception as exc:
-        logger.warning(
-            "Database not reachable at startup: %s. "
-            "Check internet, DATABASE_URL in backend/.env, and Neon dashboard. "
-            "Server will run, but DB routes may fail until connected.",
-            exc,
-        )
+        logger.error("Database not ready: %s — run: alembic upgrade head", exc, exc_info=True)
+
     yield
 
 
-app = FastAPI(
-    title="Popal Eats API",
-    version="1.0.0",
-    description="Food delivery API: auth, restaurants, cart, checkout, orders",
-    lifespan=lifespan,
-)
+def create_app() -> FastAPI:
+    application = FastAPI(
+        title="Popal Eats API",
+        version="3.0.0",
+        description="Food delivery API — AI reviews, OCR menu import, admin, JWT+refresh, cart & orders",
+        lifespan=lifespan,
+        debug=settings.debug,
+    )
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+    application.state.limiter = limiter
+    application.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+    register_exception_handlers(application)
 
-app.include_router(auth_router)
-app.include_router(category_router)
-app.include_router(restaurant_router)
-app.include_router(dish_router)
-app.include_router(cart_router)
-app.include_router(checkout_router)
-app.include_router(order_router)
-app.include_router(restaurant_orders_router)
+    application.add_middleware(SlowAPIMiddleware)
+    application.add_middleware(RequestLoggingMiddleware)
+    application.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origins_list,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type"],
+    )
+
+    application.include_router(auth_router)
+    application.include_router(category_router)
+    application.include_router(restaurant_router)
+    application.include_router(dish_router)
+    application.include_router(review_router)
+    application.include_router(menu_router)
+    application.include_router(admin_router)
+    application.include_router(cart_router)
+    application.include_router(checkout_router)
+    application.include_router(order_router)
+    application.include_router(restaurant_orders_router)
+
+    @application.get("/health")
+    @limiter.limit(settings.rate_limit_default)
+    def health(request: Request):
+        return {"status": "ok", "version": "3.0.0"}
+
+    @application.get("/")
+    @limiter.limit(settings.rate_limit_default)
+    def home(request: Request):
+        return {
+            "message": "Popal Eats Backend Running",
+            "docs": "/docs",
+            "version": "3.0.0",
+        }
+
+    return application
 
 
-@app.get("/")
-def home():
-    return {"message": "Popal Eats Backend Running"}
+app = create_app()
