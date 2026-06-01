@@ -20,6 +20,7 @@ from app.models import (  # noqa: E402, F401
     Restaurant,
     Review,
     User,
+    UserPreference,
 )
 
 config = context.config

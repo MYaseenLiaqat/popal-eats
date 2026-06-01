@@ -49,6 +49,7 @@ def check_database_ready() -> list[str]:
         Restaurant,
         Review,
         User,
+        UserPreference,  # noqa: F401
     )
 
     verify_postgresql_connection()
