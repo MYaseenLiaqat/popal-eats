@@ -29,6 +29,7 @@ from app.routes.menu import router as menu_router
 from app.routes.order import checkout_router, restaurant_orders_router, router as order_router
 from app.routes.restaurant import router as restaurant_router
 from app.routes.review import router as review_router
+from app.routes.recommendations import router as recommendations_router
 from app.routes.user_preferences import router as user_preferences_router
 
 settings = get_settings()
@@ -89,6 +90,7 @@ def create_app() -> FastAPI:
 
     application.include_router(auth_router)
     application.include_router(user_preferences_router)
+    application.include_router(recommendations_router)
     application.include_router(category_router)
     application.include_router(restaurant_router)
     application.include_router(dish_router)
