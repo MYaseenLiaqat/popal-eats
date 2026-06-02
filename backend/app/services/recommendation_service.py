@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.models.dish import Dish
 from app.models.user_preference import UserPreference
+from app.schemas.recommendation import ScoreBreakdown
 from app.services.user_preference_service import get_or_create_preferences
 
 SCORE_CUISINE = 40
@@ -27,15 +28,6 @@ _GOAL_HIGH_PROTEIN = frozenset({"muscle_gain", "high_protein", "high-protein", "
 _GOAL_LOW_CARB = frozenset({"low_carb", "low-carb", "keto"})
 _GOAL_WEIGHT_LOSS = frozenset({"weight_loss", "weight-loss", "weight loss", "lose_weight"})
 _GOAL_BALANCED = frozenset({"balanced", "maintain", "general"})
-
-
-@dataclass
-class ScoreBreakdown:
-    cuisine_score: float
-    nutrition_score: float
-    budget_score: float
-    rating_score: float
-    total_score: float
 
 
 @dataclass
