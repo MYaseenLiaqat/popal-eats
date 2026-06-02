@@ -20,18 +20,17 @@ StrategyQuery = Literal["content", "collaborative", "hybrid"]
 @router.get(
     "/recommendations/v2",
     response_model=RecommendationsV2Response,
-    summary="Get personalized recommendations (Engine V2 — content)",
+    summary="Get personalized recommendations (Engine V2)",
     description=(
-        "**Recommendation Engine V2 — Phase 1 (content-based)**\n\n"
-        "Scores eligible dishes (max **100** points):\n"
-        "- **Cuisine** — 50 (dish tags → restaurant tags → category → text)\n"
-        "- **Nutrition** — 25 (`nutrition_goal` vs macros/calories)\n"
-        "- **Budget** — 15 (`budget_min` / `budget_max` vs price)\n"
-        "- **Popularity** — 10 (rating, review count, order count)\n\n"
+        "**Recommendation Engine V2** — choose a `strategy`:\n\n"
+        "| Strategy | Description |\n"
+        "|----------|-------------|\n"
+        "| `content` | Phase 1 rule-based (cuisine 50 + nutrition 25 + budget 15 + popularity 10) |\n"
+        "| `collaborative` | Phase 2 order co-occurrence from `orders` / `order_items` |\n"
+        "| `hybrid` | Phase 3 blend: **0.7 × content + 0.3 × collaborative**; "
+        "falls back to content if user has no orders |\n\n"
         "Returns top **10** dishes with `score`, `score_breakdown`, and `explanation`.\n\n"
-        "**Query:** `strategy` — `content` (default), `hybrid` (content in Phase 1), "
-        "or `collaborative` (order co-occurrence, Phase 2).\n\n"
-        "Uses `user_preferences` when present; falls back to popularity-only ranking.\n\n"
+        "Related: `GET /recommendations/v2/similar/{dish_id}` for item-based similar dishes.\n\n"
         "Does **not** replace `GET /recommendations` (V1.1).\n\n"
         "Requires JWT Bearer token from `POST /login`."
     ),
@@ -39,7 +38,7 @@ StrategyQuery = Literal["content", "collaborative", "hybrid"]
 def list_recommendations_v2(
     strategy: StrategyQuery = Query(
         "content",
-        description="content | hybrid (Phase 1 scoring), collaborative (Phase 2)",
+        description="content (default) | collaborative | hybrid (0.7 content + 0.3 CF)",
     ),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),

@@ -51,7 +51,12 @@ class V2DishRecommendationItem(BaseModel):
     restaurant_name: str
     price: Decimal
     calories: int | None = None
-    score: float = Field(..., ge=0, le=100, description="Total content-based score (0–100)")
+    score: float = Field(
+        ...,
+        ge=0,
+        le=100,
+        description="Final score 0–100 (content, collaborative, or hybrid blend)",
+    )
     score_breakdown: V2ScoreBreakdown
     explanation: str
     signals_used: list[str] = Field(default_factory=list)
