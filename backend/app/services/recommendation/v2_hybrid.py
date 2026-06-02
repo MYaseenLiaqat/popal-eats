@@ -1,8 +1,8 @@
 """
-Recommendation Engine V2 — hybrid fusion module.
+Recommendation Engine V2 — strategy router.
 
-Phase 1: ``content`` and ``hybrid`` delegate to content-based engine.
-Collaborative filtering arrives in Phase 2.
+- content / hybrid → Phase 1 content engine (unchanged)
+- collaborative → Phase 2 item-based CF from order history
 """
 
 from typing import Literal
@@ -10,6 +10,7 @@ from typing import Literal
 from sqlalchemy.orm import Session
 
 from app.schemas.recommendation_v2 import V2DishRecommendationItem
+from app.services.recommendation.v2_collaborative import get_collaborative_recommendations
 from app.services.recommendation.v2_content import get_content_recommendations
 
 Strategy = Literal["content", "collaborative", "hybrid"]
@@ -22,7 +23,8 @@ def get_v2_recommendations(
     strategy: Strategy = "content",
     limit: int = 10,
 ) -> list[V2DishRecommendationItem]:
+    if strategy == "collaborative":
+        return get_collaborative_recommendations(db, user_id, limit=limit)
     if strategy in ("content", "hybrid"):
         return get_content_recommendations(db, user_id, limit=limit)
-    # collaborative — Phase 2
     return []
