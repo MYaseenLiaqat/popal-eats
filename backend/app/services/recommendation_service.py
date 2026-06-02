@@ -1,5 +1,5 @@
 """
-Recommendation Engine V1 — rule-based scoring from user preferences.
+Recommendation Engine V1.1 — rule-based scoring from user preferences.
 
 Score weights (max 100):
   Cuisine 40 | Nutrition 25 | Budget 20 | Restaurant rating 15
@@ -7,6 +7,7 @@ Score weights (max 100):
 
 from dataclasses import dataclass
 from decimal import Decimal
+from typing import Literal
 
 from sqlalchemy.orm import Session, joinedload
 
@@ -20,11 +21,21 @@ SCORE_BUDGET = 20
 SCORE_RATING = 15
 TOP_N = 10
 
-# Nutrition goal aliases (normalized lowercase)
+BudgetStatus = Literal["none", "below", "within", "slightly_above", "above"]
+
 _GOAL_HIGH_PROTEIN = frozenset({"muscle_gain", "high_protein", "high-protein", "muscle gain"})
 _GOAL_LOW_CARB = frozenset({"low_carb", "low-carb", "keto"})
 _GOAL_WEIGHT_LOSS = frozenset({"weight_loss", "weight-loss", "weight loss", "lose_weight"})
 _GOAL_BALANCED = frozenset({"balanced", "maintain", "general"})
+
+
+@dataclass
+class ScoreBreakdown:
+    cuisine_score: float
+    nutrition_score: float
+    budget_score: float
+    rating_score: float
+    total_score: float
 
 
 @dataclass
@@ -36,6 +47,7 @@ class ScoredDish:
     calories: int | None
     recommendation_score: float
     explanation: str
+    score_breakdown: ScoreBreakdown
 
 
 def _normalize_list(values: list | None) -> list[str]:
@@ -44,23 +56,65 @@ def _normalize_list(values: list | None) -> list[str]:
     return [str(v).strip().lower() for v in values if v and str(v).strip()]
 
 
+def _normalize_tags(tags: list | None) -> list[str]:
+    if not tags:
+        return []
+    return [str(t).strip().lower() for t in tags if t and str(t).strip()]
+
+
 def _text_blob(dish: Dish) -> str:
     parts = [
         dish.name or "",
         dish.description or "",
-        dish.category.name if dish.category else "",
         dish.restaurant.name if dish.restaurant else "",
         dish.restaurant.description if dish.restaurant and dish.restaurant.description else "",
     ]
     return " ".join(parts).lower()
 
 
-def _score_cuisine(dish: Dish, favorite_cuisines: list[str]) -> tuple[float, bool]:
+def _match_cuisine_in_tags(tags: list[str], favorite_cuisines: list[str]) -> str | None:
+    for cuisine in favorite_cuisines:
+        for tag in tags:
+            if cuisine in tag or tag in cuisine:
+                return cuisine
+    return None
+
+
+def _score_cuisine(dish: Dish, favorite_cuisines: list[str]) -> tuple[float, str | None]:
+    """
+    Cuisine match with fallback order: dish tags → restaurant tags → category name → text blob.
+    """
     if not favorite_cuisines:
-        return 0.0, False
+        return 0.0, None
+
+    dish_tags = _normalize_tags(getattr(dish, "tags", None))
+    restaurant_tags = _normalize_tags(
+        getattr(dish.restaurant, "tags", None) if dish.restaurant else None
+    )
+
+    matched = _match_cuisine_in_tags(dish_tags, favorite_cuisines)
+    if matched:
+        return float(SCORE_CUISINE), matched
+
+    matched = _match_cuisine_in_tags(restaurant_tags, favorite_cuisines)
+    if matched:
+        return float(SCORE_CUISINE), matched
+
+    if dish.category and dish.category.name:
+        category_lower = dish.category.name.lower()
+        for cuisine in favorite_cuisines:
+            if cuisine in category_lower or category_lower in cuisine:
+                return float(SCORE_CUISINE), cuisine
+
     blob = _text_blob(dish)
-    matched = any(cuisine in blob for cuisine in favorite_cuisines)
-    return (float(SCORE_CUISINE) if matched else 0.0, matched)
+    if dish.category and dish.category.name:
+        blob = f"{blob} {dish.category.name.lower()}"
+
+    for cuisine in favorite_cuisines:
+        if cuisine in blob:
+            return float(SCORE_CUISINE), cuisine
+
+    return 0.0, None
 
 
 def _score_nutrition(dish: Dish, nutrition_goal: str | None) -> tuple[float, bool]:
@@ -100,25 +154,37 @@ def _score_nutrition(dish: Dish, nutrition_goal: str | None) -> tuple[float, boo
             return float(SCORE_NUTRITION) * 0.5, True
         return float(SCORE_NUTRITION) * 0.25, True
 
-    # Unknown goal — light credit if any macro data exists
     if any(v is not None for v in (protein, carbs, calories)):
         return float(SCORE_NUTRITION) * 0.3, True
     return 0.0, False
 
 
-def _score_budget(price: Decimal, budget_min: Decimal | None, budget_max: Decimal | None) -> tuple[float, bool]:
+def _score_budget(
+    price: Decimal,
+    budget_min: Decimal | None,
+    budget_max: Decimal | None,
+) -> tuple[float, BudgetStatus]:
     if budget_min is None and budget_max is None:
-        return 0.0, False
+        return 0.0, "none"
 
     p = float(price)
-    min_ok = budget_min is None or p >= float(budget_min)
-    max_ok = budget_max is None or p <= float(budget_max)
+    has_min = budget_min is not None
+    has_max = budget_max is not None
+    min_val = float(budget_min) if has_min else None
+    max_val = float(budget_max) if has_max else None
 
-    if min_ok and max_ok:
-        return float(SCORE_BUDGET), True
-    if budget_max is not None and p <= float(budget_max) * 1.1:
-        return float(SCORE_BUDGET) * 0.5, True
-    return 0.0, False
+    if has_min and p < min_val:
+        return 0.0, "below"
+
+    if has_max and p > max_val:
+        if p <= max_val * 1.1:
+            return float(SCORE_BUDGET) * 0.5, "slightly_above"
+        return 0.0, "above"
+
+    if (not has_min or p >= min_val) and (not has_max or p <= max_val):
+        return float(SCORE_BUDGET), "within"
+
+    return 0.0, "below"
 
 
 def _score_restaurant_rating(average_rating: float) -> float:
@@ -126,65 +192,95 @@ def _score_restaurant_rating(average_rating: float) -> float:
     return round((rating / 5.0) * SCORE_RATING, 2)
 
 
-def _nutrition_phrase(nutrition_goal: str | None) -> str | None:
+def _nutrition_label(nutrition_goal: str | None) -> str:
     if not nutrition_goal:
-        return None
+        return "Nutrition"
     goal = nutrition_goal.strip().lower()
     if goal in _GOAL_HIGH_PROTEIN:
-        return "high-protein goal"
+        return "High Protein"
     if goal in _GOAL_LOW_CARB:
-        return "low-carb goal"
+        return "Low Carb"
     if goal in _GOAL_WEIGHT_LOSS:
-        return "weight-loss goal"
+        return "Weight Loss"
     if goal in _GOAL_BALANCED:
-        return "balanced nutrition goal"
-    return f"{nutrition_goal} goal"
+        return "Balanced Nutrition"
+    return nutrition_goal.replace("_", " ").title()
+
+
+def _format_points(value: float) -> int:
+    return int(round(value))
 
 
 def _build_explanation(
     *,
-    cuisine_matched: bool,
-    nutrition_matched: bool,
-    budget_matched: bool,
-    rating_score: float,
+    cuisine_pts: float,
+    matched_cuisine: str | None,
+    nutrition_pts: float,
     nutrition_goal: str | None,
+    budget_pts: float,
+    budget_status: BudgetStatus,
+    rating_pts: float,
+    has_budget_prefs: bool,
 ) -> str:
     parts: list[str] = []
 
-    if cuisine_matched:
-        parts.append("matches your cuisine preferences")
-    if nutrition_matched:
-        phrase = _nutrition_phrase(nutrition_goal)
-        if phrase:
-            parts.append(phrase)
-    if budget_matched:
-        parts.append("fits your budget")
-    if rating_score >= SCORE_RATING * 0.6:
-        parts.append("from a highly rated restaurant")
+    if cuisine_pts > 0:
+        label = matched_cuisine.title() if matched_cuisine else "your cuisine"
+        parts.append(f"Matched {label} cuisine (+{_format_points(cuisine_pts)})")
+
+    if nutrition_pts > 0:
+        parts.append(f"{_nutrition_label(nutrition_goal)} goal (+{_format_points(nutrition_pts)})")
+
+    if budget_pts > 0:
+        if budget_status == "within":
+            parts.append(f"Within budget range (+{_format_points(budget_pts)})")
+        elif budget_status == "slightly_above":
+            parts.append(f"Slightly above budget (+{_format_points(budget_pts)})")
+        else:
+            parts.append(f"Budget range (+{_format_points(budget_pts)})")
+    elif has_budget_prefs:
+        if budget_status == "below":
+            parts.append("Below your budget range")
+        elif budget_status == "above":
+            parts.append("Above your budget range")
+
+    if rating_pts > 0:
+        parts.append(f"Restaurant rating (+{_format_points(rating_pts)})")
 
     if not parts:
-        return "Popular dish based on restaurant rating and availability."
+        return "No strong preference match; ranked by availability and restaurant data."
 
-    sentence = " and ".join(parts)
-    return sentence[0].upper() + sentence[1:] + "."
+    return ", ".join(parts) + "."
 
 
 def _score_dish(dish: Dish, prefs: UserPreference) -> ScoredDish:
     cuisines = _normalize_list(prefs.favorite_cuisines)
-    cuisine_pts, cuisine_ok = _score_cuisine(dish, cuisines)
-    nutrition_pts, nutrition_ok = _score_nutrition(dish, prefs.nutrition_goal)
-    budget_pts, budget_ok = _score_budget(dish.price, prefs.budget_min, prefs.budget_max)
+    cuisine_pts, matched_cuisine = _score_cuisine(dish, cuisines)
+    nutrition_pts, _ = _score_nutrition(dish, prefs.nutrition_goal)
+    budget_pts, budget_status = _score_budget(dish.price, prefs.budget_min, prefs.budget_max)
     rating_pts = _score_restaurant_rating(
         dish.restaurant.average_rating if dish.restaurant else 0.0
     )
 
     total = round(cuisine_pts + nutrition_pts + budget_pts + rating_pts, 1)
+    breakdown = ScoreBreakdown(
+        cuisine_score=round(cuisine_pts, 1),
+        nutrition_score=round(nutrition_pts, 1),
+        budget_score=round(budget_pts, 1),
+        rating_score=round(rating_pts, 1),
+        total_score=round(total, 1),
+    )
+
+    has_budget_prefs = prefs.budget_min is not None or prefs.budget_max is not None
     explanation = _build_explanation(
-        cuisine_matched=cuisine_ok,
-        nutrition_matched=nutrition_ok,
-        budget_matched=budget_ok,
-        rating_score=rating_pts,
+        cuisine_pts=cuisine_pts,
+        matched_cuisine=matched_cuisine,
+        nutrition_pts=nutrition_pts,
         nutrition_goal=prefs.nutrition_goal,
+        budget_pts=budget_pts,
+        budget_status=budget_status,
+        rating_pts=rating_pts,
+        has_budget_prefs=has_budget_prefs,
     )
 
     return ScoredDish(
@@ -195,13 +291,12 @@ def _score_dish(dish: Dish, prefs: UserPreference) -> ScoredDish:
         calories=dish.calories,
         recommendation_score=total,
         explanation=explanation,
+        score_breakdown=breakdown,
     )
 
 
 def get_recommendations(db: Session, user_id: int, *, limit: int = TOP_N) -> list[ScoredDish]:
-    """
-    Score all available dishes for the user and return the top N by recommendation_score.
-    """
+    """Score available dishes and return the top N by total score."""
     prefs = get_or_create_preferences(db, user_id)
 
     dishes = (

@@ -4,7 +4,7 @@ Dish model — menu item belonging to a restaurant and category.
 ForeignKeys link restaurant_id and category_id.
 """
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -29,6 +29,7 @@ class Dish(Base):
     protein = Column(Numeric(8, 2), nullable=True)
     carbs = Column(Numeric(8, 2), nullable=True)
     fats = Column(Numeric(8, 2), nullable=True)
+    tags = Column(JSON, nullable=False, default=list)
     image = Column(String(500), nullable=True)
     is_available = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

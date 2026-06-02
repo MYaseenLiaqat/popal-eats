@@ -68,7 +68,7 @@ def create_app() -> FastAPI:
         version="3.0.0",
         description=(
             "Food delivery API — AI reviews, OCR menu import, admin, JWT+refresh, "
-            "cart & orders, user preferences"
+            "cart & orders, user preferences, recommendations V1.1"
         ),
         lifespan=lifespan,
         debug=settings.debug,

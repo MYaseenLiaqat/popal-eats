@@ -1,6 +1,6 @@
 """Restaurant model — owned by a user (restaurant owner)."""
 
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text, Time
+from sqlalchemy import JSON, Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text, Time
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -21,6 +21,7 @@ class Restaurant(Base):
     opening_time = Column(Time, nullable=True)
     closing_time = Column(Time, nullable=True)
     is_open = Column(Boolean, default=True, nullable=False)
+    tags = Column(JSON, nullable=False, default=list)
     average_rating = Column(Float, default=0.0, nullable=False)
     total_reviews = Column(Integer, default=0, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
