@@ -1,13 +1,15 @@
 """
-Recommendation Engine V2 — hybrid fusion module (Phase 0 stub).
+Recommendation Engine V2 — hybrid fusion module.
 
-Phase 3 will combine content, collaborative, popularity, and sentiment signals.
+Phase 1: ``content`` and ``hybrid`` delegate to content-based engine.
+Collaborative filtering arrives in Phase 2.
 """
 
 from typing import Literal
 
 from sqlalchemy.orm import Session
 
+from app.schemas.recommendation_v2 import V2DishRecommendationItem
 from app.services.recommendation.v2_content import get_content_recommendations
 
 Strategy = Literal["content", "collaborative", "hybrid"]
@@ -19,15 +21,8 @@ def get_v2_recommendations(
     *,
     strategy: Strategy = "content",
     limit: int = 10,
-) -> list:
-    """
-    Entry point for V2 recommendations by strategy.
-
-    Phase 0: only ``content`` is recognized; returns an empty list.
-    Other strategies are reserved for later phases.
-    """
-    if strategy == "content":
+) -> list[V2DishRecommendationItem]:
+    if strategy in ("content", "hybrid"):
         return get_content_recommendations(db, user_id, limit=limit)
-    # collaborative / hybrid — Phase 2–3
-    _ = db, user_id, limit
+    # collaborative — Phase 2
     return []
