@@ -15,6 +15,8 @@ from sqlalchemy.orm import Session, joinedload
 from app.models.dish import Dish
 from app.models.order_item import OrderItem
 from app.schemas.recommendation_v2 import V2DishRecommendationItem, V2ScoreBreakdown
+from app.services.recommendation.v2_candidates import load_eligible_dishes
+from app.services.recommendation.v2_debug import log_ranked_recommendations
 
 SCORE_CUISINE = 50
 SCORE_NUTRITION = 25
@@ -382,15 +384,7 @@ def get_content_recommendations(
     dish_tags_map, restaurant_tags_map = _load_tags_maps(db)
     order_counts = _load_order_counts(db)
 
-    dishes = (
-        db.query(Dish)
-        .join(Dish.restaurant)
-        .options(joinedload(Dish.restaurant), joinedload(Dish.category))
-        .filter(Dish.is_available.is_(True))
-        .filter(Dish.restaurant.has(is_open=True))
-        .all()
-    )
-
+    dishes = load_eligible_dishes(db, user_id=user_id)
     if not dishes:
         return []
 
@@ -399,4 +393,6 @@ def get_content_recommendations(
         for dish in dishes
     ]
     scored.sort(key=lambda item: item.score, reverse=True)
-    return scored[:limit]
+    top = scored[:limit]
+    log_ranked_recommendations("content_ranked", top, user_id=user_id)
+    return top

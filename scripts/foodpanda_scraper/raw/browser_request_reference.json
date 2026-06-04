@@ -1,0 +1,35 @@
+{
+  "method": "GET",
+  "url": "https://pk.fd-api.com/vendors-gateway/api/v1/pandora/vendors",
+  "query_parameters": {
+    "latitude": 24.8607,
+    "longitude": 67.0011,
+    "language_id": 1,
+    "include": "characteristics",
+    "dynamic_pricing": 0,
+    "configuration": "Variant1",
+    "country": "pk",
+    "budgets": "",
+    "cuisine": "",
+    "sort": "",
+    "food_characteristic": "",
+    "use_free_delivery_label": "false",
+    "vertical": "restaurants",
+    "limit": 48,
+    "offset": 0,
+    "customer_type": "regular"
+  },
+  "headers": {
+    "Accept": "application/json, text/plain, */*",
+    "Accept-Language": "en-PK,en;q=0.9",
+    "Origin": "https://www.foodpanda.pk",
+    "Referer": "https://www.foodpanda.pk/",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+    "x-disco-client-id": "web",
+    "Sec-Fetch-Dest": "empty",
+    "Sec-Fetch-Mode": "cors",
+    "Sec-Fetch-Site": "same-site"
+  },
+  "verified_status": 200,
+  "note": "Captured via probe against pk.fd-api.com; matches foodpanda.pk web listing API."
+}

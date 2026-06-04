@@ -43,9 +43,24 @@ class PopularResponse(BaseModel):
 
 
 class AnalyticsResponse(BaseModel):
+    engine_version: str = Field(default="2.1")
     total_dishes: int = Field(..., ge=0)
     total_restaurants: int = Field(..., ge=0)
     total_orders: int = Field(..., ge=0)
     total_reviews: int = Field(..., ge=0)
     avg_restaurant_rating: float = Field(..., ge=0)
-    engine_version: str = Field(default="2.1")
+    total_impressions: int = Field(
+        ...,
+        ge=0,
+        description="Count of recommendation_events where event_type is impression",
+    )
+    total_clicks: int = Field(
+        ...,
+        ge=0,
+        description="Count of recommendation_events where event_type is click",
+    )
+    click_through_rate: float = Field(
+        ...,
+        ge=0,
+        description="total_clicks / total_impressions (0 when impressions are 0); rounded to 4 decimals",
+    )

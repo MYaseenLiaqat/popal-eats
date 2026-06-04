@@ -1,16 +1,22 @@
 """
-Recommendation Engine V2 — strategy router and hybrid fusion (Phase 3).
+Recommendation Engine V2 - strategy router and weighted hybrid fusion (Phase 5.4).
 
-Hybrid formula:
-    final_score = 0.7 * content_score + 0.3 * collaborative_score
+Pipeline: content (DB dishes + preferences + reviews/orders) -> collaborative (orders)
+-> feedback (recommendation_events) -> fusion -> ranked top-N.
 
-Users with no order history fall back to content-only scoring.
+Hybrid fusion (0-100 inputs):
+    content*0.45 + collaborative*0.25 + feedback*0.15 + popularity*0.15
+
+Users with no order history use fusion with collaborative_score = 0.
 """
 
+import logging
 from collections import defaultdict
 from typing import Literal
 
 from sqlalchemy.orm import Session, joinedload
+
+logger = logging.getLogger("popal.recommendations.v2")
 
 from app.models.dish import Dish
 from app.models.order import Order
@@ -21,11 +27,23 @@ from app.services.recommendation.v2_collaborative import (
     get_collaborative_recommendations,
 )
 from app.services.recommendation.v2_content import get_content_recommendations
+from app.services.recommendation.v2_feedback import (
+    UserFeedbackProfile,
+    compute_feedback_bonus,
+    get_user_feedback_profile,
+    load_dish_category_names,
+)
+from app.services.recommendation.v2_candidates import is_eligible_dish
+from app.services.recommendation.v2_debug import log_ranked_recommendations
+from app.services.recommendation.v2_fusion import (
+    build_fusion_explanation,
+    compute_hybrid_score,
+    normalize_feedback_for_fusion,
+    normalize_popularity_for_fusion,
+)
 
 Strategy = Literal["content", "collaborative", "hybrid"]
 
-CONTENT_WEIGHT = 0.7
-COLLABORATIVE_WEIGHT = 0.3
 HYBRID_POOL_SIZE = 100
 TOP_N = 10
 
@@ -41,10 +59,7 @@ def _user_has_order_history(db: Session, user_id: int) -> bool:
 
 
 def _collaborative_score_map(db: Session, user_id: int) -> dict[int, float]:
-    """
-    Normalized 0–100 collaborative scores from order co-occurrence (same logic as Phase 2).
-    Does not modify the collaborative service module.
-    """
+    """Normalized 0–100 collaborative scores from order co-occurrence."""
     ordered_dish_ids = {
         row[0]
         for row in db.query(OrderItem.dish_id)
@@ -75,88 +90,86 @@ def _collaborative_score_map(db: Session, user_id: int) -> dict[int, float]:
     }
 
 
-def _hybrid_explanation(
-    content_score: float,
+def _build_fused_item(
+    *,
+    dish_id: int,
+    dish_name: str,
+    restaurant_name: str,
+    price,
+    calories: int | None,
+    content_item: V2DishRecommendationItem | None,
     collaborative_score: float,
-    final_score: float,
-    content_explanation: str,
-) -> str:
-    parts: list[str] = []
-    if content_score > 0:
-        parts.append(f"content ({content_score:.0f} × {CONTENT_WEIGHT})")
-    if collaborative_score > 0:
-        parts.append(f"collaborative ({collaborative_score:.0f} × {COLLABORATIVE_WEIGHT})")
-    blend = f"Hybrid score {final_score:.0f}"
-    if parts:
-        return f"{blend}: {' + '.join(parts)}. {content_explanation}"
-    return content_explanation
+    profile: UserFeedbackProfile,
+    category_name: str | None,
+) -> V2DishRecommendationItem | None:
+    content_score = content_item.score if content_item else 0.0
+    popularity_raw = (
+        content_item.score_breakdown.popularity_score if content_item else 0.0
+    )
+    if content_item and content_item.score_breakdown.popularity_score <= 10:
+        popularity_fusion = normalize_popularity_for_fusion(popularity_raw)
+    else:
+        popularity_fusion = min(100.0, float(popularity_raw))
 
+    feedback_bonus, feedback_detail = compute_feedback_bonus(
+        dish_id=dish_id,
+        dish_name=dish_name,
+        category_name=category_name,
+        profile=profile,
+    )
+    feedback_fusion = normalize_feedback_for_fusion(feedback_bonus)
 
-def _merge_hybrid_item(
-    content_item: V2DishRecommendationItem,
-    collaborative_score: float,
-    final_score: float,
-) -> V2DishRecommendationItem:
-    content_score = content_item.score
-    breakdown = content_item.score_breakdown.model_copy(
+    hybrid_score = compute_hybrid_score(
+        content_score,
+        collaborative_score,
+        feedback_fusion,
+        popularity_fusion,
+    )
+    if hybrid_score <= 0:
+        return None
+
+    base_breakdown = (
+        content_item.score_breakdown
+        if content_item
+        else V2ScoreBreakdown()
+    )
+    breakdown = base_breakdown.model_copy(
         update={
-            "collaborative_score": collaborative_score,
-            "total_score": final_score,
+            "content_score": round(content_score, 2),
+            "collaborative_score": round(collaborative_score, 2),
+            "feedback_score": feedback_fusion,
+            "popularity_score": popularity_fusion,
+            "hybrid_score": hybrid_score,
+            "total_score": hybrid_score,
         }
     )
-    signals = list(content_item.signals_used)
-    if collaborative_score > 0 and "collaborative" not in signals:
+
+    detail = content_item.explanation if content_item else None
+    explanation = build_fusion_explanation(
+        feedback_detail=feedback_detail,
+        detail=detail,
+    )
+
+    signals = ["hybrid", "fusion"]
+    if content_score > 0:
+        signals.append("content")
+    if collaborative_score > 0:
         signals.append("collaborative")
-    if content_score > 0 and "content" not in signals:
-        signals.insert(0, "content")
+    if feedback_fusion > 0:
+        signals.append("feedback")
+    if popularity_fusion > 0:
+        signals.append("popularity")
 
     return V2DishRecommendationItem(
-        dish_id=content_item.dish_id,
-        dish_name=content_item.dish_name,
-        restaurant_name=content_item.restaurant_name,
-        price=content_item.price,
-        calories=content_item.calories,
-        score=final_score,
+        dish_id=dish_id,
+        dish_name=dish_name,
+        restaurant_name=restaurant_name,
+        price=price,
+        calories=calories,
+        score=hybrid_score,
         score_breakdown=breakdown,
-        explanation=_hybrid_explanation(
-            content_score,
-            collaborative_score,
-            final_score,
-            content_item.explanation,
-        ),
+        explanation=explanation,
         signals_used=signals,
-    )
-
-
-def _build_cf_only_hybrid_item(
-    cf_item: V2DishRecommendationItem,
-    content_score: float,
-    final_score: float,
-) -> V2DishRecommendationItem:
-    collaborative_score = cf_item.score
-    breakdown = V2ScoreBreakdown(
-        cuisine_score=0.0,
-        nutrition_score=0.0,
-        budget_score=0.0,
-        popularity_score=0.0,
-        collaborative_score=collaborative_score,
-        total_score=final_score,
-    )
-    return V2DishRecommendationItem(
-        dish_id=cf_item.dish_id,
-        dish_name=cf_item.dish_name,
-        restaurant_name=cf_item.restaurant_name,
-        price=cf_item.price,
-        calories=cf_item.calories,
-        score=final_score,
-        score_breakdown=breakdown,
-        explanation=_hybrid_explanation(
-            content_score,
-            collaborative_score,
-            final_score,
-            cf_item.explanation,
-        ),
-        signals_used=["collaborative", "hybrid"],
     )
 
 
@@ -167,43 +180,70 @@ def get_hybrid_recommendations(
     limit: int = TOP_N,
 ) -> list[V2DishRecommendationItem]:
     """
-    Fuse content (70%) and collaborative (30%) scores.
-
-    Falls back to content-only when the user has no order history.
+    Weighted hybrid fusion across content, collaborative, feedback, and popularity.
     """
-    if not _user_has_order_history(db, user_id):
-        return get_content_recommendations(db, user_id, limit=limit)
+    profile = get_user_feedback_profile(db, user_id)
+    dish_to_category = load_dish_category_names(db)
 
     content_items = get_content_recommendations(db, user_id, limit=HYBRID_POOL_SIZE)
-    cf_items = get_collaborative_recommendations(db, user_id, limit=HYBRID_POOL_SIZE)
-    cf_map = _collaborative_score_map(db, user_id)
-
     content_by_id = {item.dish_id: item for item in content_items}
-    cf_by_id = {item.dish_id: item for item in cf_items}
-    for dish_id, score in cf_map.items():
-        cf_map[dish_id] = max(score, cf_map.get(dish_id, 0.0))
+    logger.info(
+        "V2 hybrid content pool user_id=%s: %d items",
+        user_id,
+        len(content_items),
+    )
+
+    cf_map: dict[int, float] = {}
+    cf_by_id: dict[int, V2DishRecommendationItem] = {}
+
+    if _user_has_order_history(db, user_id):
+        cf_items = get_collaborative_recommendations(db, user_id, limit=HYBRID_POOL_SIZE)
+        cf_by_id = {item.dish_id: item for item in cf_items}
+        cf_map = _collaborative_score_map(db, user_id)
+        for dish_id, score in cf_map.items():
+            cf_map[dish_id] = max(score, cf_map.get(dish_id, 0.0))
+        logger.info(
+            "V2 hybrid CF pool user_id=%s: %d cf items, %d score map entries",
+            user_id,
+            len(cf_items),
+            len(cf_map),
+        )
 
     all_dish_ids = set(content_by_id) | set(cf_map.keys()) | set(cf_by_id.keys())
+    logger.debug("V2 hybrid union candidates user_id=%s: %d dish ids", user_id, len(all_dish_ids))
     hybrid_rows: list[tuple[float, V2DishRecommendationItem]] = []
 
     for dish_id in all_dish_ids:
         content_item = content_by_id.get(dish_id)
-        content_score = content_item.score if content_item else 0.0
         collaborative_score = cf_map.get(dish_id, 0.0)
         if collaborative_score == 0.0 and dish_id in cf_by_id:
             collaborative_score = cf_by_id[dish_id].score
 
-        final_score = round(
-            CONTENT_WEIGHT * content_score + COLLABORATIVE_WEIGHT * collaborative_score,
-            1,
-        )
-        if final_score <= 0:
-            continue
-
         if content_item:
-            merged = _merge_hybrid_item(content_item, collaborative_score, final_score)
+            fused = _build_fused_item(
+                dish_id=content_item.dish_id,
+                dish_name=content_item.dish_name,
+                restaurant_name=content_item.restaurant_name,
+                price=content_item.price,
+                calories=content_item.calories,
+                content_item=content_item,
+                collaborative_score=collaborative_score,
+                profile=profile,
+                category_name=dish_to_category.get(dish_id),
+            )
         elif dish_id in cf_by_id:
-            merged = _build_cf_only_hybrid_item(cf_by_id[dish_id], content_score, final_score)
+            cf_item = cf_by_id[dish_id]
+            fused = _build_fused_item(
+                dish_id=cf_item.dish_id,
+                dish_name=cf_item.dish_name,
+                restaurant_name=cf_item.restaurant_name,
+                price=cf_item.price,
+                calories=cf_item.calories,
+                content_item=None,
+                collaborative_score=collaborative_score,
+                profile=profile,
+                category_name=dish_to_category.get(dish_id),
+            )
         else:
             dish = (
                 db.query(Dish)
@@ -211,25 +251,27 @@ def get_hybrid_recommendations(
                 .filter(Dish.id == dish_id, Dish.is_available.is_(True))
                 .first()
             )
-            if not dish or not dish.restaurant or not dish.restaurant.is_open:
+            if not dish or not is_eligible_dish(dish):
                 continue
-            cf_stub = V2DishRecommendationItem(
+            fused = _build_fused_item(
                 dish_id=dish.id,
                 dish_name=dish.name,
                 restaurant_name=dish.restaurant.name,
                 price=dish.price,
                 calories=dish.calories,
-                score=collaborative_score,
-                score_breakdown=V2ScoreBreakdown(collaborative_score=collaborative_score),
-                explanation=f"Order co-occurrence match (score {collaborative_score:.0f}).",
-                signals_used=["collaborative"],
+                content_item=None,
+                collaborative_score=collaborative_score,
+                profile=profile,
+                category_name=dish_to_category.get(dish_id),
             )
-            merged = _build_cf_only_hybrid_item(cf_stub, content_score, final_score)
 
-        hybrid_rows.append((final_score, merged))
+        if fused:
+            hybrid_rows.append((fused.score, fused))
 
     hybrid_rows.sort(key=lambda row: row[0], reverse=True)
-    return [item for _, item in hybrid_rows[:limit]]
+    final = [item for _, item in hybrid_rows[:limit]]
+    log_ranked_recommendations("hybrid_final", final, user_id=user_id)
+    return final
 
 
 def get_v2_recommendations(

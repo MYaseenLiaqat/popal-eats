@@ -45,6 +45,7 @@ def check_database_ready() -> list[str]:
         Category,
         Dish,
         MenuUpload,
+        RecommendationEvent,
         RefreshToken,
         Restaurant,
         Review,

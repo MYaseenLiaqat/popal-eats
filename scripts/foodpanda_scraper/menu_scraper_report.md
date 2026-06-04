@@ -1,0 +1,419 @@
+# Foodpanda Menu Scraper Report
+
+## Summary
+
+| Metric | Value |
+|--------|------:|
+| Restaurants in Excel | 48 |
+| Restaurants processed | 48 |
+| Restaurants failed | 0 |
+| Total dishes extracted | 3981 |
+| Unique categories | 395 |
+
+## Endpoint
+
+`GET https://pk.fd-api.com/api/v5/vendors/{vendor_code}`
+
+Query: `latitude`, `longitude`, `language_id=1`, `country=pk`, `opening_type=delivery`, `include=menus`
+
+## Failed restaurants
+
+_None._
+
+## Categories found
+
+- 100 Pepperoni
+- 100 Pepperoni Deal
+- 2 Big 2 Better
+- ALL DEAL
+- Aamazing Summer
+- Add Ons
+- All Butter Biscuits
+- Appetizers
+- Arabic SHAWARMA
+- Arabic Shawarma
+- BAR B Q
+- BBQ
+- BEEF BURGERS
+- BREADS
+- BREAST FILLET BURGER
+- BROAST
+- BURGER
+- Bakery Items
+- Baklava
+- Bar B.Q
+- Bar BQ
+- Beef
+- Beef & Veggie Pizza
+- Beef Bihari Rolls
+- Beef Boti Rolls
+- Beef Burgers
+- Beef With Rice
+- Bento Cakes
+- Beverage
+- Beverages
+- Biryani
+- Biryani & Pulao
+- Biscuit & Cookies
+- Biscuits
+- Biscuits & Cookies
+- Biscuits Value Packs
+- Blizzards
+- Boba Cups
+- Boneless Karahi
+- Bread & Rusk
+- Bread Basket
+- Breads
+- Breads - Buns - Rusk
+- Breakfast
+- Broadway Calzone
+- Broast
+- Broast-Zinger Combo
+- Brownie
+- Brownies
+- Brownies - Cupcakes - Muffins
+- Buland Pizza
+- Bun Kabab
+- Buns
+- Burgers
+- Burgers & Bun Kabab
+- Burgers & Deals
+- Burgers & Sandwiches
+- Burritos & Wraps
+- Butter Cream & Dry Fruit Cakes
+- CHEF FAVORITES
+- CHICKEN CORNER
+- CLASSIC FLAVORS
+- CLASSIC LOADED PIZZA ROLLS
+- CRICKET DEALS
+- CRISPY CHICKEN BURGER
+- Cake Can -A Spoonful Of Joy
+- Cakes
+- Cakes Large 4.5 Lbs Serving
+- Cakes Medium 2.5 Lbs Serving
+- Celebration Deals
+- Celebration Deals & Discounts
+- Celebration deals
+- Chaat Corner
+- Chapli Rolls
+- Chargha
+- Chicken & Fish
+- Chicken Biryani & Beef Pulao
+- Chicken Bites (9 PC)
+- Chicken Burgers
+- Chicken Charga
+- Chicken Flavors
+- Chicken Handi
+- Chicken Karahi
+- Chicken Rolls
+- Chicken Wings
+- Chicken Wraps
+- Chill Items
+- Chillers
+- Chinese
+- Chinese Items
+- Chips
+- Chips & Nimco
+- Chotu Meals
+- Chow Mein
+- Classic Flavors Pizza
+- Classic Pizza
+- Cold Beverages
+- Cold Brews
+- Cold Coffee
+- Combo Box
+- Combos
+- Condiments
+- Cookie
+- Cookies & Chips
+- Crazy Doubles
+- Crispy Chicken
+- Crispy French Fries
+- Crunchy Treats
+- Cup
+- Cup Cakes
+- Cupcakes
+- Curries
+- Customer Choice Deals
+- Cutlery Items
+- DAILY DEALS
+- DEAL
+- DESSERTS
+- DIPS
+- DOUBLE THE FUN
+- DRINKS
+- Dairy Products
+- Deals & Discounts
+- Delicious Deal
+- Delicious Deals
+- Delicious Deals & Discounts
+- Deluxe Pizza
+- Desi BBQ Loaded Fries
+- Desi Food
+- Desi Tarka
+- Dessert
+- Dessert Affair
+- Desserts
+- Desserts & Pastry
+- Dil Dil Pepsi Deals
+- Dip Sauces
+- Dipping Sauce
+- Dips
+- Donut Boxes
+- Double Patty Burgers
+- Double Trouble Deals
+- Drinks
+- EPIC LARGE DEALS
+- EPIC MEDIUM DEALS
+- EXTRA
+- Earth Quake Lava Cake
+- Everyday Value Picks
+- Exclusive Deal
+- Exclusive Deals
+- Exclusive Deals & Discounts
+- Exclusive Dessert
+- Exclusive Discount Deals
+- Exclusive Discounted Deals
+- Exclusive Discounted Deals.
+- Exclusive Family Deals
+- Exclusive Family Packs
+- Exclusive Pizza
+- Express Share Box
+- Extras
+- Extras & Drinks
+- Extreme Burgers
+- FAVORITE FLAVORS
+- FAVORITE LOADED PIZZA ROLL
+- FRIES
+- Family Deals
+- Family Meals
+- Fast Food
+- Favorite Deal
+- Fingers & Nuggets
+- Flavored Fries
+- Focaccia Pizzas
+- Foodie Thrills Deals
+- French Bread & Flavour Croissant.
+- French Fries
+- Fresh Juices
+- Fried Chicken
+- Fried Items
+- Fried Tenders
+- Fries
+- Fries & Sides
+- Frozen Essentials
+- Frozen Items
+- Fudge Meets Vanilla Swirls
+- GATHERING DEALS
+- GRILLED CHICKEN BURGER
+- Gifting
+- Gourmet Flavors
+- Gourmet Fries
+- Gyros
+- HOT BEVERAGES
+- Haleem
+- Halwa Tin
+- Halwajaat
+- Handcut Fries
+- Handi
+- Happy Meals
+- Heat & Eat Tin Pack Food
+- Heavy Duty
+- Helados Special Ice-Cream Shake
+- Helados Speciality
+- Hi-Tea
+- Hi-Tea Deals
+- Hot Beverages
+- Hyderabadi Cakes
+- Ice Cream
+- Ice Cream Cones
+- Ice Cream Shakes
+- Italian
+- K.F.H Mains
+- KFH Rolls
+- KIDDY MEALS
+- Kabab Rolls
+- Kakar Ki Chai Desi Tea
+- Kamaal Combo
+- Kiddie Corner
+- Kiddy Meals
+- Kids Cup
+- Kids Meal
+- Kids Meals
+- Kulfi
+- LOADED FRIES
+- Lacha Parartha Exclusive Deals
+- Lacha Paratha Burger
+- Lacha Paratha Deals
+- Lasagne
+- Lasagne & Pasta
+- Lemonade
+- Loaded Fries
+- Loaded Fries & Rice
+- Loaded Sundae
+- MATILDA CAKE
+- MELTZ FAVORITE
+- MELTZ PREMIUM
+- MY VALUE PICKS
+- MYBOX MELTZ
+- MYBOX PIZZA
+- MYBOX PIZZA ROLLS
+- Magnum Ice Cream
+- Mains
+- Malai Rolls
+- Matka Ice Cream
+- Max Deals
+- Max Value Deals
+- McSavers Mix & Match
+- Meal Deals
+- Medium Cakes - 2.5 Lbs
+- Mega Rolls
+- Mega Sandwiches
+- Mehak Platters
+- Midnight Deals
+- Milkshakes
+- Mini Bites Brownies
+- Mini Cheese cake
+- Mixed Mithai
+- Mixed Rolls
+- Mocktails
+- Mocktails & Shakes
+- NEW ARRIVAL
+- NEW ARRIVAL ( GRAB THE WRAPS )
+- NEW STUFFED PIZZA ROLL
+- Nashta
+- Nashta Parata Items
+- New Arrival
+- New Arrivals
+- New in Menu
+- Nimco
+- Nimco & Chips
+- Noodles
+- Noodles & Rice
+- One-Plate Delight Deals
+- Our Royal Juices
+- Our Signature Roll Range
+- PARTY PACKS
+- PREMIUM BURGER
+- PREMIUM DEALS
+- PREMIUM FLAVORS
+- Packed Product
+- Packed Products
+- Pakistani Afghani Kany
+- Pakistani Cuisine
+- Pakistani Food
+- Pakwan
+- Paratha
+- Paratha & Chapati
+- Paratha Rolls
+- Pasta
+- Pastas
+- Pastries
+- Patisa
+- Pepsi Deal
+- Pepsi Strong Deals
+- Pizza
+- Pizza Deals
+- Pizza Roll
+- Platter
+- Platters
+- Premium Burger Range
+- Premium Chocolatey Range
+- Premium Ice Cream
+- Premium Mini Cakes
+- Premium Pastries
+- Premium Pizza
+- Premium Quality Chocolates
+- Premium Sweets
+- Premium brownies
+- Pulao
+- ROLLS
+- Regular Ice Cream
+- Regular Size Donuts
+- Reshmi Rolls
+- Rice
+- Rice Items
+- Roll
+- Rolls
+- Royal Crown Pizza
+- Royal Rice Affair
+- Royale flavor
+- Rusk
+- SANDWICH
+- SHARE BOX
+- SOUP
+- STARTER
+- STEAK
+- SUPER LOADED PIZZAS
+- Salad & Raita
+- Salads
+- Salads & Sandwiches
+- Sandwiches
+- Savories
+- Savory
+- Savoury
+- Say Less Stuff More
+- Shakes
+- Share Bags
+- Sharing Box
+- Sharing Boxes
+- Shawarma
+- Shawarma Rolls
+- Side Orders
+- Sidelines
+- Sides
+- Sliders - Party In A Box
+- Small Cakes  - 1.5 Lbs
+- Snack Wraps
+- Snacks
+- Something Sweet
+- Soups
+- Special Halwajat
+- Special Rolls
+- Special Treats
+- Square Oven Baked Sandwiches
+- Starter
+- Starters
+- Steaks
+- Strong Pepsi Deal
+- Student Biryani (Special)
+- Subs (6 Inch)
+- Subs (Foot Long)
+- Sundae
+- Sundaes
+- Sweet Treats
+- Sweets
+- Sweets & Halwajaat
+- Sweets Tin
+- THE CLASSICS ( NEW ARRIVAL )
+- TRIPLE THE MADNESS
+- Tandoor
+- Tarts & Cookies
+- Tawa Roll Ice-Cream
+- Tea & Coffee
+- Tea Time Cakes
+- The Cookie Tin
+- The Messy Range
+- The Original Korean Range
+- The Tart Collection
+- Tin Packs
+- Tinpack Foods
+- Top Value Pizza Deals
+- Tri Milk Cakes
+- VALUE BURGERS
+- Value Packs
+- Vanilla Shakes
+- Vanilla Sundaes
+- Vanilla Swirls
+- Vanilla Twisters
+- Vegetarian
+- Vegetarian Delights
+- Weekday Deals
+- What's New
+- Wing It (8 Pc Buckets)
+- Wings
+- World Cup Deal
+- Wrap
+- Wraps
+- ZINGER
+- Zinger Rolls

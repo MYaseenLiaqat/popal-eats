@@ -18,6 +18,8 @@ from app.schemas.recommendation_v2 import (
     V2ScoreBreakdown,
     V2SimilarDishItem,
 )
+from app.services.recommendation.v2_candidates import is_eligible_dish
+from app.services.recommendation.v2_debug import log_ranked_recommendations
 
 TOP_N = 10
 SIMILAR_DEFAULT_LIMIT = 10
@@ -116,7 +118,7 @@ def get_similar_dishes(
     results: list[V2SimilarDishItem] = []
     for other_id, co_count in ranked:
         dish = dishes_by_id.get(other_id)
-        if not dish or not dish.restaurant or not dish.restaurant.is_open:
+        if not dish or not is_eligible_dish(dish):
             continue
         sim = _jaccard_similarity(
             co_count,
@@ -193,7 +195,7 @@ def get_collaborative_recommendations(
         if len(items) >= limit:
             break
         dish = dishes_by_id.get(dish_id)
-        if not dish:
+        if not dish or not is_eligible_dish(dish):
             continue
 
         raw = candidate_scores[dish_id]
@@ -223,4 +225,5 @@ def get_collaborative_recommendations(
             )
         )
 
+    log_ranked_recommendations("collaborative_ranked", items, user_id=user_id)
     return items

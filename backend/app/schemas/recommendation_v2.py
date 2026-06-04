@@ -14,14 +14,37 @@ class V2ScoreBreakdown(BaseModel):
     cuisine_score: float = Field(0, ge=0, le=50, description="Cuisine match (max 50)")
     nutrition_score: float = Field(0, ge=0, le=25, description="Nutrition goal match (max 25)")
     budget_score: float = Field(0, ge=0, le=15, description="Budget match (max 15)")
-    popularity_score: float = Field(0, ge=0, le=10, description="Popularity bonus (max 10)")
+    popularity_score: float = Field(
+        0,
+        ge=0,
+        le=100,
+        description="Popularity signal (0–10 raw in content strategy; 0–100 in hybrid fusion)",
+    )
     collaborative_score: float = Field(
         0,
         ge=0,
         le=100,
         description="Item-based CF score from order co-occurrence (Phase 2)",
     )
-    total_score: float = Field(0, ge=0, le=100, description="Sum of active components")
+    feedback_score: float = Field(
+        0,
+        ge=0,
+        le=100,
+        description="Learned preference signal (0–100 in hybrid fusion; legacy bonus 0–15 elsewhere)",
+    )
+    content_score: float = Field(
+        0,
+        ge=0,
+        le=100,
+        description="Total content score used in hybrid fusion (Phase 5.4)",
+    )
+    hybrid_score: float = Field(
+        0,
+        ge=0,
+        le=100,
+        description="Weighted fusion result (Phase 5.4)",
+    )
+    total_score: float = Field(0, ge=0, le=100, description="Final score (sum or hybrid_score)")
 
 
 class V2SimilarDishItem(BaseModel):

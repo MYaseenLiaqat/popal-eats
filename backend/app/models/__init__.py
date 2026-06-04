@@ -8,6 +8,7 @@ from app.models.menu_upload import MenuUpload
 from app.models.order import Order
 from app.models.order_item import OrderItem
 from app.models.restaurant import Restaurant
+from app.models.recommendation_event import RecommendationEvent
 from app.models.refresh_token import RefreshToken
 from app.models.review import Review
 from app.models.user import User
@@ -24,4 +25,5 @@ __all__ = [
     "CartItem",
     "Order",
     "OrderItem",
+    "RecommendationEvent",
 ]

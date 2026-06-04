@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.models.dish import Dish
 from app.models.order import Order
 from app.models.order_item import OrderItem
+from app.models.recommendation_event import RecommendationEvent
 from app.models.restaurant import Restaurant
 from app.models.review import Review
 from app.schemas.recommendation_v2_analytics import (
@@ -135,6 +136,15 @@ def get_popular_dishes(db: Session, *, limit: int = 10) -> PopularResponse:
     )
 
 
+def _count_recommendation_events(db: Session, event_type: str) -> int:
+    return int(
+        db.query(func.count(RecommendationEvent.id))
+        .filter(RecommendationEvent.event_type == event_type)
+        .scalar()
+        or 0
+    )
+
+
 def get_recommendation_analytics(db: Session) -> AnalyticsResponse:
     """Platform-wide counts for recommendation dashboards."""
     total_dishes = db.query(func.count(Dish.id)).scalar() or 0
@@ -143,11 +153,21 @@ def get_recommendation_analytics(db: Session) -> AnalyticsResponse:
     total_reviews = db.query(func.count(Review.id)).scalar() or 0
     avg_rating = db.query(func.coalesce(func.avg(Restaurant.average_rating), 0.0)).scalar()
 
+    total_impressions = _count_recommendation_events(db, "impression")
+    total_clicks = _count_recommendation_events(db, "click")
+    if total_impressions == 0:
+        click_through_rate = 0.0
+    else:
+        click_through_rate = round(total_clicks / total_impressions, 4)
+
     return AnalyticsResponse(
+        engine_version=ENGINE_VERSION,
         total_dishes=int(total_dishes),
         total_restaurants=int(total_restaurants),
         total_orders=int(total_orders),
         total_reviews=int(total_reviews),
         avg_restaurant_rating=round(float(avg_rating or 0.0), 2),
-        engine_version=ENGINE_VERSION,
+        total_impressions=total_impressions,
+        total_clicks=total_clicks,
+        click_through_rate=click_through_rate,
     )

@@ -1,0 +1,48 @@
+Foodpanda Vendor API — Request Comparison Report
+============================================================
+
+ENDPOINT (both):
+  https://pk.fd-api.com/vendors-gateway/api/v1/pandora/vendors
+
+BROWSER / WORKING REQUEST (foodpanda.pk DevTools + probe 200 OK):
+  URL: https://pk.fd-api.com/vendors-gateway/api/v1/pandora/vendors?latitude=24.8607&longitude=67.0011&language_id=1&include=characteristics&dynamic_pricing=0&configuration=Variant1&country=pk&budgets=&cuisine=&sort=&food_characteristic=&use_free_delivery_label=false&vertical=restaurants&limit=48&offset=0&customer_type=regular
+  Required header: x-disco-client-id: web
+  Origin: https://www.foodpanda.pk
+  Referer: https://www.foodpanda.pk/
+
+LEGACY PYTHON REQUEST (403 Invalid or null Client Id):
+  URL: https://pk.fd-api.com/vendors-gateway/api/v1/pandora/vendors?latitude=24.8607&longitude=67.0011
+
+MISSING HEADERS in legacy (must add):
+  - Origin: 'https://www.foodpanda.pk'
+  - Referer: 'https://www.foodpanda.pk/'
+  - Sec-Fetch-Dest: 'empty'
+  - Sec-Fetch-Mode: 'cors'
+  - Sec-Fetch-Site: 'same-site'
+  - x-disco-client-id: 'web'
+
+MISSING QUERY PARAMETERS in legacy (must add):
+  - budgets: ''
+  - configuration: 'Variant1'
+  - country: 'pk'
+  - cuisine: ''
+  - customer_type: 'regular'
+  - dynamic_pricing: 0
+  - food_characteristic: ''
+  - include: 'characteristics'
+  - language_id: 1
+  - limit: 48
+  - offset: 0
+  - sort: ''
+  - use_free_delivery_label: 'false'
+  - vertical: 'restaurants'
+
+ROOT CAUSE:
+  1. Missing x-disco-client-id: web (API returns 403 without it)
+  2. Missing Pandora listing query params (country, vertical, language_id, ...)
+  3. Missing Origin/Referer from https://www.foodpanda.pk
+
+REQUIRED FIXES (applied in config.py + vendor_scraper.py):
+  - Use BROWSER_HEADERS including x-disco-client-id
+  - Use build_vendor_query_params() for full query string
+  - Set Origin + Referer to foodpanda.pk
