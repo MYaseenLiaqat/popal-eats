@@ -1,7 +1,16 @@
 # Python
 venv/
+.venv/
 __pycache__/
 *.pyc
+
+# Foodpanda scraper generated artifacts
+scripts/foodpanda_scraper/raw/
+scripts/foodpanda_scraper/output/*.xlsx
+
+# Logs and temp files
+*.log
+*.tmp
 
 # Environment files
 .env
