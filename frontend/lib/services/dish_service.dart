@@ -1,3 +1,4 @@
+import '../models/dish.dart';
 import 'api_client.dart';
 
 class DishService {
@@ -18,5 +19,11 @@ class DishService {
     final r = await _api.get('/dishes', query: query, auth: false);
     _api.throwIfError(r);
     return _api.decodeList(r);
+  }
+
+  Future<Dish> getById(int id) async {
+    final r = await _api.get('/dishes/$id', auth: false);
+    _api.throwIfError(r);
+    return Dish.fromJson(_api.decodeJson(r));
   }
 }

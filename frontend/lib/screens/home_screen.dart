@@ -9,6 +9,7 @@ import '../services/review_service.dart';
 import 'admin_dashboard_screen.dart';
 import 'login_screen.dart';
 import 'menu_upload_screen.dart';
+import 'restaurant_detail_screen.dart';
 import 'review_status_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -149,6 +150,14 @@ class _HomeScreenState extends State<HomeScreen> {
                               '${r['city'] ?? ''} · ★ $rating (${r['total_reviews'] ?? 0} reviews)',
                             ),
                             isThreeLine: true,
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => RestaurantDetailScreen(
+                                  restaurantId: id,
+                                ),
+                              ),
+                            ),
                             trailing: IconButton(
                               icon: const Icon(Icons.rate_review),
                               onPressed: () => _addReview(id),

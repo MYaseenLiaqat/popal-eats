@@ -1,3 +1,4 @@
+import '../models/restaurant.dart';
 import 'api_client.dart';
 
 class RestaurantService {
@@ -26,9 +27,9 @@ class RestaurantService {
     return _api.decodeJson(r);
   }
 
-  Future<Map<String, dynamic>> getById(int id) async {
+  Future<Restaurant> getById(int id) async {
     final r = await _api.get('/restaurants/$id', auth: false);
     _api.throwIfError(r);
-    return _api.decodeJson(r);
+    return Restaurant.fromJson(_api.decodeJson(r));
   }
 }
