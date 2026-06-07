@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
+import '../providers/cart_provider.dart';
 import '../services/category_service.dart';
 import '../services/dish_service.dart';
 import '../services/restaurant_service.dart';
@@ -9,8 +10,11 @@ import '../services/review_service.dart';
 import 'admin_dashboard_screen.dart';
 import 'login_screen.dart';
 import 'menu_upload_screen.dart';
+import 'orders_screen.dart';
+import 'recommendations_screen.dart';
 import 'restaurant_detail_screen.dart';
 import 'review_status_screen.dart';
+import '../widgets/cart_icon_button.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -35,6 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _load();
+    context.read<CartProvider>().load();
   }
 
   Future<void> _load() async {
@@ -46,15 +51,19 @@ class _HomeScreenState extends State<HomeScreen> {
       final r = await _restaurants.list();
       final c = await _categories.list();
       final d = await _dishes.list();
+      if (!mounted) return;
       setState(() {
         restaurants = r;
         categories = c;
         dishes = d;
+        loading = false;
       });
     } catch (e) {
-      setState(() => error = e.toString());
-    } finally {
-      setState(() => loading = false);
+      if (!mounted) return;
+      setState(() {
+        error = e.toString();
+        loading = false;
+      });
     }
   }
 
@@ -96,6 +105,25 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('Popal Eats'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.recommend_outlined),
+            tooltip: 'Recommendations',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const RecommendationsScreen(),
+              ),
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.receipt_long),
+            tooltip: 'My orders',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const OrdersScreen()),
+            ),
+          ),
+          const CartIconButton(),
           if (auth.user?['role'] == 'admin')
             IconButton(
               icon: const Icon(Icons.dashboard),
@@ -116,6 +144,7 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: () async {
               await auth.logout();
               if (!context.mounted) return;
+              context.read<CartProvider>().reset();
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(builder: (_) => const LoginScreen()),

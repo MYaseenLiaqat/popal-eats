@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
+import 'dish_detail_screen.dart';
 import '../models/dish.dart';
 import '../models/restaurant.dart';
 import '../services/dish_service.dart';
 import '../services/restaurant_service.dart';
+import '../widgets/cart_icon_button.dart';
 
 /// Restaurant profile and menu (`GET /restaurants/{id}` + dishes).
 class RestaurantDetailScreen extends StatefulWidget {
@@ -47,14 +49,18 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
           .map(Dish.fromJson)
           .toList();
 
+      if (!mounted) return;
       setState(() {
         restaurant = r;
         dishes = parsedDishes;
+        loading = false;
       });
     } catch (e) {
-      setState(() => error = e.toString());
-    } finally {
-      setState(() => loading = false);
+      if (!mounted) return;
+      setState(() {
+        error = e.toString();
+        loading = false;
+      });
     }
   }
 
@@ -65,6 +71,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(r?.name ?? 'Restaurant'),
+        actions: const [CartIconButton()],
       ),
       body: loading
           ? const Center(child: CircularProgressIndicator())
@@ -146,6 +153,13 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                                   trailing: Text('\$${d.price.toStringAsFixed(2)}'),
                                   isThreeLine: d.description != null &&
                                       d.description!.isNotEmpty,
+                                  onTap: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          DishDetailScreen(dishId: d.id),
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
