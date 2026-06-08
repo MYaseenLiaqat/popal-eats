@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../models/order.dart';
 import '../services/order_service.dart';
+import '../theme/app_colors.dart';
+import '../widgets/ui/app_ui_widgets.dart';
 import 'order_detail_screen.dart';
 
 /// Order history from `GET /orders/my-orders`.
@@ -67,28 +69,27 @@ class _OrdersScreenState extends State<OrdersScreen> {
           : error != null
               ? Center(
                   child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text(error!),
+                    padding: const EdgeInsets.all(AppColors.screenPadding),
+                    child: Text(error!, textAlign: TextAlign.center),
                   ),
                 )
               : orders.isEmpty
-                  ? const Center(child: Text('No orders yet'))
+                  ? const EmptyState(
+                      icon: Icons.receipt_long_outlined,
+                      title: 'No orders yet',
+                      subtitle: 'Your order history will appear here',
+                    )
                   : RefreshIndicator(
                       onRefresh: _load,
+                      color: AppColors.gold,
                       child: ListView.builder(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(AppColors.screenPadding),
                         itemCount: orders.length,
                         itemBuilder: (context, index) {
                           final order = orders[index];
-                          return Card(
-                            child: ListTile(
-                              title: Text('Order #${order.id}'),
-                              subtitle: Text(
-                                '${order.status} · ${_formatDate(order.createdAt)}',
-                              ),
-                              trailing: Text(
-                                '\$${order.totalPrice.toStringAsFixed(2)}',
-                              ),
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: ModernCard(
                               onTap: () => Navigator.push(
                                 context,
                                 MaterialPageRoute(
@@ -96,6 +97,80 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                     orderId: order.id,
                                   ),
                                 ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(10),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.gold
+                                          .withValues(alpha: 0.12),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Icon(
+                                      Icons.receipt_long,
+                                      color: AppColors.gold,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Expanded(
+                                              child: Text(
+                                                'Order #${order.id}',
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .titleMedium,
+                                              ),
+                                            ),
+                                            StatusBadge(status: order.status),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Row(
+                                          children: [
+                                            const Icon(
+                                              Icons.schedule,
+                                              size: 14,
+                                              color: AppColors.textSecondary,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              _formatDate(order.createdAt),
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodyMedium,
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Text(
+                                        '\$${order.totalPrice.toStringAsFixed(2)}',
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleMedium
+                                            ?.copyWith(color: AppColors.gold),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      const Icon(
+                                        Icons.chevron_right,
+                                        size: 18,
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
                             ),
                           );

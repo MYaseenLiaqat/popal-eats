@@ -1,18 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_colors.dart';
+import '../widgets/ui/app_ui_widgets.dart';
+
 /// Health dashboard with mock nutrition data (Sprint 5C).
 class HealthDashboardScreen extends StatelessWidget {
   const HealthDashboardScreen({super.key});
 
-  static const _weeklyCalories = {
-    'Mon': 1800,
-    'Tue': 2100,
-    'Wed': 1950,
-    'Thu': 2200,
-    'Fri': 1850,
-    'Sat': 2300,
-    'Sun': 1900,
-  };
+  static const _weekLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  static const _weekValues = [1800, 2100, 1950, 2200, 1850, 2300, 1900];
 
   static const _maxCalories = 2300;
   static const _avgDay = 2014;
@@ -32,202 +28,225 @@ class HealthDashboardScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Health Dashboard')),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppColors.screenPadding),
         children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Weekly calories',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 12),
-                  ..._weeklyCalories.entries.map((e) {
-                    final factor = e.value / _maxCalories;
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Row(
+          ModernCard(
+            gradient: AppColors.headerGradient,
+            borderColor: AppColors.green.withValues(alpha: 0.4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.green.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.monitor_heart_outlined,
+                        color: AppColors.green,
+                        size: 28,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          SizedBox(
-                            width: 36,
-                            child: Text(e.key),
+                          Text(
+                            'Weekly analytics',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleLarge
+                                ?.copyWith(color: AppColors.gold),
                           ),
-                          Expanded(
-                            child: SizedBox(
-                              height: 12,
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .surfaceContainerHighest,
-                                  borderRadius: BorderRadius.circular(4),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Calorie overview & nutrition trends',
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  height: 120,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: List.generate(_weekValues.length, (i) {
+                      final factor = _weekValues[i] / _maxCalories;
+                      return Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 3),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Text(
+                                '${_weekValues[i]}',
+                                style: const TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 9,
                                 ),
-                                child: Align(
-                                  alignment: Alignment.centerLeft,
-                                  widthFactor: factor,
-                                  child: DecoratedBox(
+                              ),
+                              const SizedBox(height: 4),
+                              Flexible(
+                                child: FractionallySizedBox(
+                                  heightFactor: factor,
+                                  child: Container(
+                                    width: double.infinity,
                                     decoration: BoxDecoration(
-                                      color:
-                                          Theme.of(context).colorScheme.primary,
-                                      borderRadius: BorderRadius.circular(4),
+                                      gradient: LinearGradient(
+                                        begin: Alignment.bottomCenter,
+                                        end: Alignment.topCenter,
+                                        colors: [
+                                          AppColors.green
+                                              .withValues(alpha: 0.5),
+                                          AppColors.gold.withValues(alpha: 0.9),
+                                        ],
+                                      ),
+                                      borderRadius: BorderRadius.circular(6),
                                     ),
                                   ),
                                 ),
                               ),
-                            ),
+                              const SizedBox(height: 6),
+                              Text(
+                                _weekLabels[i],
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 8),
-                          SizedBox(
-                            width: 44,
-                            child: Text(
-                              '${e.value}',
-                              textAlign: TextAlign.end,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
-                ],
-              ),
+                        ),
+                      );
+                    }),
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 12),
           const Row(
             children: [
-              Expanded(
-                child: Card(
-                  child: ListTile(
-                    title: Text('Avg/Day'),
-                    trailing: Text('$_avgDay cal'),
-                  ),
-                ),
+              StatChip(
+                label: 'Avg/Day',
+                value: '$_avgDay kcal',
               ),
               SizedBox(width: 8),
-              Expanded(
-                child: Card(
-                  child: ListTile(
-                    title: Text('Goal'),
-                    trailing: Text('$_goal cal'),
-                  ),
-                ),
+              StatChip(
+                label: 'Goal',
+                value: '$_goal kcal',
+                accent: AppColors.green,
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Progress',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      Text('$progressPct%'),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    height: 8,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        widthFactor: _progress,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primary,
-                            borderRadius: BorderRadius.circular(4),
+          const SizedBox(height: 10),
+          ModernCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Progress',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    Text(
+                      '$progressPct%',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: AppColors.green,
                           ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  height: 10,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceLight,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      widthFactor: _progress,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: AppColors.goldGradient,
+                          borderRadius: BorderRadius.circular(6),
                         ),
                       ),
                     ),
                   ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Nutrition summary',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
-          const Row(
-            children: [
-              Expanded(
-                child: Card(
-                  child: ListTile(
-                    title: Text('Protein'),
-                    trailing: Text('120g'),
-                  ),
                 ),
-              ),
-              SizedBox(width: 8),
-              Expanded(
-                child: Card(
-                  child: ListTile(
-                    title: Text('Carbs'),
-                    trailing: Text('250g'),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          const Row(
-            children: [
-              Expanded(
-                child: Card(
-                  child: ListTile(
-                    title: Text('Fat'),
-                    trailing: Text('70g'),
-                  ),
-                ),
-              ),
-              SizedBox(width: 8),
-              Expanded(
-                child: Card(
-                  child: ListTile(
-                    title: Text('Water'),
-                    trailing: Text('2.3L'),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Health insights',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
-          Card(
-            child: Column(
-              children: [
-                for (var i = 0; i < _insights.length; i++) ...[
-                  if (i > 0) const Divider(height: 1),
-                  ListTile(
-                    leading: const Icon(Icons.lightbulb_outline),
-                    title: Text(_insights[i]),
-                  ),
-                ],
               ],
             ),
           ),
+          const SectionHeader(
+            title: 'Nutrition summary',
+            subtitle: 'This week',
+          ),
+          const NutritionGrid(
+            protein: 120,
+            carbs: 250,
+            fats: 70,
+          ),
+          ModernCard(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Water', style: Theme.of(context).textTheme.bodyMedium),
+                Text(
+                  '2.3L',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: AppColors.green,
+                      ),
+                ),
+              ],
+            ),
+          ),
+          const SectionHeader(
+            title: 'Health insights',
+            subtitle: 'AI-powered tips',
+          ),
+          ..._insights.map(
+            (tip) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: ModernCard(
+                borderColor: AppColors.gold.withValues(alpha: 0.3),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.gold.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.lightbulb_outline,
+                        color: AppColors.gold,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        tip,
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
         ],
       ),
     );

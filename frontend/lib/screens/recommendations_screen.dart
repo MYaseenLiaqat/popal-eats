@@ -66,6 +66,59 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
     );
   }
 
+  int _matchPercent(Recommendation rec) {
+    if (rec.score <= 10) {
+      return (rec.score * 10).round().clamp(0, 100);
+    }
+    return rec.score.round().clamp(0, 100);
+  }
+
+  List<String> _whyReasons(Recommendation rec) {
+    final reasons = <String>[];
+    final breakdown = rec.scoreBreakdown;
+
+    if (breakdown != null) {
+      if (breakdown.cuisineScore >= 1) {
+        reasons.add('Matches cuisine preference');
+      }
+      if (breakdown.budgetScore >= 1) {
+        reasons.add('Within budget');
+      }
+      if (breakdown.nutritionScore >= 1) {
+        reasons.add('Fits nutrition goals');
+      }
+      if (breakdown.popularityScore >= 1 && reasons.length < 4) {
+        reasons.add('Popular with other users');
+      }
+      if (breakdown.contentScore >= 1 && reasons.length < 4) {
+        reasons.add('Matches your taste profile');
+      }
+    }
+
+    for (final signal in rec.signalsUsed) {
+      if (reasons.length >= 4) break;
+      if (signal.trim().isEmpty) continue;
+      final normalized = signal.trim();
+      if (!reasons.contains(normalized)) {
+        reasons.add(normalized);
+      }
+    }
+
+    if (reasons.isEmpty && rec.explanation.isNotEmpty) {
+      reasons.add(rec.explanation);
+    }
+
+    if (reasons.isEmpty) {
+      return const [
+        'Matches cuisine preference',
+        'Within budget',
+        'High protein',
+      ];
+    }
+
+    return reasons.take(4).toList();
+  }
+
   Widget _buildSection({
     required String title,
     required String subtitle,
@@ -106,6 +159,8 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
               score: rec.score,
               explanation: rec.explanation,
               calories: rec.calories,
+              matchPercent: _matchPercent(rec),
+              whyReasons: _whyReasons(rec),
               onTap: () => _openDish(rec),
             ),
           ),

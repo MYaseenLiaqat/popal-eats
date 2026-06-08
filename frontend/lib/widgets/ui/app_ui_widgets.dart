@@ -412,6 +412,8 @@ class RecommendationCard extends StatelessWidget {
     this.calories,
     this.onTap,
     this.showAiBadge = true,
+    this.whyReasons = const [],
+    this.matchPercent,
   });
 
   final String dishName;
@@ -422,6 +424,8 @@ class RecommendationCard extends StatelessWidget {
   final int? calories;
   final VoidCallback? onTap;
   final bool showAiBadge;
+  final List<String> whyReasons;
+  final int? matchPercent;
 
   @override
   Widget build(BuildContext context) {
@@ -535,6 +539,74 @@ class RecommendationCard extends StatelessWidget {
                     ),
               ),
             ],
+            if (matchPercent != null || whyReasons.isNotEmpty) ...[
+              const SizedBox(height: 14),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceLight.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppColors.green.withValues(alpha: 0.25),
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (matchPercent != null)
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.auto_awesome,
+                            size: 16,
+                            color: AppColors.green,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'AI Match: $matchPercent%',
+                            style: const TextStyle(
+                              color: AppColors.green,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    if (whyReasons.isNotEmpty) ...[
+                      if (matchPercent != null) const SizedBox(height: 10),
+                      Text(
+                        'Why recommended:',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontSize: 14,
+                            ),
+                      ),
+                      const SizedBox(height: 6),
+                      ...whyReasons.map(
+                        (reason) => Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                '• ',
+                                style: TextStyle(color: AppColors.gold),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  reason,
+                                  style:
+                                      Theme.of(context).textTheme.bodyMedium,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -553,6 +625,231 @@ class RecommendationCard extends StatelessWidget {
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class StatusBadge extends StatelessWidget {
+  const StatusBadge({super.key, required this.status});
+
+  final String status;
+
+  Color _colorForStatus(String s) {
+    final lower = s.toLowerCase();
+    if (lower.contains('cancel')) return AppColors.error;
+    if (lower.contains('deliver')) return AppColors.green;
+    if (lower.contains('pending')) return AppColors.gold;
+    return AppColors.green;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final color = _colorForStatus(status);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Text(
+        status,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.w600,
+          fontSize: 12,
+        ),
+      ),
+    );
+  }
+}
+
+class QuantityControl extends StatelessWidget {
+  const QuantityControl({
+    super.key,
+    required this.quantity,
+    required this.onDecrease,
+    required this.onIncrease,
+    this.enabled = true,
+  });
+
+  final int quantity;
+  final VoidCallback? onDecrease;
+  final VoidCallback? onIncrease;
+  final bool enabled;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surfaceLight,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.gold.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _QtyButton(
+            icon: Icons.remove,
+            onPressed: enabled ? onDecrease : null,
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text(
+              '$quantity',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: AppColors.gold,
+                  ),
+            ),
+          ),
+          _QtyButton(
+            icon: Icons.add,
+            onPressed: enabled ? onIncrease : null,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QtyButton extends StatelessWidget {
+  const _QtyButton({required this.icon, this.onPressed});
+
+  final IconData icon;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.all(8),
+          child: Icon(
+            icon,
+            size: 18,
+            color: onPressed != null ? AppColors.gold : AppColors.textSecondary,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class SummaryLine extends StatelessWidget {
+  const SummaryLine({
+    super.key,
+    required this.label,
+    required this.value,
+    this.emphasize = false,
+  });
+
+  final String label;
+  final String value;
+  final bool emphasize;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = emphasize
+        ? Theme.of(context).textTheme.titleMedium
+        : Theme.of(context).textTheme.bodyLarge;
+    final valueStyle = emphasize
+        ? Theme.of(context).textTheme.titleLarge?.copyWith(color: AppColors.gold)
+        : Theme.of(context).textTheme.titleMedium;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: style),
+          Text(value, style: valueStyle),
+        ],
+      ),
+    );
+  }
+}
+
+class TotalAmountCard extends StatelessWidget {
+  const TotalAmountCard({
+    super.key,
+    required this.label,
+    required this.amount,
+  });
+
+  final String label;
+  final String amount;
+
+  @override
+  Widget build(BuildContext context) {
+    return ModernCard(
+      borderColor: AppColors.gold.withValues(alpha: 0.4),
+      gradient: AppColors.headerGradient,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: Theme.of(context).textTheme.titleMedium),
+          Text(
+            amount,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: AppColors.gold,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class EmptyState extends StatelessWidget {
+  const EmptyState({
+    super.key,
+    required this.icon,
+    required this.title,
+    this.subtitle,
+  });
+
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppColors.screenPadding),
+        child: ModernCard(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.gold.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, size: 48, color: AppColors.gold),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                style: Theme.of(context).textTheme.titleLarge,
+                textAlign: TextAlign.center,
+              ),
+              if (subtitle != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  subtitle!,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ],
+          ),
         ),
       ),
     );

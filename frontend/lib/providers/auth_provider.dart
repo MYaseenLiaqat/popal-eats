@@ -7,20 +7,25 @@ class AuthProvider extends ChangeNotifier {
   final _auth = AuthService();
   Map<String, dynamic>? user;
   bool loading = false;
+  bool initializing = true;
   String? error;
 
   bool get isLoggedIn => ApiClient.instance.isAuthenticated;
 
   Future<void> init() async {
-    await ApiClient.instance.loadToken();
-    if (isLoggedIn) {
-      try {
-        user = await _auth.me();
-      } catch (_) {
-        await _auth.logout();
+    try {
+      await ApiClient.instance.loadToken();
+      if (isLoggedIn) {
+        try {
+          user = await _auth.me();
+        } catch (_) {
+          await _auth.logout();
+        }
       }
+    } finally {
+      initializing = false;
+      notifyListeners();
     }
-    notifyListeners();
   }
 
   Future<bool> login(String email, String password) async {

@@ -5,6 +5,7 @@ import '../providers/auth_provider.dart';
 import '../providers/cart_provider.dart';
 import '../theme/app_colors.dart';
 import '../widgets/ui/app_ui_widgets.dart';
+import 'friend_requests_screen.dart';
 import 'budget_preferences_screen.dart';
 import 'health_dashboard_screen.dart';
 import 'login_screen.dart';
@@ -18,12 +19,6 @@ class ProfileScreen extends StatelessWidget {
   static const _mockGoal = 2100;
   static const _mockProgress = 0.88;
   static const _weekBars = [0.6, 0.75, 0.7, 0.85, 0.65, 0.9, 0.72];
-
-  void _comingSoon(BuildContext context, String label) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$label — coming soon')),
-    );
-  }
 
   Future<void> _logout(BuildContext context) async {
     final auth = context.read<AuthProvider>();
@@ -243,12 +238,12 @@ class ProfileScreen extends StatelessWidget {
             icon: Icons.people_outline,
             title: 'Friend Requests',
             subtitle: 'Connect with friends',
-            onTap: () => _comingSoon(context, 'Friend Requests'),
-          ),
-          ProfileActionCard(
-            icon: Icons.settings_outlined,
-            title: 'Settings',
-            onTap: () => _comingSoon(context, 'Settings'),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const FriendRequestsScreen(),
+              ),
+            ),
           ),
           ProfileActionCard(
             icon: Icons.logout,

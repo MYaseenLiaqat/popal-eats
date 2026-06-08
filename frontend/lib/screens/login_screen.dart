@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
+import '../theme/app_colors.dart';
+import '../widgets/auth_screen_widgets.dart';
+import '../widgets/ui/app_ui_widgets.dart';
 import 'signup_screen.dart';
-import 'home_screen.dart';
+import 'main_shell.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -30,7 +33,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (ok) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        MaterialPageRoute(builder: (_) => const MainShell()),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -42,40 +45,71 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Login')),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.all(AppColors.screenPadding),
           children: [
-            TextField(
-              controller: _email,
-              decoration: const InputDecoration(labelText: 'Email'),
-              keyboardType: TextInputType.emailAddress,
-            ),
             const SizedBox(height: 12),
-            TextField(
-              controller: _password,
-              decoration: const InputDecoration(labelText: 'Password'),
-              obscureText: true,
+            const AuthBrandedHeader(
+              title: 'Welcome back',
+              subtitle: 'AI-powered food, nutrition & community',
             ),
-            const SizedBox(height: 24),
-            FilledButton(
-              onPressed: auth.loading ? null : _submit,
-              child: auth.loading
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Login'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SignupScreen()),
+            const SizedBox(height: 20),
+            AuthFormCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Sign in',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _email,
+                    decoration: authInputDecoration(
+                      label: 'Email',
+                      icon: Icons.email_outlined,
+                      hint: 'you@example.com',
+                    ),
+                    keyboardType: TextInputType.emailAddress,
+                  ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: _password,
+                    decoration: authInputDecoration(
+                      label: 'Password',
+                      icon: Icons.lock_outline,
+                    ),
+                    obscureText: true,
+                  ),
+                  const SizedBox(height: 20),
+                  GoldActionButton(
+                    label: 'Login',
+                    icon: Icons.login,
+                    loading: auth.loading,
+                    onPressed: auth.loading ? null : _submit,
+                  ),
+                ],
               ),
-              child: const Text('Create account'),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  "Don't have an account?",
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                TextButton(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SignupScreen()),
+                  ),
+                  child: const Text('Create account'),
+                ),
+              ],
             ),
           ],
         ),
