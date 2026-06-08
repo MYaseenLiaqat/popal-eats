@@ -3,8 +3,10 @@ import 'package:provider/provider.dart';
 
 import 'providers/auth_provider.dart';
 import 'providers/cart_provider.dart';
-import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
+import 'screens/main_shell.dart';
+import 'theme/app_colors.dart';
+import 'theme/app_theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,10 +25,7 @@ class PopalEatsApp extends StatelessWidget {
       ],
       child: MaterialApp(
         title: 'Popal Eats',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepOrange),
-          useMaterial3: true,
-        ),
+        theme: AppTheme.dark,
         home: const _Root(),
       ),
     );
@@ -39,8 +38,15 @@ class _Root extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
+    if (auth.initializing) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(color: AppColors.gold),
+        ),
+      );
+    }
     if (!auth.isLoggedIn) return const LoginScreen();
-    return const HomeScreen();
+    return const MainShell();
   }
 }
 
