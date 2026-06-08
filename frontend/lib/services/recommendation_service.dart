@@ -1,4 +1,5 @@
 import '../models/recommendation.dart';
+import '../models/json_parse.dart';
 import 'api_client.dart';
 
 /// Recommendation Engine V2 API client.
@@ -87,13 +88,13 @@ class RecommendationService {
 
     return items.whereType<Map<String, dynamic>>().map((json) {
       final score = kind == 'trending'
-          ? (json['trending_score'] as num?)?.toDouble() ?? 0
-          : (json['total_orders'] as num?)?.toDouble() ?? 0;
+          ? parseDoubleOrNull(json['trending_score']) ?? 0
+          : parseDoubleOrNull(json['total_orders']) ?? 0;
       return Recommendation(
-        dishId: json['dish_id'] as int,
-        dishName: json['dish_name']?.toString() ?? '',
-        restaurantName: json['restaurant_name']?.toString() ?? '',
-        price: (json['price'] as num?)?.toDouble() ?? 0,
+        dishId: parseInt(json['dish_id'], field: 'dish_id'),
+        dishName: parseString(json['dish_name']),
+        restaurantName: parseString(json['restaurant_name']),
+        price: parseDouble(json['price'], field: 'price'),
         score: score,
         explanation: kind == 'trending' ? 'Trending dish' : 'Popular dish',
         strategy: kind,

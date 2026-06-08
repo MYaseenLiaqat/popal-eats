@@ -11,6 +11,7 @@ import 'admin_dashboard_screen.dart';
 import 'login_screen.dart';
 import 'menu_upload_screen.dart';
 import 'orders_screen.dart';
+import 'profile_screen.dart';
 import 'recommendations_screen.dart';
 import 'restaurant_detail_screen.dart';
 import 'review_status_screen.dart';
@@ -105,6 +106,14 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('Popal Eats'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.person_outline),
+            tooltip: 'Profile',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ProfileScreen()),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.recommend_outlined),
             tooltip: 'Recommendations',
