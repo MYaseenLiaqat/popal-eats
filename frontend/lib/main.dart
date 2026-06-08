@@ -5,6 +5,7 @@ import 'providers/auth_provider.dart';
 import 'providers/cart_provider.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
+import 'theme/app_theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,10 +24,7 @@ class PopalEatsApp extends StatelessWidget {
       ],
       child: MaterialApp(
         title: 'Popal Eats',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepOrange),
-          useMaterial3: true,
-        ),
+        theme: AppTheme.dark,
         home: const _Root(),
       ),
     );
