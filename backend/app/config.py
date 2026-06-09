@@ -67,6 +67,38 @@ class Settings(BaseSettings):
     enable_hf_sentiment: bool = Field(False, alias="ENABLE_HF_SENTIMENT")
     enable_marian_translation: bool = Field(False, alias="ENABLE_MARIAN_TRANSLATION")
 
+    # Foodpanda (Pakistan) external API — used by app.integrations.foodpanda
+    foodpanda_vendors_api_url: str = Field(
+        "https://pk.fd-api.com/vendors-gateway/api/v1/pandora/vendors",
+        alias="FOODPANDA_VENDORS_API_URL",
+    )
+    foodpanda_menu_api_base: str = Field(
+        "https://pk.fd-api.com/api/v5",
+        alias="FOODPANDA_MENU_API_BASE",
+    )
+    foodpanda_site_origin: str = Field(
+        "https://www.foodpanda.pk",
+        alias="FOODPANDA_SITE_ORIGIN",
+    )
+    foodpanda_default_latitude: float = Field(24.8607, alias="FOODPANDA_LATITUDE")
+    foodpanda_default_longitude: float = Field(67.0011, alias="FOODPANDA_LONGITUDE")
+    foodpanda_country: str = Field("pk", alias="FOODPANDA_COUNTRY")
+    foodpanda_language_id: int = Field(1, alias="FOODPANDA_LANGUAGE_ID")
+    foodpanda_configuration: str = Field("Variant1", alias="FOODPANDA_CONFIGURATION")
+    foodpanda_request_timeout_seconds: int = Field(30, alias="FOODPANDA_REQUEST_TIMEOUT")
+    foodpanda_disco_client_id: str = Field("web", alias="FOODPANDA_DISCO_CLIENT_ID")
+    foodpanda_perseus_client_id: str = Field("web", alias="FOODPANDA_PERSEUS_CLIENT_ID")
+    foodpanda_perseus_session_id: str = Field("", alias="FOODPANDA_PERSEUS_SESSION_ID")
+    foodpanda_user_agent: str = Field(
+        (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/131.0.0.0 Safari/537.36"
+        ),
+        alias="FOODPANDA_USER_AGENT",
+    )
+    foodpanda_accept_language: str = Field("en-PK,en;q=0.9", alias="FOODPANDA_ACCEPT_LANGUAGE")
+
     @field_validator("database_url", mode="before")
     @classmethod
     def validate_db_url(cls, v: str) -> str:
