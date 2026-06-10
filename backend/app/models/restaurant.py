@@ -1,6 +1,7 @@
 """Restaurant model — owned by a user (restaurant owner)."""
 
 from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text, Time
+from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -23,6 +24,10 @@ class Restaurant(Base):
     is_open = Column(Boolean, default=True, nullable=False)
     average_rating = Column(Float, default=0.0, nullable=False)
     total_reviews = Column(Integer, default=0, nullable=False)
+    source = Column(String(32), nullable=True, index=True)
+    external_id = Column(String(64), nullable=True)
+    external_code = Column(String(64), nullable=True, index=True)
+    tags = Column(JSON, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     owner = relationship("User", back_populates="restaurants")

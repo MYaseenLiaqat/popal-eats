@@ -5,6 +5,7 @@ ForeignKeys link restaurant_id and category_id.
 """
 
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -31,6 +32,9 @@ class Dish(Base):
     fats = Column(Numeric(8, 2), nullable=True)
     image = Column(String(500), nullable=True)
     is_available = Column(Boolean, default=True, nullable=False)
+    source = Column(String(32), nullable=True, index=True)
+    external_id = Column(String(64), nullable=True)
+    tags = Column(JSON, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     restaurant = relationship("Restaurant", back_populates="dishes")
