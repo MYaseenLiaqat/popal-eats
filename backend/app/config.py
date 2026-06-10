@@ -99,6 +99,15 @@ class Settings(BaseSettings):
     )
     foodpanda_accept_language: str = Field("en-PK,en;q=0.9", alias="FOODPANDA_ACCEPT_LANGUAGE")
 
+    # Lahore bulk import (FoodpandaDiscoveryJob / FoodpandaBulkImportRunner)
+    foodpanda_lahore_latitude: float = Field(31.4824, alias="FOODPANDA_LAHORE_LATITUDE")
+    foodpanda_lahore_longitude: float = Field(74.3237, alias="FOODPANDA_LAHORE_LONGITUDE")
+    foodpanda_bulk_data_dir: str = Field("data/foodpanda", alias="FOODPANDA_BULK_DATA_DIR")
+    foodpanda_bulk_page_limit: int = Field(100, alias="FOODPANDA_BULK_PAGE_LIMIT")
+    foodpanda_bulk_chunk_size: int = Field(50, alias="FOODPANDA_BULK_CHUNK_SIZE")
+    foodpanda_bulk_menu_delay_seconds: float = Field(0.5, alias="FOODPANDA_BULK_MENU_DELAY")
+    foodpanda_bulk_search_delay_seconds: float = Field(0.3, alias="FOODPANDA_BULK_SEARCH_DELAY")
+
     @field_validator("database_url", mode="before")
     @classmethod
     def validate_db_url(cls, v: str) -> str:
@@ -124,6 +133,11 @@ class Settings(BaseSettings):
     @property
     def upload_path(self) -> Path:
         return Path(self.upload_dir)
+
+    @property
+    def foodpanda_bulk_data_path(self) -> Path:
+        base = Path(__file__).resolve().parent.parent
+        return base / self.foodpanda_bulk_data_dir
 
 
 @lru_cache
