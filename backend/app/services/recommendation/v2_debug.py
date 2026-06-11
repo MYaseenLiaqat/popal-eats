@@ -7,6 +7,13 @@ from app.schemas.recommendation_v2 import V2DishRecommendationItem
 logger = logging.getLogger("popal.recommendations.v2")
 
 
+def log_pipeline_stage(stage: str, *, user_id: int | None = None, **metrics: object) -> None:
+    """Log a recommendation pipeline stage with structured counters."""
+    uid = f" user_id={user_id}" if user_id is not None else ""
+    parts = " ".join(f"{key}={value}" for key, value in metrics.items())
+    logger.info("V2 pipeline stage=%s%s %s", stage, uid, parts)
+
+
 def log_ranked_recommendations(
     label: str,
     items: list[V2DishRecommendationItem],

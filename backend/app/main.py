@@ -27,6 +27,7 @@ from app.routes.category import router as category_router
 from app.routes.dish import router as dish_router
 from app.routes.menu import router as menu_router
 from app.routes.order import checkout_router, restaurant_orders_router, router as order_router
+from app.routes.preferences import router as preferences_router
 from app.routes.restaurant import router as restaurant_router
 from app.routes.review import router as review_router
 from app.routes.recommendations_v2 import router as recommendations_v2_router
@@ -95,6 +96,7 @@ def create_app() -> FastAPI:
     application.include_router(dish_router)
     application.include_router(review_router)
     application.include_router(recommendations_v2_router)
+    application.include_router(preferences_router)
     application.include_router(menu_router)
     application.include_router(admin_router)
     application.include_router(cart_router)

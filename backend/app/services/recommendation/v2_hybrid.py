@@ -14,6 +14,7 @@ import logging
 from collections import defaultdict
 from typing import Literal
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
 logger = logging.getLogger("popal.recommendations.v2")
@@ -34,7 +35,8 @@ from app.services.recommendation.v2_feedback import (
     load_dish_category_names,
 )
 from app.services.recommendation.v2_candidates import is_eligible_dish
-from app.services.recommendation.v2_debug import log_ranked_recommendations
+from app.services.recommendation.v2_catalog import FOODPANDA_SOURCE
+from app.services.recommendation.v2_debug import log_pipeline_stage, log_ranked_recommendations
 from app.services.recommendation.v2_fusion import (
     build_fusion_explanation,
     compute_hybrid_score,
@@ -185,12 +187,14 @@ def get_hybrid_recommendations(
     profile = get_user_feedback_profile(db, user_id)
     dish_to_category = load_dish_category_names(db)
 
+    log_pipeline_stage("hybrid_start", user_id=user_id)
+
     content_items = get_content_recommendations(db, user_id, limit=HYBRID_POOL_SIZE)
     content_by_id = {item.dish_id: item for item in content_items}
-    logger.info(
-        "V2 hybrid content pool user_id=%s: %d items",
-        user_id,
-        len(content_items),
+    log_pipeline_stage(
+        "hybrid_content_pool",
+        user_id=user_id,
+        pool_size=len(content_items),
     )
 
     cf_map: dict[int, float] = {}
@@ -202,15 +206,19 @@ def get_hybrid_recommendations(
         cf_map = _collaborative_score_map(db, user_id)
         for dish_id, score in cf_map.items():
             cf_map[dish_id] = max(score, cf_map.get(dish_id, 0.0))
-        logger.info(
-            "V2 hybrid CF pool user_id=%s: %d cf items, %d score map entries",
-            user_id,
-            len(cf_items),
-            len(cf_map),
+        log_pipeline_stage(
+            "hybrid_cf_pool",
+            user_id=user_id,
+            cf_items=len(cf_items),
+            cf_score_entries=len(cf_map),
         )
 
     all_dish_ids = set(content_by_id) | set(cf_map.keys()) | set(cf_by_id.keys())
-    logger.debug("V2 hybrid union candidates user_id=%s: %d dish ids", user_id, len(all_dish_ids))
+    log_pipeline_stage(
+        "hybrid_fusion_union",
+        user_id=user_id,
+        candidate_ids=len(all_dish_ids),
+    )
     hybrid_rows: list[tuple[float, V2DishRecommendationItem]] = []
 
     for dish_id in all_dish_ids:
@@ -270,6 +278,22 @@ def get_hybrid_recommendations(
 
     hybrid_rows.sort(key=lambda row: row[0], reverse=True)
     final = [item for _, item in hybrid_rows[:limit]]
+    foodpanda_in_final = 0
+    if final:
+        final_ids = [item.dish_id for item in final]
+        foodpanda_in_final = (
+            db.query(func.count(Dish.id))
+            .filter(Dish.id.in_(final_ids), Dish.source == FOODPANDA_SOURCE)
+            .scalar()
+            or 0
+        )
+    log_pipeline_stage(
+        "hybrid_ranking_complete",
+        user_id=user_id,
+        fused=len(hybrid_rows),
+        returned=len(final),
+        foodpanda_in_final=foodpanda_in_final,
+    )
     log_ranked_recommendations("hybrid_final", final, user_id=user_id)
     return final
 

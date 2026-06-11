@@ -18,6 +18,9 @@ scripts/foodpanda_scraper/output/*.xlsx
 # Uploads
 backend/uploads/
 
+# Foodpanda bulk import manifests/checkpoints
+backend/data/foodpanda/
+
 # Flutter
 .dart_tool/
 .flutter-plugins

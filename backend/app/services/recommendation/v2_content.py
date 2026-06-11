@@ -5,18 +5,23 @@ Scoring (max 100):
   Cuisine 50 | Nutrition 25 | Budget 15 | Popularity 10
 """
 
-from dataclasses import dataclass, field
 from decimal import Decimal
-from typing import Any
 
-from sqlalchemy import func, text
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import func
+from sqlalchemy.orm import Session
 
 from app.models.dish import Dish
 from app.models.order_item import OrderItem
 from app.schemas.recommendation_v2 import V2DishRecommendationItem, V2ScoreBreakdown
+from app.schemas.user_preference import RecommendationPreferences
+from app.services.recommendation.preference_scoring import (
+    is_disliked_category,
+    score_dietary_preferences,
+)
 from app.services.recommendation.v2_candidates import load_eligible_dishes
-from app.services.recommendation.v2_debug import log_ranked_recommendations
+from app.services.recommendation.v2_catalog import FOODPANDA_SOURCE, load_tag_maps
+from app.services.recommendation.v2_debug import log_pipeline_stage, log_ranked_recommendations
+from app.services.user_preferences_service import load_recommendation_preferences
 
 SCORE_CUISINE = 50
 SCORE_NUTRITION = 25
@@ -28,15 +33,6 @@ _GOAL_HIGH_PROTEIN = frozenset({"muscle_gain", "high_protein", "high-protein", "
 _GOAL_LOW_CARB = frozenset({"low_carb", "low-carb", "keto"})
 _GOAL_WEIGHT_LOSS = frozenset({"weight_loss", "weight-loss", "weight loss", "lose_weight"})
 _GOAL_BALANCED = frozenset({"balanced", "maintain", "general", "balanced nutrition"})
-
-
-@dataclass
-class _Preferences:
-    favorite_cuisines: list[str] = field(default_factory=list)
-    dietary_preference: str | None = None
-    nutrition_goal: str | None = None
-    budget_min: Decimal | None = None
-    budget_max: Decimal | None = None
 
 
 def _normalize_list(values: list | None) -> list[str]:
@@ -53,53 +49,9 @@ def _normalize_tags(raw: Any) -> list[str]:
     return []
 
 
-def _load_preferences(db: Session, user_id: int) -> _Preferences:
-    """Load user_preferences row; empty defaults if missing (no crash)."""
-    try:
-        row = db.execute(
-            text(
-                """
-                SELECT favorite_cuisines, dietary_preference, nutrition_goal,
-                       budget_min, budget_max
-                FROM user_preferences
-                WHERE user_id = :uid
-                """
-            ),
-            {"uid": user_id},
-        ).mappings().first()
-    except Exception:
-        return _Preferences()
-
-    if not row:
-        return _Preferences()
-
-    cuisines = row.get("favorite_cuisines")
-    if cuisines is None:
-        cuisines = []
-    elif not isinstance(cuisines, list):
-        cuisines = []
-
-    return _Preferences(
-        favorite_cuisines=_normalize_list(cuisines),
-        dietary_preference=row.get("dietary_preference"),
-        nutrition_goal=row.get("nutrition_goal"),
-        budget_min=row.get("budget_min"),
-        budget_max=row.get("budget_max"),
-    )
-
-
 def _load_tags_maps(db: Session) -> tuple[dict[int, list[str]], dict[int, list[str]]]:
-    """Load dish/restaurant tags from DB (columns may exist before ORM models do)."""
-    dish_tags: dict[int, list[str]] = {}
-    restaurant_tags: dict[int, list[str]] = {}
-    try:
-        for row in db.execute(text("SELECT id, tags FROM dishes")).mappings():
-            dish_tags[row["id"]] = _normalize_tags(row.get("tags"))
-        for row in db.execute(text("SELECT id, tags FROM restaurants")).mappings():
-            restaurant_tags[row["id"]] = _normalize_tags(row.get("tags"))
-    except Exception:
-        pass
-    return dish_tags, restaurant_tags
+    """Delegate to catalog integration layer (ORM tags + Foodpanda cuisine fallback)."""
+    return load_tag_maps(db)
 
 
 def _load_order_counts(db: Session) -> dict[int, int]:
@@ -241,11 +193,17 @@ def _score_popularity(
     average_rating: float,
     total_reviews: int,
     order_count: int,
+    *,
+    has_import_rating: bool = False,
 ) -> float:
     rating_part = (max(0.0, min(float(average_rating or 0.0), 5.0)) / 5.0) * 4.0
     review_part = min(total_reviews / 10.0, 1.0) * 3.0
     order_part = min(order_count / 5.0, 1.0) * 3.0
-    return round(min(float(SCORE_POPULARITY), rating_part + review_part + order_part), 1)
+    base = rating_part + review_part + order_part
+    # Imported Foodpanda ratings/reviews are a valid popularity signal without platform orders.
+    if has_import_rating and order_count == 0 and (average_rating or total_reviews):
+        base = max(base, rating_part + review_part)
+    return round(min(float(SCORE_POPULARITY), base), 1)
 
 
 def _nutrition_label(nutrition_goal: str | None) -> str:
@@ -273,6 +231,7 @@ def _build_explanation(
     cuisine_pts: float,
     nutrition_pts: float,
     nutrition_goal: str | None,
+    matched_dietary: str | None,
     budget_pts: float,
     budget_status: str,
     popularity_pts: float,
@@ -286,8 +245,15 @@ def _build_explanation(
         parts.append(f"Matched {label} cuisine (+{_format_pts(cuisine_pts)})")
         signals.append("cuisine")
 
-    if nutrition_pts > 0:
+    if matched_dietary:
+        parts.append(f"Matches {matched_dietary.replace('_', ' ')} preference")
+        signals.append("dietary")
+
+    if nutrition_pts > 0 and not matched_dietary:
         parts.append(f"{_nutrition_label(nutrition_goal)} goal match (+{_format_pts(nutrition_pts)})")
+        signals.append("nutrition")
+    elif nutrition_pts > 0 and matched_dietary:
+        parts.append(f"Nutrition alignment (+{_format_pts(nutrition_pts)})")
         signals.append("nutrition")
 
     if budget_pts > 0:
@@ -316,11 +282,14 @@ def _build_explanation(
 
 def _score_dish(
     dish: Dish,
-    prefs: _Preferences,
+    prefs: RecommendationPreferences,
     dish_tags_map: dict[int, list[str]],
     restaurant_tags_map: dict[int, list[str]],
     order_counts: dict[int, int],
-) -> V2DishRecommendationItem:
+) -> V2DishRecommendationItem | None:
+    if is_disliked_category(dish, prefs.disliked_categories):
+        return None
+
     dish_tags = dish_tags_map.get(dish.id, [])
     restaurant_tags = restaurant_tags_map.get(dish.restaurant_id, []) if dish.restaurant_id else []
 
@@ -328,22 +297,39 @@ def _score_dish(
         dish, prefs.favorite_cuisines, dish_tags, restaurant_tags
     )
     nutrition_pts, _ = _score_nutrition(dish, prefs.nutrition_goal)
+    dietary_adj, matched_dietary = score_dietary_preferences(
+        dish,
+        prefs.dietary_preferences,
+        dish_tags=dish_tags,
+        restaurant_tags=restaurant_tags,
+    )
+    if dietary_adj > 0:
+        nutrition_pts = min(float(SCORE_NUTRITION), nutrition_pts + dietary_adj)
     budget_pts, budget_status = _score_budget(dish.price, prefs.budget_min, prefs.budget_max)
 
     restaurant = dish.restaurant
+    has_import_rating = bool(
+        restaurant
+        and restaurant.source == FOODPANDA_SOURCE
+        and ((restaurant.average_rating or 0) > 0 or (restaurant.total_reviews or 0) > 0)
+    )
     popularity_pts = _score_popularity(
         restaurant.average_rating if restaurant else 0.0,
         restaurant.total_reviews if restaurant else 0,
         order_counts.get(dish.id, 0),
+        has_import_rating=has_import_rating,
     )
 
     total = round(cuisine_pts + nutrition_pts + budget_pts + popularity_pts, 1)
+    if dietary_adj < 0:
+        total = max(0.0, total + dietary_adj)
     has_budget_prefs = prefs.budget_min is not None or prefs.budget_max is not None
     explanation, signals = _build_explanation(
         matched_cuisine=matched_cuisine,
         cuisine_pts=cuisine_pts,
         nutrition_pts=nutrition_pts,
         nutrition_goal=prefs.nutrition_goal,
+        matched_dietary=matched_dietary,
         budget_pts=budget_pts,
         budget_status=budget_status,
         popularity_pts=popularity_pts,
@@ -380,19 +366,42 @@ def get_content_recommendations(
     """
     Content-based recommendations for a user (Phase 1).
     """
-    prefs = _load_preferences(db, user_id)
+    prefs = load_recommendation_preferences(db, user_id)
     dish_tags_map, restaurant_tags_map = _load_tags_maps(db)
     order_counts = _load_order_counts(db)
 
     dishes = load_eligible_dishes(db, user_id=user_id)
+    log_pipeline_stage(
+        "content_scoring_start",
+        user_id=user_id,
+        candidates=len(dishes),
+        foodpanda_candidates=sum(1 for d in dishes if d.source == FOODPANDA_SOURCE),
+        tagged_restaurants=len(restaurant_tags_map),
+        tagged_dishes=len(dish_tags_map),
+        favorite_cuisines=len(prefs.favorite_cuisines),
+        dietary_preferences=len(prefs.dietary_preferences),
+        disliked_categories=len(prefs.disliked_categories),
+        budget_level=prefs.budget_level,
+    )
     if not dishes:
         return []
 
-    scored = [
-        _score_dish(dish, prefs, dish_tags_map, restaurant_tags_map, order_counts)
-        for dish in dishes
-    ]
+    scored: list[V2DishRecommendationItem] = []
+    for dish in dishes:
+        item = _score_dish(dish, prefs, dish_tags_map, restaurant_tags_map, order_counts)
+        if item is not None:
+            scored.append(item)
     scored.sort(key=lambda item: item.score, reverse=True)
     top = scored[:limit]
+    source_by_id = {d.id: d.source for d in dishes}
+    log_pipeline_stage(
+        "content_ranking_complete",
+        user_id=user_id,
+        scored=len(scored),
+        returned=len(top),
+        foodpanda_in_top=sum(
+            1 for item in top if source_by_id.get(item.dish_id) == FOODPANDA_SOURCE
+        ),
+    )
     log_ranked_recommendations("content_ranked", top, user_id=user_id)
     return top
