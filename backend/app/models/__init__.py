@@ -12,9 +12,11 @@ from app.models.recommendation_event import RecommendationEvent
 from app.models.refresh_token import RefreshToken
 from app.models.review import Review
 from app.models.user import User
+from app.models.user_preference import UserPreference
 
 __all__ = [
     "User",
+    "UserPreference",
     "Category",
     "Restaurant",
     "Dish",

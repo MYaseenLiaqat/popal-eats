@@ -11,6 +11,7 @@ import re
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.dish import Dish
+from app.services.recommendation.v2_debug import log_pipeline_stage
 
 logger = logging.getLogger("popal.recommendations.v2")
 
@@ -105,6 +106,15 @@ def load_eligible_dishes(db: Session, *, user_id: int | None = None) -> list[Dis
             )
 
     uid = f" user_id={user_id}" if user_id is not None else ""
+    foodpanda_eligible = sum(1 for dish in eligible if dish.source == "foodpanda")
+    log_pipeline_stage(
+        "candidates_filtered",
+        user_id=user_id,
+        total_loaded=len(dishes),
+        eligible=len(eligible),
+        excluded=len(excluded),
+        foodpanda_eligible=foodpanda_eligible,
+    )
     logger.info(
         "V2 candidate dishes%s: %d eligible of %d total (%d excluded)",
         uid,
