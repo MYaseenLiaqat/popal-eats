@@ -1,28 +1,41 @@
 import 'package:flutter/foundation.dart';
 
+import '../models/group_member_location.dart';
 import '../models/group_session.dart';
 import '../services/api_client.dart';
+import '../services/device_location_service.dart';
 import '../services/group_service.dart';
 
 class GroupProvider extends ChangeNotifier {
-  GroupProvider({GroupService? service}) : _service = service ?? GroupService();
+  GroupProvider({
+    GroupService? service,
+    DeviceLocationService? locationService,
+  })  : _service = service ?? GroupService(),
+        _locationService = locationService ?? DeviceLocationService();
 
   final GroupService _service;
+  final DeviceLocationService _locationService;
 
   List<GroupSession> groups = [];
   GroupSession? selectedGroup;
   List<GroupInvitation> incomingInvitations = [];
   List<GroupInvitation> outgoingInvitations = [];
+  List<GroupMemberLocation> memberLocations = [];
+  int? locationsSessionId;
 
   bool loadingGroups = false;
   bool loadingDetail = false;
   bool loadingInvitations = false;
+  bool loadingLocations = false;
+  bool sharingLocation = false;
   bool actionLoading = false;
 
   String? groupsError;
   String? detailError;
   String? invitationsError;
+  String? locationsError;
   String? actionError;
+  String? locationActionError;
 
   int get groupCount => groups.length;
   int get incomingInvitationCount => incomingInvitations.length;
@@ -33,14 +46,20 @@ class GroupProvider extends ChangeNotifier {
     selectedGroup = null;
     incomingInvitations = [];
     outgoingInvitations = [];
+    memberLocations = [];
+    locationsSessionId = null;
     loadingGroups = false;
     loadingDetail = false;
     loadingInvitations = false;
+    loadingLocations = false;
+    sharingLocation = false;
     actionLoading = false;
     groupsError = null;
     detailError = null;
     invitationsError = null;
+    locationsError = null;
     actionError = null;
+    locationActionError = null;
     notifyListeners();
   }
 
@@ -91,6 +110,93 @@ class GroupProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
+
+  Future<void> loadLocations(int sessionId, {bool force = false}) async {
+    if (loadingLocations) return;
+    if (!force &&
+        locationsSessionId == sessionId &&
+        memberLocations.isNotEmpty &&
+        locationsError == null) {
+      return;
+    }
+
+    loadingLocations = true;
+    locationsError = null;
+    notifyListeners();
+
+    try {
+      final result = await _service.getGroupLocations(sessionId);
+      memberLocations = result.locations;
+      locationsSessionId = sessionId;
+    } on ApiException catch (e) {
+      locationsError = e.message;
+    } finally {
+      loadingLocations = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> shareLocation({
+    required int sessionId,
+    required double latitude,
+    required double longitude,
+  }) async {
+    sharingLocation = true;
+    locationActionError = null;
+    notifyListeners();
+
+    try {
+      final saved = await _service.shareGroupLocation(
+        sessionId: sessionId,
+        latitude: latitude,
+        longitude: longitude,
+      );
+      locationsSessionId = sessionId;
+      memberLocations = [
+        saved,
+        ...memberLocations.where((loc) => loc.userId != saved.userId),
+      ];
+      return true;
+    } on ApiException catch (e) {
+      locationActionError = e.message;
+      return false;
+    } finally {
+      sharingLocation = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> shareMyLocation(int sessionId) async {
+    sharingLocation = true;
+    locationActionError = null;
+    notifyListeners();
+
+    try {
+      final position = await _locationService.getCurrentPosition();
+      final saved = await _service.shareGroupLocation(
+        sessionId: sessionId,
+        latitude: position.latitude,
+        longitude: position.longitude,
+      );
+      locationsSessionId = sessionId;
+      memberLocations = [
+        saved,
+        ...memberLocations.where((loc) => loc.userId != saved.userId),
+      ];
+      return true;
+    } on LocationAccessException catch (e) {
+      locationActionError = e.message;
+      return false;
+    } on ApiException catch (e) {
+      locationActionError = e.message;
+      return false;
+    } finally {
+      sharingLocation = false;
+      notifyListeners();
+    }
+  }
+
+  DeviceLocationService get locationService => _locationService;
 
   Future<void> fetchInvitations({bool force = false}) async {
     if (!ApiClient.instance.isAuthenticated) return;
@@ -205,6 +311,10 @@ class GroupProvider extends ChangeNotifier {
   void clearSelectedGroup() {
     selectedGroup = null;
     detailError = null;
+    memberLocations = [];
+    locationsSessionId = null;
+    locationsError = null;
+    locationActionError = null;
     notifyListeners();
   }
 }

@@ -1,4 +1,5 @@
 import 'api_client.dart';
+import '../models/group_member_location.dart';
 import '../models/group_session.dart';
 
 class GroupService {
@@ -57,5 +58,27 @@ class GroupService {
   Future<void> leaveGroup(int sessionId) async {
     final response = await _client.post('/groups/$sessionId/leave');
     _client.throwIfError(response);
+  }
+
+  Future<GroupMemberLocationList> getGroupLocations(int sessionId) async {
+    final response = await _client.get('/groups/$sessionId/location');
+    _client.throwIfError(response);
+    return GroupMemberLocationList.fromJson(_client.decodeJson(response));
+  }
+
+  Future<GroupMemberLocation> shareGroupLocation({
+    required int sessionId,
+    required double latitude,
+    required double longitude,
+  }) async {
+    final response = await _client.post(
+      '/groups/$sessionId/location',
+      body: {
+        'latitude': latitude,
+        'longitude': longitude,
+      },
+    );
+    _client.throwIfError(response);
+    return GroupMemberLocation.fromJson(_client.decodeJson(response));
   }
 }

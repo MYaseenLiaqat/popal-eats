@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../models/group_member_location.dart';
 import '../models/group_session.dart';
 import '../providers/group_provider.dart';
 import '../theme/app_colors.dart';
 import '../utils/date_display.dart';
+import '../widgets/groups/group_locations_section.dart';
 import '../widgets/groups/group_session_card.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 import 'invite_friends_to_group_screen.dart';
 
-/// Group session detail with members and actions.
+/// Group session detail with members, locations, and actions.
 class GroupDetailScreen extends StatefulWidget {
   const GroupDetailScreen({super.key, required this.sessionId});
 
@@ -23,9 +25,69 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<GroupProvider>().fetchGroupDetail(widget.sessionId, force: true);
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadAll());
+  }
+
+  Future<void> _loadAll({bool force = true}) async {
+    final provider = context.read<GroupProvider>();
+    await provider.fetchGroupDetail(widget.sessionId, force: force);
+    if (!mounted) return;
+    await provider.loadLocations(widget.sessionId, force: force);
+  }
+
+  Future<void> _shareMyLocation() async {
+    final provider = context.read<GroupProvider>();
+    final ok = await provider.shareMyLocation(widget.sessionId);
+    if (!mounted) return;
+
+    if (ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Location shared with the group')),
+      );
+      return;
+    }
+
+    final message = provider.locationActionError ?? 'Could not share location';
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+
+    if (provider.locationActionError != null &&
+        provider.locationActionError!.contains('permanently denied')) {
+      _showPermissionDialog(openSettings: true);
+    } else if (provider.locationActionError != null &&
+        provider.locationActionError!.contains('turned off')) {
+      _showPermissionDialog(openSettings: false, locationServices: true);
+    }
+  }
+
+  Future<void> _showPermissionDialog({
+    required bool openSettings,
+    bool locationServices = false,
+  }) async {
+    final provider = context.read<GroupProvider>();
+    final open = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(locationServices ? 'Enable location services' : 'Location permission needed'),
+        content: Text(
+          locationServices
+              ? 'Turn on location services to share your position with the group.'
+              : 'Allow location access so your group can find nearby restaurant picks.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(openSettings ? 'Open settings' : 'Open location settings'),
+          ),
+        ],
+      ),
+    );
+    if (open != true || !mounted) return;
+    if (openSettings) {
+      await provider.locationService.openAppSettings();
+    } else {
+      await provider.locationService.openLocationSettings();
+    }
   }
 
   void _showComingSoon(String feature) {
@@ -45,7 +107,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
       ),
       body: RefreshIndicator(
         color: AppColors.gold,
-        onRefresh: () => provider.fetchGroupDetail(widget.sessionId, force: true),
+        onRefresh: () => _loadAll(force: true),
         child: _buildBody(provider, session),
       ),
     );
@@ -71,8 +133,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
                   subtitle: provider.detailError,
                 ),
                 TextButton(
-                  onPressed: () =>
-                      provider.fetchGroupDetail(widget.sessionId, force: true),
+                  onPressed: () => _loadAll(force: true),
                   child: const Text('Retry'),
                 ),
               ],
@@ -85,6 +146,9 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     if (session == null) return const SizedBox.shrink();
 
     final hostName = session.host?.fullName ?? 'User #${session.hostUserId}';
+    final locations = provider.locationsSessionId == session.id
+        ? provider.memberLocations
+        : <GroupMemberLocation>[];
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -114,6 +178,16 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
             ],
           ),
         ),
+        GroupLocationsSection(
+          sessionId: session.id,
+          loading: provider.loadingLocations,
+          sharing: provider.sharingLocation,
+          error: provider.locationsError,
+          locations: locations,
+          onShare: _shareMyLocation,
+          onRefresh: () => provider.loadLocations(session.id, force: true),
+          onRetry: () => provider.loadLocations(session.id, force: true),
+        ),
         const SectionHeader(
           title: 'Members',
           subtitle: 'People in this session',
@@ -142,12 +216,6 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
               builder: (_) => InviteFriendsToGroupScreen(sessionId: session.id),
             ),
           ),
-        ),
-        ProfileActionCard(
-          icon: Icons.location_on_outlined,
-          title: 'Share Location',
-          subtitle: 'Help the group find nearby picks',
-          onTap: () => _showComingSoon('Location sharing'),
         ),
         ProfileActionCard(
           icon: Icons.restaurant_menu,
