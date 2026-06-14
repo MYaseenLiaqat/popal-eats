@@ -13,7 +13,9 @@ from app.models.group_session_member import GroupSessionMember
 from app.models.user import User
 from app.schemas.friend import UserPublicProfile
 from app.schemas.group_session import (
+    GroupInvitationEnrichedResponse,
     GroupInvitationResponse,
+    GroupInvitationsListResponse,
     GroupSessionCreate,
     GroupSessionListResponse,
     GroupSessionMemberResponse,
@@ -260,6 +262,33 @@ def invite_to_group_session(
     invitation.sender = db.query(User).filter(User.id == sender_id).first()
     invitation.receiver = db.query(User).filter(User.id == receiver_id).first()
     return _to_invitation_response(invitation)
+
+
+def _to_invitation_enriched(invitation: GroupInvitation) -> GroupInvitationEnrichedResponse:
+    base = _to_invitation_response(invitation)
+    session = invitation.session
+    return GroupInvitationEnrichedResponse(
+        **base.model_dump(),
+        session_name=session.name if session else None,
+        session_host=_to_profile(session.host) if session else None,
+    )
+
+
+def list_group_invitations(db: Session, user_id: int) -> GroupInvitationsListResponse:
+    pending = (
+        db.query(GroupInvitation)
+        .options(
+            joinedload(GroupInvitation.sender),
+            joinedload(GroupInvitation.receiver),
+            joinedload(GroupInvitation.session).joinedload(GroupSession.host),
+        )
+        .filter(GroupInvitation.status == PENDING)
+        .order_by(GroupInvitation.created_at.desc())
+        .all()
+    )
+    incoming = [_to_invitation_enriched(inv) for inv in pending if inv.receiver_id == user_id]
+    outgoing = [_to_invitation_enriched(inv) for inv in pending if inv.sender_id == user_id]
+    return GroupInvitationsListResponse(incoming=incoming, outgoing=outgoing)
 
 
 def accept_group_invitation(

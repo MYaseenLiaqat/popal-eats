@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/friends_provider.dart';
+import '../providers/group_provider.dart';
 import '../theme/app_colors.dart';
 import '../widgets/community_avatar.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 import 'friend_requests_screen.dart';
 import 'friends_list_screen.dart';
+import 'groups_screen.dart';
+import 'group_invitations_screen.dart';
 import 'search_users_screen.dart';
 
 class MockCommunityActivity {
@@ -69,12 +72,14 @@ class _CommunityScreenState extends State<CommunityScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<FriendsProvider>().fetchAll(force: true);
+      context.read<GroupProvider>().fetchAll(force: true);
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final friends = context.watch<FriendsProvider>();
+    final groups = context.watch<GroupProvider>();
     final previewRequests = friends.incomingRequests.take(2).toList();
     final previewFriends = friends.friends.take(3).toList();
 
@@ -94,7 +99,10 @@ class _CommunityScreenState extends State<CommunityScreen> {
       ),
       body: RefreshIndicator(
         color: AppColors.gold,
-        onRefresh: () => friends.fetchAll(force: true),
+        onRefresh: () async {
+          await friends.fetchAll(force: true);
+          await groups.fetchAll(force: true);
+        },
         child: ListView(
           padding: const EdgeInsets.all(AppColors.screenPadding),
           physics: const AlwaysScrollableScrollPhysics(),
@@ -125,7 +133,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '${friends.friendsCount} friends · ${friends.incomingCount} incoming requests',
+                          '${friends.friendsCount} friends · ${groups.groupCount} groups',
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                       ],
@@ -134,6 +142,95 @@ class _CommunityScreenState extends State<CommunityScreen> {
                 ],
               ),
             ),
+            SectionHeader(
+              title: 'Group Sessions',
+              subtitle: groups.incomingInvitationCount > 0
+                  ? '${groups.groupCount} groups · ${groups.incomingInvitationCount} invites'
+                  : '${groups.groupCount} active groups',
+              trailing: TextButton(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const GroupsScreen()),
+                ).then((_) => groups.fetchAll(force: true)),
+                child: const Text('View all'),
+              ),
+            ),
+            if (groups.incomingInvitationCount > 0)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: ModernCard(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const GroupInvitationsScreen()),
+                  ).then((_) => groups.fetchAll(force: true)),
+                  borderColor: AppColors.gold.withValues(alpha: 0.35),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.mail_outline, color: AppColors.gold),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          '${groups.incomingInvitationCount} pending group invitation${groups.incomingInvitationCount == 1 ? '' : 's'}',
+                          style: Theme.of(context).textTheme.bodyLarge,
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right, color: AppColors.textSecondary, size: 18),
+                    ],
+                  ),
+                ),
+              ),
+            if (groups.groups.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: ModernCard(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const GroupsScreen()),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.group_add_outlined, color: AppColors.green),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Create a group to decide what to eat together',
+                          style: Theme.of(context).textTheme.bodyLarge,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
+              ...groups.groups.take(2).map(
+                (session) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: ModernCard(
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const GroupsScreen()),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.groups, color: AppColors.gold),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(session.name, style: Theme.of(context).textTheme.titleMedium),
+                              Text(
+                                '${session.memberCount} members · ${session.status}',
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             SectionHeader(
               title: 'Friend Requests',
               subtitle: friends.incomingCount > 0

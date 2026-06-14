@@ -14,6 +14,7 @@ from app.schemas.group_location import (
 )
 from app.schemas.group_session import (
     GroupInvitationResponse,
+    GroupInvitationsListResponse,
     GroupInviteCreate,
     GroupSessionCreate,
     GroupSessionListResponse,
@@ -42,6 +43,7 @@ from app.services.group_session_service import (
     get_group_session,
     invite_to_group_session,
     leave_group_session,
+    list_group_invitations,
     list_group_sessions,
     reject_group_invitation,
 )
@@ -69,6 +71,18 @@ def list_groups(
     current_user: User = Depends(get_current_user),
 ) -> GroupSessionListResponse:
     return list_group_sessions(db, current_user.id)
+
+
+@router.get(
+    "/groups/invitations",
+    response_model=GroupInvitationsListResponse,
+    summary="List pending group session invitations",
+)
+def list_invitations(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> GroupInvitationsListResponse:
+    return list_group_invitations(db, current_user.id)
 
 
 @router.get("/groups/{session_id}", response_model=GroupSessionResponse, summary="Get group session")

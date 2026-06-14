@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/cart_provider.dart';
 import '../providers/friends_provider.dart';
+import '../providers/group_provider.dart';
 import '../providers/onboarding_provider.dart';
 import '../providers/preferences_provider.dart';
 import '../theme/app_colors.dart';
@@ -11,6 +12,8 @@ import '../utils/preference_display.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 import 'friend_requests_screen.dart';
 import 'friends_list_screen.dart';
+import 'groups_screen.dart';
+import 'group_invitations_screen.dart';
 import 'search_users_screen.dart';
 import 'budget_preferences_screen.dart';
 import 'health_dashboard_screen.dart';
@@ -36,6 +39,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<PreferencesProvider>().fetch(force: true);
       context.read<FriendsProvider>().fetchAll(force: true);
+      context.read<GroupProvider>().fetchAll(force: true);
     });
   }
 
@@ -47,6 +51,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     context.read<OnboardingProvider>().reset();
     context.read<PreferencesProvider>().reset();
     context.read<FriendsProvider>().reset();
+    context.read<GroupProvider>().reset();
   }
 
   String _nutritionSubtitle(PreferencesProvider prefs) {
@@ -165,6 +170,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final user = context.watch<AuthProvider>().user;
     final prefs = context.watch<PreferencesProvider>();
     final friends = context.watch<FriendsProvider>();
+    final groups = context.watch<GroupProvider>();
     final name = user?['full_name']?.toString() ?? 'Guest';
     final email = user?['email']?.toString() ?? '—';
     final progressPct = (_mockProgress * 100).round();
@@ -177,6 +183,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         onRefresh: () async {
           await prefs.fetch(force: true);
           await friends.fetchAll(force: true);
+          if (!mounted) return;
+          await context.read<GroupProvider>().fetchAll(force: true);
         },
         child: ListView(
           padding: const EdgeInsets.all(AppColors.screenPadding),
@@ -381,6 +389,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 context,
                 MaterialPageRoute(builder: (_) => const SearchUsersScreen()),
               ).then((_) => friends.fetchAll(force: true)),
+            ),
+            ProfileActionCard(
+              icon: Icons.groups,
+              title: 'Group Sessions',
+              subtitle: groups.loadingGroups && groups.groupCount == 0
+                  ? 'Loading…'
+                  : '${groups.groupCount} active · ${groups.incomingInvitationCount} invites',
+              iconColor: AppColors.green,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const GroupsScreen()),
+              ).then((_) => groups.fetchAll(force: true)),
+            ),
+            ProfileActionCard(
+              icon: Icons.mail_outline,
+              title: 'Group Invitations',
+              subtitle: groups.incomingInvitationCount > 0
+                  ? '${groups.incomingInvitationCount} pending invites'
+                  : 'No pending group invites',
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const GroupInvitationsScreen()),
+              ).then((_) => groups.fetchInvitations(force: true)),
             ),
             const SizedBox(height: 20),
             Text('Preferences', style: Theme.of(context).textTheme.titleMedium),

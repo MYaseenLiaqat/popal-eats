@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/cart_provider.dart';
 import 'providers/friends_provider.dart';
+import 'providers/group_provider.dart';
 import 'providers/onboarding_provider.dart';
 import 'providers/preferences_provider.dart';
 import 'screens/login_screen.dart';
@@ -28,6 +29,7 @@ class PopalEatsApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => OnboardingProvider()),
         ChangeNotifierProvider(create: (_) => PreferencesProvider()),
         ChangeNotifierProvider(create: (_) => FriendsProvider()),
+        ChangeNotifierProvider(create: (_) => GroupProvider()),
         ChangeNotifierProvider(create: (_) => CartProvider()),
       ],
       child: MaterialApp(
@@ -110,6 +112,7 @@ class _MainShellWithPreferencesState extends State<_MainShellWithPreferences> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<PreferencesProvider>().fetch(force: true);
       context.read<FriendsProvider>().fetchAll(force: true);
+      context.read<GroupProvider>().fetchAll(force: true);
     });
   }
 
