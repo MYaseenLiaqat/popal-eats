@@ -52,6 +52,14 @@ def test_preferences_update_validation():
         UserPreferencesUpdate(dietary_preferences=["not_a_diet"])
 
 
+def test_allergies_validation():
+    payload = UserPreferencesUpdate(allergies=["Peanuts", "tree_nuts", "Gluten"])
+    assert payload.allergies == ["peanuts", "tree_nuts", "gluten"]
+
+    with pytest.raises(ValidationError):
+        UserPreferencesUpdate(allergies=["unknown_allergen"])
+
+
 def test_disliked_category_filtering():
     dish = _Dish(name="Chocolate Cake", category_name="Desserts")
     assert is_disliked_category(dish, ["desserts"]) is True

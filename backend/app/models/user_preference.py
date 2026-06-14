@@ -20,6 +20,7 @@ class UserPreference(Base):
     budget_max = Column(Numeric(10, 2), nullable=True)
     budget_level = Column(String(16), nullable=True)
     disliked_categories = Column(JSON, nullable=True)
+    allergies = Column(JSON, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at = Column(
         DateTime(timezone=True),

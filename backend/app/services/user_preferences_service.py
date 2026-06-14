@@ -74,6 +74,7 @@ def _to_response(row: UserPreference | None) -> UserPreferencesResponse:
         dietary_preferences=_dietary_preferences_list(row),
         budget_level=infer_budget_level(row.budget_min, row.budget_max, row.budget_level),
         disliked_categories=_normalize_json_list(row.disliked_categories),
+        allergies=_normalize_json_list(row.allergies),
     )
 
 
@@ -99,6 +100,8 @@ def upsert_user_preferences(
         row.dietary_preference = payload.dietary_preferences[0] if payload.dietary_preferences else None
     if payload.disliked_categories is not None:
         row.disliked_categories = payload.disliked_categories
+    if payload.allergies is not None:
+        row.allergies = payload.allergies
     if payload.budget_level is not None:
         row.budget_level = payload.budget_level
         row.budget_min, row.budget_max = budget_bounds_for_level(payload.budget_level)
