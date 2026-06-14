@@ -1,10 +1,23 @@
 import 'api_client.dart';
 import '../models/onboarding_option.dart';
+import '../models/user_preferences.dart';
 
 class PreferencesService {
   PreferencesService({ApiClient? client}) : _client = client ?? ApiClient.instance;
 
   final ApiClient _client;
+
+  Future<UserPreferences> getPreferences() async {
+    final response = await _client.get('/preferences');
+    _client.throwIfError(response);
+    return UserPreferences.fromJson(_client.decodeJson(response));
+  }
+
+  Future<UserPreferences> updatePreferences(UserPreferencesUpdate update) async {
+    final response = await _client.put('/preferences', body: update.toJson());
+    _client.throwIfError(response);
+    return UserPreferences.fromJson(_client.decodeJson(response));
+  }
 
   Future<OnboardingOptions> getOnboardingOptions() async {
     final response = await _client.get('/preferences/onboarding/options');

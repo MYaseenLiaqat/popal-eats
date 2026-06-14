@@ -3,7 +3,9 @@ import 'package:provider/provider.dart';
 
 import 'providers/auth_provider.dart';
 import 'providers/cart_provider.dart';
+import 'providers/friends_provider.dart';
 import 'providers/onboarding_provider.dart';
+import 'providers/preferences_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_shell.dart';
 import 'screens/preference_onboarding_screen.dart';
@@ -24,6 +26,8 @@ class PopalEatsApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()..init()),
         ChangeNotifierProvider(create: (_) => OnboardingProvider()),
+        ChangeNotifierProvider(create: (_) => PreferencesProvider()),
+        ChangeNotifierProvider(create: (_) => FriendsProvider()),
         ChangeNotifierProvider(create: (_) => CartProvider()),
       ],
       child: MaterialApp(
@@ -88,6 +92,29 @@ class _AuthenticatedGateState extends State<_AuthenticatedGate> {
       return const PreferenceOnboardingScreen();
     }
 
+    return const _MainShellWithPreferences();
+  }
+}
+
+class _MainShellWithPreferences extends StatefulWidget {
+  const _MainShellWithPreferences();
+
+  @override
+  State<_MainShellWithPreferences> createState() => _MainShellWithPreferencesState();
+}
+
+class _MainShellWithPreferencesState extends State<_MainShellWithPreferences> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<PreferencesProvider>().fetch(force: true);
+      context.read<FriendsProvider>().fetchAll(force: true);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return const MainShell();
   }
 }

@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-import '../data/local_preferences_store.dart';
+import '../providers/preferences_provider.dart';
 import '../theme/app_colors.dart';
+import '../utils/preference_display.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 
-/// Local-only nutrition preferences (Sprint 5B).
+/// Nutrition preferences synced with backend GET/PUT /preferences.
 class NutritionPreferencesScreen extends StatefulWidget {
   const NutritionPreferencesScreen({super.key});
 
@@ -15,45 +17,45 @@ class NutritionPreferencesScreen extends StatefulWidget {
 
 class _NutritionPreferencesScreenState
     extends State<NutritionPreferencesScreen> {
-  final _store = LocalPreferencesStore();
-  final _calorieGoalController = TextEditingController();
+  final _calorieGoalController = TextEditingController(text: '2100');
 
-  static const _dietTypes = [
-    'None',
-    'Vegetarian',
-    'Vegan',
-    'Keto',
-    'High Protein',
-  ];
-
-  static const _cuisineOptions = [
-    'Pakistani',
-    'Italian',
-    'Chinese',
-    'Mediterranean',
-    'American',
-  ];
-
-  String _dietType = LocalPreferencesStore.defaultDietType;
+  String _dietType = 'None';
   final Set<String> _selectedCuisines = {};
-  bool _loading = true;
+  bool _initialized = false;
+
+  List<MapEntry<String, String>> get _cuisineOptions {
+    final entries = PreferenceDisplay.nutritionCuisineOptions.entries.toList();
+    for (final key in _selectedCuisines) {
+      if (!PreferenceDisplay.nutritionCuisineOptions.containsKey(key)) {
+        entries.add(MapEntry(key, PreferenceDisplay.cuisineLabel(key)));
+      }
+    }
+    return entries;
+  }
 
   @override
   void initState() {
     super.initState();
-    _loadSaved();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadFromBackend());
   }
 
-  Future<void> _loadSaved() async {
-    final saved = await _store.loadNutrition();
+  Future<void> _loadFromBackend() async {
+    final provider = context.read<PreferencesProvider>();
+    await provider.fetch(force: true);
     if (!mounted) return;
+
+    final prefs = provider.preferences;
+    if (provider.error != null || prefs == null) {
+      setState(() => _initialized = true);
+      return;
+    }
+
     setState(() {
-      _calorieGoalController.text = saved.calorieGoal;
-      _dietType = saved.dietType;
+      _dietType = PreferenceDisplay.dietLabelFromBackend(prefs.dietaryPreferences);
       _selectedCuisines
         ..clear()
-        ..addAll(saved.cuisines);
-      _loading = false;
+        ..addAll(prefs.favoriteCuisines);
+      _initialized = true;
     });
   }
 
@@ -64,17 +66,21 @@ class _NutritionPreferencesScreenState
   }
 
   Future<void> _save() async {
-    await _store.saveNutrition(
-      calorieGoal: _calorieGoalController.text.trim().isEmpty
-          ? LocalPreferencesStore.defaultCalorieGoal
-          : _calorieGoalController.text.trim(),
-      dietType: _dietType,
-      cuisines: _selectedCuisines,
+    final provider = context.read<PreferencesProvider>();
+    final ok = await provider.updateNutrition(
+      favoriteCuisines: _selectedCuisines.toList(),
+      dietaryPreferences: PreferenceDisplay.dietToBackend(_dietType),
     );
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Preferences saved')),
-    );
+    if (ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Preferences saved')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(provider.error ?? 'Could not save preferences')),
+      );
+    }
   }
 
   Widget _chip({
@@ -107,126 +113,161 @@ class _NutritionPreferencesScreenState
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    if (_loading) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Nutrition Preferences')),
-        body: const Center(child: CircularProgressIndicator()),
+  Widget _buildBody(PreferencesProvider provider) {
+    if (!_initialized || (provider.loading && provider.preferences == null)) {
+      return const Center(child: CircularProgressIndicator(color: AppColors.gold));
+    }
+
+    if (provider.error != null && provider.preferences == null) {
+      return Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          EmptyState(
+            icon: Icons.cloud_off_outlined,
+            title: 'Could not load preferences',
+            subtitle: provider.error,
+          ),
+          TextButton(
+            onPressed: _loadFromBackend,
+            child: const Text('Retry'),
+          ),
+        ],
       );
     }
 
+    return ListView(
+      padding: const EdgeInsets.all(AppColors.screenPadding),
+      children: [
+        ModernCard(
+          gradient: AppColors.headerGradient,
+          borderColor: AppColors.gold.withValues(alpha: 0.35),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.gold.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.restaurant_menu,
+                  color: AppColors.gold,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Nutrition goals',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: AppColors.gold,
+                          ),
+                    ),
+                    Text(
+                      'Personalize AI recommendations',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SectionHeader(
+          title: 'Daily calorie goal',
+          subtitle: 'Target intake per day (device display only)',
+        ),
+        ModernCard(
+          borderColor: AppColors.gold.withValues(alpha: 0.4),
+          child: TextField(
+            controller: _calorieGoalController,
+            keyboardType: TextInputType.number,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: AppColors.gold,
+                ),
+            decoration: const InputDecoration(
+              hintText: '2100',
+              suffixText: 'kcal',
+              suffixStyle: TextStyle(color: AppColors.textSecondary),
+              border: InputBorder.none,
+              isDense: true,
+            ),
+          ),
+        ),
+        const SectionHeader(
+          title: 'Diet type',
+          subtitle: 'Select your diet preference',
+        ),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: PreferenceDisplay.dietTypes.map((diet) {
+            return _chip(
+              label: diet,
+              selected: _dietType == diet,
+              onTap: () => setState(() => _dietType = diet),
+              accent: AppColors.green,
+            );
+          }).toList(),
+        ),
+        const SectionHeader(
+          title: 'Preferred cuisines',
+          subtitle: 'Tap to select multiple',
+        ),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: _cuisineOptions.map((entry) {
+            return _chip(
+              label: entry.value,
+              selected: _selectedCuisines.contains(entry.key),
+              onTap: () {
+                setState(() {
+                  if (_selectedCuisines.contains(entry.key)) {
+                    _selectedCuisines.remove(entry.key);
+                  } else {
+                    _selectedCuisines.add(entry.key);
+                  }
+                });
+              },
+            );
+          }).toList(),
+        ),
+        if ((provider.preferences?.allergies ?? []).isNotEmpty) ...[
+          const SectionHeader(
+            title: 'Allergies',
+            subtitle: 'Synced from onboarding',
+          ),
+          ModernCard(
+            child: Text(
+              provider.preferences!.allergies
+                  .map(PreferenceDisplay.allergyLabel)
+                  .join(', '),
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ),
+        ],
+        const SizedBox(height: 24),
+        GoldActionButton(
+          label: 'Save Preferences',
+          icon: Icons.check,
+          loading: provider.saving,
+          onPressed: provider.saving ? null : _save,
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<PreferencesProvider>();
+
     return Scaffold(
       appBar: AppBar(title: const Text('Nutrition Preferences')),
-      body: ListView(
-        padding: const EdgeInsets.all(AppColors.screenPadding),
-        children: [
-          ModernCard(
-            gradient: AppColors.headerGradient,
-            borderColor: AppColors.gold.withValues(alpha: 0.35),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppColors.gold.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(
-                    Icons.restaurant_menu,
-                    color: AppColors.gold,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Nutrition goals',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              color: AppColors.gold,
-                            ),
-                      ),
-                      Text(
-                        'Personalize AI recommendations',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SectionHeader(
-            title: 'Daily calorie goal',
-            subtitle: 'Target intake per day',
-          ),
-          ModernCard(
-            borderColor: AppColors.gold.withValues(alpha: 0.4),
-            child: TextField(
-              controller: _calorieGoalController,
-              keyboardType: TextInputType.number,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: AppColors.gold,
-                  ),
-              decoration: const InputDecoration(
-                hintText: '2100',
-                suffixText: 'kcal',
-                suffixStyle: TextStyle(color: AppColors.textSecondary),
-                border: InputBorder.none,
-                isDense: true,
-              ),
-            ),
-          ),
-          const SectionHeader(
-            title: 'Diet type',
-            subtitle: 'Select your diet preference',
-          ),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _dietTypes.map((diet) {
-              return _chip(
-                label: diet,
-                selected: _dietType == diet,
-                onTap: () => setState(() => _dietType = diet),
-                accent: AppColors.green,
-              );
-            }).toList(),
-          ),
-          const SectionHeader(
-            title: 'Preferred cuisines',
-            subtitle: 'Tap to select multiple',
-          ),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _cuisineOptions.map((cuisine) {
-              return _chip(
-                label: cuisine,
-                selected: _selectedCuisines.contains(cuisine),
-                onTap: () {
-                  setState(() {
-                    if (_selectedCuisines.contains(cuisine)) {
-                      _selectedCuisines.remove(cuisine);
-                    } else {
-                      _selectedCuisines.add(cuisine);
-                    }
-                  });
-                },
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 24),
-          GoldActionButton(
-            label: 'Save Preferences',
-            icon: Icons.check,
-            onPressed: _save,
-          ),
-          const SizedBox(height: 16),
-        ],
-      ),
+      body: _buildBody(provider),
     );
   }
 }

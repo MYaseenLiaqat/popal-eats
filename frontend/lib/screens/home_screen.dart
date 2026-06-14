@@ -3,7 +3,9 @@ import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
 import '../providers/cart_provider.dart';
+import '../providers/friends_provider.dart';
 import '../providers/onboarding_provider.dart';
+import '../providers/preferences_provider.dart';
 import '../data/chef_specials_mock_data.dart';
 import '../services/category_service.dart';
 import '../services/dish_service.dart';
@@ -153,6 +155,8 @@ class _HomeScreenState extends State<HomeScreen> {
               if (!context.mounted) return;
               context.read<CartProvider>().reset();
               context.read<OnboardingProvider>().reset();
+              context.read<PreferencesProvider>().reset();
+              context.read<FriendsProvider>().reset();
             },
           ),
         ],
