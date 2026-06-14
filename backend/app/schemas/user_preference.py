@@ -21,8 +21,32 @@ ALLOWED_DIETARY_PREFERENCES = frozenset(
     }
 )
 
+ALLOWED_ALLERGIES = frozenset(
+    {
+        "peanuts",
+        "tree_nuts",
+        "shellfish",
+        "fish",
+        "eggs",
+        "milk",
+        "dairy",
+        "soy",
+        "wheat",
+        "gluten",
+        "sesame",
+        "mustard",
+        "celery",
+        "sulphites",
+        "lupin",
+        "molluscs",
+        "lactose",
+        "nuts",
+    }
+)
+
 MAX_FAVORITE_CUISINES = 15
 MAX_DISLIKED_CATEGORIES = 20
+MAX_ALLERGIES = 20
 MAX_CUISINE_LENGTH = 50
 MAX_CATEGORY_LENGTH = 80
 
@@ -51,6 +75,7 @@ class UserPreferencesResponse(BaseModel):
     dietary_preferences: list[str] = Field(default_factory=list)
     budget_level: BudgetLevel | None = None
     disliked_categories: list[str] = Field(default_factory=list)
+    allergies: list[str] = Field(default_factory=list)
 
 
 class UserPreferencesUpdate(BaseModel):
@@ -58,6 +83,7 @@ class UserPreferencesUpdate(BaseModel):
     dietary_preferences: list[str] | None = None
     budget_level: BudgetLevel | None = None
     disliked_categories: list[str] | None = None
+    allergies: list[str] | None = None
 
     @field_validator("favorite_cuisines")
     @classmethod
@@ -95,6 +121,25 @@ class UserPreferencesUpdate(BaseModel):
             if key not in ALLOWED_DIETARY_PREFERENCES:
                 allowed = ", ".join(sorted(ALLOWED_DIETARY_PREFERENCES))
                 raise ValueError(f"Invalid dietary preference '{raw}'. Allowed: {allowed}")
+            if key not in seen:
+                seen.add(key)
+                normalized.append(key)
+        return normalized
+
+    @field_validator("allergies")
+    @classmethod
+    def validate_allergies(cls, value: list[str] | None) -> list[str] | None:
+        if value is None:
+            return None
+        normalized: list[str] = []
+        seen: set[str] = set()
+        for raw in value[:MAX_ALLERGIES]:
+            key = str(raw).strip().lower().replace(" ", "_").replace("-", "_")
+            if not key:
+                continue
+            if key not in ALLOWED_ALLERGIES:
+                allowed = ", ".join(sorted(ALLOWED_ALLERGIES))
+                raise ValueError(f"Invalid allergy '{raw}'. Allowed: {allowed}")
             if key not in seen:
                 seen.add(key)
                 normalized.append(key)
