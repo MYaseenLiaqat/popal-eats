@@ -174,13 +174,26 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Recommendations')),
       body: loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: AppColors.gold))
           : error != null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppColors.screenPadding),
-                    child: Text(error!, textAlign: TextAlign.center),
-                  ),
+              ? ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  children: [
+                    SizedBox(
+                      height: MediaQuery.of(context).size.height * 0.5,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          EmptyState(
+                            icon: Icons.cloud_off_outlined,
+                            title: 'Could not load recommendations',
+                            subtitle: error,
+                          ),
+                          TextButton(onPressed: _load, child: const Text('Retry')),
+                        ],
+                      ),
+                    ),
+                  ],
                 )
               : RefreshIndicator(
                   onRefresh: _load,

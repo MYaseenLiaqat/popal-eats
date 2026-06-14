@@ -13,10 +13,6 @@ class MainShell extends StatefulWidget {
 
   final int initialIndex;
 
-  static MainShellState? of(BuildContext context) {
-    return context.findAncestorStateOfType<MainShellState>();
-  }
-
   @override
   State<MainShell> createState() => MainShellState();
 }

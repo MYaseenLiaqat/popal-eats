@@ -29,6 +29,7 @@ class ApiClient {
     _token = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_tokenKey);
+    await prefs.remove('refresh_token');
   }
 
   bool get isAuthenticated => _token != null && _token!.isNotEmpty;

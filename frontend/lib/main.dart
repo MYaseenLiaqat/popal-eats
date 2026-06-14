@@ -83,6 +83,38 @@ class _AuthenticatedGateState extends State<_AuthenticatedGate> {
     final onboarding = context.watch<OnboardingProvider>();
 
     if (onboarding.completed == null) {
+      if (onboarding.error != null) {
+        return Scaffold(
+          body: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(AppColors.screenPadding),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.cloud_off_outlined, size: 48, color: AppColors.gold),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Could not verify onboarding status',
+                    style: Theme.of(context).textTheme.titleMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    onboarding.error!,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 20),
+                  TextButton(
+                    onPressed: onboarding.loading ? null : _refreshOnboarding,
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }
       return const Scaffold(
         body: Center(
           child: CircularProgressIndicator(color: AppColors.gold),

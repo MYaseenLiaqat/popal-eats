@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../models/order.dart';
 import '../theme/app_colors.dart';
 import '../widgets/ui/app_ui_widgets.dart';
-import 'main_shell.dart';
 
 /// Shown after a successful checkout.
 class OrderSuccessScreen extends StatelessWidget {
@@ -107,11 +106,7 @@ class OrderSuccessScreen extends StatelessWidget {
               label: 'Continue Shopping',
               icon: Icons.home_outlined,
               onPressed: () {
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (_) => const MainShell()),
-                  (_) => false,
-                );
+                Navigator.of(context).popUntil((route) => route.isFirst);
               },
             ),
             const SizedBox(height: 8),
