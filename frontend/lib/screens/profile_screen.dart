@@ -3,12 +3,12 @@ import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
 import '../providers/cart_provider.dart';
+import '../providers/onboarding_provider.dart';
 import '../theme/app_colors.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 import 'friend_requests_screen.dart';
 import 'budget_preferences_screen.dart';
 import 'health_dashboard_screen.dart';
-import 'login_screen.dart';
 import 'nutrition_preferences_screen.dart';
 
 /// Profile — FYP dark theme layout.
@@ -25,10 +25,7 @@ class ProfileScreen extends StatelessWidget {
     await auth.logout();
     if (!context.mounted) return;
     context.read<CartProvider>().reset();
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-    );
+    context.read<OnboardingProvider>().reset();
   }
 
   @override

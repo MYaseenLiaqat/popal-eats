@@ -1,6 +1,6 @@
 """SQLAlchemy ORM model for the `users` table."""
 
-from sqlalchemy import Column, DateTime, Integer, String, Text
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -19,6 +19,7 @@ class User(Base):
     username = Column(String(32), unique=True, index=True, nullable=True)
     bio = Column(Text, nullable=True)
     profile_image = Column(String(500), nullable=True)
+    onboarding_completed = Column(Boolean, default=False, nullable=False, server_default="false")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     restaurants = relationship("Restaurant", back_populates="owner")
@@ -74,6 +75,11 @@ class User(Base):
     )
     group_member_locations = relationship(
         "GroupMemberLocation",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+    group_votes = relationship(
+        "GroupVote",
         back_populates="user",
         cascade="all, delete-orphan",
     )

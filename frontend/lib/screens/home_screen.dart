@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
 import '../providers/cart_provider.dart';
+import '../providers/onboarding_provider.dart';
 import '../data/chef_specials_mock_data.dart';
 import '../services/category_service.dart';
 import '../services/dish_service.dart';
@@ -11,7 +12,6 @@ import '../services/review_service.dart';
 import '../theme/app_colors.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 import 'admin_dashboard_screen.dart';
-import 'login_screen.dart';
 import 'menu_upload_screen.dart';
 import 'recommendations_screen.dart';
 import 'restaurant_detail_screen.dart';
@@ -152,10 +152,7 @@ class _HomeScreenState extends State<HomeScreen> {
               await auth.logout();
               if (!context.mounted) return;
               context.read<CartProvider>().reset();
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-              );
+              context.read<OnboardingProvider>().reset();
             },
           ),
         ],

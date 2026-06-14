@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 
+import '../providers/onboarding_provider.dart';
 import '../services/api_client.dart';
 import '../services/auth_service.dart';
 
@@ -67,6 +68,7 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> logout() async {
     await _auth.logout();
+    await OnboardingProvider.clearCache();
     user = null;
     notifyListeners();
   }

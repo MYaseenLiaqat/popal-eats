@@ -6,10 +6,13 @@ from app.models.category import Category
 from app.models.dish import Dish
 from app.models.friend_request import FriendRequest
 from app.models.friendship import Friendship
+from app.models.group_decision import GroupDecision
 from app.models.group_invitation import GroupInvitation
 from app.models.group_member_location import GroupMemberLocation
+from app.models.group_recommendation import GroupRecommendation
 from app.models.group_session import GroupSession
 from app.models.group_session_member import GroupSessionMember
+from app.models.group_vote import GroupVote
 from app.models.menu_upload import MenuUpload
 from app.models.order import Order
 from app.models.order_item import OrderItem
@@ -29,6 +32,9 @@ __all__ = [
     "GroupSessionMember",
     "GroupInvitation",
     "GroupMemberLocation",
+    "GroupRecommendation",
+    "GroupVote",
+    "GroupDecision",
     "Category",
     "Restaurant",
     "Dish",

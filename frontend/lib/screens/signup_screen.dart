@@ -5,7 +5,6 @@ import '../providers/auth_provider.dart';
 import '../theme/app_colors.dart';
 import '../widgets/auth_screen_widgets.dart';
 import '../widgets/ui/app_ui_widgets.dart';
-import 'main_shell.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -36,11 +35,7 @@ class _SignupScreenState extends State<SignupScreen> {
     );
     if (!mounted) return;
     if (ok) {
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const MainShell()),
-        (_) => false,
-      );
+      Navigator.of(context).popUntil((route) => route.isFirst);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(auth.error ?? 'Registration failed')),
