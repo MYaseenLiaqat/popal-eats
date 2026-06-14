@@ -1,7 +1,9 @@
 import 'api_client.dart';
+import '../models/group_decision.dart';
 import '../models/group_member_location.dart';
 import '../models/group_recommendation.dart';
 import '../models/group_session.dart';
+import '../models/group_vote.dart';
 
 class GroupService {
   GroupService({ApiClient? client}) : _client = client ?? ApiClient.instance;
@@ -87,5 +89,35 @@ class GroupService {
     final response = await _client.get('/groups/$sessionId/recommendations');
     _client.throwIfError(response);
     return GroupRecommendationsResult.fromJson(_client.decodeJson(response));
+  }
+
+  Future<GroupVote> voteOnRecommendation({
+    required int recommendationId,
+    required String voteType,
+  }) async {
+    final response = await _client.post(
+      '/groups/recommendations/$recommendationId/vote',
+      body: {'vote_type': voteType},
+    );
+    _client.throwIfError(response);
+    return GroupVote.fromJson(_client.decodeJson(response));
+  }
+
+  Future<GroupVoteSummary> getVoteSummary(int recommendationId) async {
+    final response = await _client.get('/groups/recommendations/$recommendationId/votes');
+    _client.throwIfError(response);
+    return GroupVoteSummary.fromJson(_client.decodeJson(response));
+  }
+
+  Future<GroupDecision> getDecision(int sessionId) async {
+    final response = await _client.get('/groups/$sessionId/decision');
+    _client.throwIfError(response);
+    return GroupDecision.fromJson(_client.decodeJson(response));
+  }
+
+  Future<GroupDecision> markDecisionOrdered(int sessionId) async {
+    final response = await _client.post('/groups/$sessionId/decision/ordered');
+    _client.throwIfError(response);
+    return GroupDecision.fromJson(_client.decodeJson(response));
   }
 }

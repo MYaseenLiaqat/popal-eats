@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../models/group_recommendation.dart';
+import '../../models/group_vote.dart';
 import '../../theme/app_colors.dart';
 import '../ui/app_ui_widgets.dart';
+import 'group_vote_widgets.dart';
 
 class GroupScoreBadge extends StatelessWidget {
   const GroupScoreBadge({super.key, required this.percent});
@@ -41,10 +43,24 @@ class GroupRecommendationCard extends StatelessWidget {
     super.key,
     required this.recommendation,
     this.onTap,
+    this.userVote,
+    this.voteSummary,
+    this.voting = false,
+    this.pendingVote,
+    this.loadingVoteSummary = false,
+    this.onVote,
   });
 
   final GroupDishRecommendation recommendation;
   final VoidCallback? onTap;
+  final String? userVote;
+  final GroupVoteSummary? voteSummary;
+  final bool voting;
+  final String? pendingVote;
+  final bool loadingVoteSummary;
+  final ValueChanged<String>? onVote;
+
+  bool get _canVote => recommendation.recommendationId != null && onVote != null;
 
   @override
   Widget build(BuildContext context) {
@@ -156,6 +172,24 @@ class GroupRecommendationCard extends StatelessWidget {
                         children: recommendation.reasons.map(_reasonChip).toList(),
                       ),
                     ],
+                    if (_canVote) ...[
+                      const SizedBox(height: 16),
+                      Text(
+                        'Your vote',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 14),
+                      ),
+                      const SizedBox(height: 8),
+                      VoteControls(
+                        selectedVote: userVote,
+                        pendingVote: pendingVote,
+                        voting: voting,
+                        onVote: onVote!,
+                      ),
+                    ],
+                    VoteSummarySection(
+                      summary: voteSummary,
+                      loading: loadingVoteSummary,
+                    ),
                   ],
                 ),
               ),

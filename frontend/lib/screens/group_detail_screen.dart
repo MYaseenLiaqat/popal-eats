@@ -9,6 +9,7 @@ import '../utils/date_display.dart';
 import '../widgets/groups/group_locations_section.dart';
 import '../widgets/groups/group_session_card.dart';
 import '../widgets/ui/app_ui_widgets.dart';
+import 'group_decision_screen.dart';
 import 'group_recommendations_screen.dart';
 import 'invite_friends_to_group_screen.dart';
 
@@ -230,6 +231,21 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
           subtitle: 'See dishes ranked for your group',
           iconColor: AppColors.gold,
           onTap: () => _openRecommendations(session),
+        ),
+        ProfileActionCard(
+          icon: Icons.how_to_vote_outlined,
+          title: 'Group Decision',
+          subtitle: 'Consensus status and agreed pick',
+          iconColor: AppColors.green,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => GroupDecisionScreen(
+                sessionId: session.id,
+                groupName: session.name,
+              ),
+            ),
+          ),
         ),
         const SizedBox(height: 24),
       ],

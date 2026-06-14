@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
 
+import '../models/group_decision.dart';
 import '../models/group_member_location.dart';
 import '../models/group_recommendation.dart';
 import '../models/group_session.dart';
+import '../models/group_vote.dart';
 import '../services/api_client.dart';
 import '../services/device_location_service.dart';
 import '../services/dish_service.dart';
@@ -26,20 +28,31 @@ class GroupProvider extends ChangeNotifier {
   int? locationsSessionId;
   GroupRecommendationsResult? groupRecommendations;
   int? recommendationsSessionId;
+  GroupDecision? groupDecision;
+  int? decisionSessionId;
+  final Map<int, GroupVoteSummary> voteSummaries = {};
+  final Map<int, String> userVotesByRecommendationId = {};
+  final Map<int, String> pendingVotesByRecommendationId = {};
+  final Set<int> votingRecommendationIds = {};
 
   bool loadingGroups = false;
   bool loadingDetail = false;
   bool loadingInvitations = false;
   bool loadingLocations = false;
   bool loadingRecommendations = false;
+  bool loadingDecision = false;
+  bool loadingVoteSummaries = false;
   bool sharingLocation = false;
   bool actionLoading = false;
+  bool orderingDecision = false;
 
   String? groupsError;
   String? detailError;
   String? invitationsError;
   String? locationsError;
   String? recommendationsError;
+  String? decisionError;
+  String? voteError;
   String? actionError;
   String? locationActionError;
 
@@ -56,18 +69,29 @@ class GroupProvider extends ChangeNotifier {
     locationsSessionId = null;
     groupRecommendations = null;
     recommendationsSessionId = null;
+    groupDecision = null;
+    decisionSessionId = null;
+    voteSummaries.clear();
+    userVotesByRecommendationId.clear();
+    pendingVotesByRecommendationId.clear();
+    votingRecommendationIds.clear();
     loadingGroups = false;
     loadingDetail = false;
     loadingInvitations = false;
     loadingLocations = false;
     loadingRecommendations = false;
+    loadingDecision = false;
+    loadingVoteSummaries = false;
     sharingLocation = false;
     actionLoading = false;
+    orderingDecision = false;
     groupsError = null;
     detailError = null;
     invitationsError = null;
     locationsError = null;
     recommendationsError = null;
+    decisionError = null;
+    voteError = null;
     actionError = null;
     locationActionError = null;
     notifyListeners();
@@ -232,6 +256,10 @@ class GroupProvider extends ChangeNotifier {
         recommendations: enriched,
       );
       recommendationsSessionId = sessionId;
+      await Future.wait([
+        loadDecision(sessionId, force: true),
+        loadVoteSummariesForRecommendations(enriched),
+      ]);
     } on ApiException catch (e) {
       recommendationsError = e.message;
     } finally {
@@ -255,6 +283,157 @@ class GroupProvider extends ChangeNotifier {
         }
       }),
     );
+  }
+
+  GroupVoteSummary? voteSummaryFor(int recommendationId) => voteSummaries[recommendationId];
+
+  String? userVoteFor(int recommendationId) => userVotesByRecommendationId[recommendationId];
+
+  bool isVotingOn(int recommendationId) => votingRecommendationIds.contains(recommendationId);
+
+  Future<void> loadVoteSummary(int recommendationId) async {
+    try {
+      final summary = await _service.getVoteSummary(recommendationId);
+      voteSummaries[recommendationId] = summary;
+      voteError = null;
+    } on ApiException catch (e) {
+      voteError = e.message;
+    } finally {
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadVoteSummariesForRecommendations(
+    List<GroupDishRecommendation> items,
+  ) async {
+    final ids = items.map((item) => item.recommendationId).whereType<int>().toList();
+    if (ids.isEmpty) return;
+
+    loadingVoteSummaries = true;
+    voteError = null;
+    notifyListeners();
+
+    try {
+      final results = await Future.wait(
+        ids.map((id) async {
+          try {
+            final summary = await _service.getVoteSummary(id);
+            return MapEntry(id, summary);
+          } catch (_) {
+            return null;
+          }
+        }),
+      );
+      for (final entry in results) {
+        if (entry != null) voteSummaries[entry.key] = entry.value;
+      }
+    } finally {
+      loadingVoteSummaries = false;
+      notifyListeners();
+    }
+  }
+
+  String? pendingVoteFor(int recommendationId) => pendingVotesByRecommendationId[recommendationId];
+
+  Future<bool> voteOnRecommendation({
+    required int recommendationId,
+    required String voteType,
+    int? sessionId,
+  }) async {
+    votingRecommendationIds.add(recommendationId);
+    pendingVotesByRecommendationId[recommendationId] = voteType;
+    voteError = null;
+    notifyListeners();
+
+    try {
+      final vote = await _service.voteOnRecommendation(
+        recommendationId: recommendationId,
+        voteType: voteType,
+      );
+      userVotesByRecommendationId[recommendationId] = vote.voteType;
+      await loadVoteSummary(recommendationId);
+      if (sessionId != null) {
+        await loadDecision(sessionId, force: true);
+      }
+      _syncRecommendationScores(recommendationId);
+      return true;
+    } on ApiException catch (e) {
+      voteError = e.message;
+      return false;
+    } finally {
+      votingRecommendationIds.remove(recommendationId);
+      pendingVotesByRecommendationId.remove(recommendationId);
+      notifyListeners();
+    }
+  }
+
+  void _syncRecommendationScores(int recommendationId) {
+    final summary = voteSummaries[recommendationId];
+    if (summary == null || groupRecommendations == null) return;
+
+    final updated = groupRecommendations!.recommendations.map((item) {
+      if (item.recommendationId != recommendationId) return item;
+      return GroupDishRecommendation(
+        recommendationId: item.recommendationId,
+        dishId: item.dishId,
+        dishName: item.dishName,
+        restaurantName: item.restaurantName,
+        price: item.price,
+        score: item.score,
+        consensusScore: summary.consensusScore,
+        finalScore: summary.finalScore,
+        reasons: item.reasons,
+        dishImageUrl: item.dishImageUrl,
+      );
+    }).toList()
+      ..sort((a, b) => b.displayScore.compareTo(a.displayScore));
+
+    groupRecommendations = GroupRecommendationsResult(
+      groupId: groupRecommendations!.groupId,
+      memberCount: groupRecommendations!.memberCount,
+      groupLatitude: groupRecommendations!.groupLatitude,
+      groupLongitude: groupRecommendations!.groupLongitude,
+      recommendations: updated,
+    );
+  }
+
+  Future<void> loadDecision(int sessionId, {bool force = false}) async {
+    if (loadingDecision) return;
+    if (!force && decisionSessionId == sessionId && groupDecision != null && decisionError == null) {
+      return;
+    }
+
+    loadingDecision = true;
+    decisionError = null;
+    notifyListeners();
+
+    try {
+      groupDecision = await _service.getDecision(sessionId);
+      decisionSessionId = sessionId;
+    } on ApiException catch (e) {
+      decisionError = e.message;
+    } finally {
+      loadingDecision = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> markDecisionOrdered(int sessionId) async {
+    orderingDecision = true;
+    decisionError = null;
+    notifyListeners();
+
+    try {
+      groupDecision = await _service.markDecisionOrdered(sessionId);
+      decisionSessionId = sessionId;
+      return true;
+    } on ApiException catch (e) {
+      decisionError = e.message;
+      return false;
+    } finally {
+      orderingDecision = false;
+      notifyListeners();
+    }
   }
 
   Future<void> fetchInvitations({bool force = false}) async {
@@ -374,8 +553,16 @@ class GroupProvider extends ChangeNotifier {
     locationsSessionId = null;
     groupRecommendations = null;
     recommendationsSessionId = null;
+    groupDecision = null;
+    decisionSessionId = null;
+    voteSummaries.clear();
+    userVotesByRecommendationId.clear();
+    pendingVotesByRecommendationId.clear();
+    votingRecommendationIds.clear();
     locationsError = null;
     recommendationsError = null;
+    decisionError = null;
+    voteError = null;
     locationActionError = null;
     notifyListeners();
   }
