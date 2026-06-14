@@ -6,7 +6,6 @@ import '../theme/app_colors.dart';
 import '../widgets/auth_screen_widgets.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 import 'signup_screen.dart';
-import 'main_shell.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -30,12 +29,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final auth = context.read<AuthProvider>();
     final ok = await auth.login(_email.text.trim(), _password.text);
     if (!mounted) return;
-    if (ok) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const MainShell()),
-      );
-    } else {
+    if (!ok) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(auth.error ?? 'Login failed')),
       );

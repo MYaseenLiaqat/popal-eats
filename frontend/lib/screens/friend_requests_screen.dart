@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-import '../data/community_mock_data.dart';
+import '../providers/friends_provider.dart';
 import '../theme/app_colors.dart';
-import '../widgets/community_avatar.dart';
+import '../widgets/social/social_user_card.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 
-/// Mock friend requests with local accept/decline actions.
+/// Friend requests with incoming and outgoing tabs.
 class FriendRequestsScreen extends StatefulWidget {
   const FriendRequestsScreen({super.key});
 
@@ -13,108 +14,209 @@ class FriendRequestsScreen extends StatefulWidget {
   State<FriendRequestsScreen> createState() => _FriendRequestsScreenState();
 }
 
-class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
-  late List<MockFriendRequest> _requests;
+class _FriendRequestsScreenState extends State<FriendRequestsScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
-    _requests = List<MockFriendRequest>.from(mockFriendRequests);
+    _tabController = TabController(length: 2, vsync: this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<FriendsProvider>().fetchRequests(force: true);
+    });
   }
 
-  void _accept(MockFriendRequest req) {
-    setState(() => _requests.removeWhere((r) => r.id == req.id));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('You are now friends with ${req.name}')),
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _accept(int requestId, String name) async {
+    final provider = context.read<FriendsProvider>();
+    final ok = await provider.acceptRequest(requestId);
+    if (!mounted) return;
+    if (ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('You are now friends with $name')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(provider.actionError ?? 'Could not accept request')),
+      );
+    }
+  }
+
+  Future<void> _reject(int requestId, String name) async {
+    final provider = context.read<FriendsProvider>();
+    final ok = await provider.rejectRequest(requestId);
+    if (!mounted) return;
+    if (ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Declined request from $name')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(provider.actionError ?? 'Could not decline request')),
+      );
+    }
+  }
+
+  Widget _buildIncoming(FriendsProvider provider) {
+    if (provider.loadingRequests && provider.incomingRequests.isEmpty) {
+      return const Center(child: CircularProgressIndicator(color: AppColors.gold));
+    }
+
+    if (provider.requestsError != null && provider.incomingRequests.isEmpty) {
+      return _errorState(provider.requestsError!, () => provider.fetchRequests(force: true));
+    }
+
+    if (provider.incomingRequests.isEmpty) {
+      return const EmptyState(
+        icon: Icons.inbox_outlined,
+        title: 'No incoming requests',
+        subtitle: 'When someone adds you, requests appear here',
+      );
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.all(AppColors.screenPadding),
+      itemCount: provider.incomingRequests.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      itemBuilder: (context, index) {
+        final request = provider.incomingRequests[index];
+        final user = request.sender;
+        if (user == null) return const SizedBox.shrink();
+
+        return ModernCard(
+          child: Column(
+            children: [
+              SocialUserCard(user: user, compact: true, useCard: false),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: provider.actionLoading
+                          ? null
+                          : () => _reject(request.id, user.fullName),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.textSecondary,
+                        side: BorderSide(
+                          color: AppColors.surfaceLight.withValues(alpha: 0.8),
+                        ),
+                      ),
+                      child: const Text('Decline'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: provider.actionLoading
+                          ? null
+                          : () => _accept(request.id, user.fullName),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.green,
+                        foregroundColor: const Color(0xFF0A1F12),
+                      ),
+                      child: const Text('Accept'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
-  void _decline(MockFriendRequest req) {
-    setState(() => _requests.removeWhere((r) => r.id == req.id));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Declined request from ${req.name}')),
+  Widget _buildOutgoing(FriendsProvider provider) {
+    if (provider.loadingRequests && provider.outgoingRequests.isEmpty) {
+      return const Center(child: CircularProgressIndicator(color: AppColors.gold));
+    }
+
+    if (provider.requestsError != null && provider.outgoingRequests.isEmpty) {
+      return _errorState(provider.requestsError!, () => provider.fetchRequests(force: true));
+    }
+
+    if (provider.outgoingRequests.isEmpty) {
+      return const EmptyState(
+        icon: Icons.outbound_outlined,
+        title: 'No outgoing requests',
+        subtitle: 'Search users to send friend requests',
+      );
+    }
+
+    return ListView.separated(
+      padding: const EdgeInsets.all(AppColors.screenPadding),
+      itemCount: provider.outgoingRequests.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 10),
+      itemBuilder: (context, index) {
+        final request = provider.outgoingRequests[index];
+        final user = request.receiver;
+        if (user == null) return const SizedBox.shrink();
+
+        return SocialUserCard(
+          user: user,
+          trailing: const PendingBadge(),
+        );
+      },
+    );
+  }
+
+  Widget _errorState(String message, VoidCallback onRetry) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        EmptyState(
+          icon: Icons.cloud_off_outlined,
+          title: 'Could not load requests',
+          subtitle: message,
+        ),
+        TextButton(onPressed: onRetry, child: const Text('Retry')),
+      ],
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final provider = context.watch<FriendsProvider>();
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Friend Requests')),
-      body: _requests.isEmpty
-          ? const EmptyState(
-              icon: Icons.person_add_outlined,
-              title: 'No pending requests',
-              subtitle: 'New friend requests will appear here',
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(AppColors.screenPadding),
-              itemCount: _requests.length,
-              itemBuilder: (context, index) {
-                final req = _requests[index];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: ModernCard(
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            CommunityAvatar(name: req.name, size: 52),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    req.name,
-                                    style:
-                                        Theme.of(context).textTheme.titleMedium,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '${req.mutualFriends} mutual friends',
-                                    style:
-                                        Theme.of(context).textTheme.bodyMedium,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 14),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: OutlinedButton(
-                                onPressed: () => _decline(req),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: AppColors.textSecondary,
-                                  side: BorderSide(
-                                    color: AppColors.surfaceLight
-                                        .withValues(alpha: 0.8),
-                                  ),
-                                ),
-                                child: const Text('Decline'),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: FilledButton(
-                                onPressed: () => _accept(req),
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: AppColors.green,
-                                  foregroundColor: const Color(0xFF0A1F12),
-                                ),
-                                child: const Text('Accept'),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
+      appBar: AppBar(
+        title: const Text('Friend Requests'),
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: AppColors.gold,
+          labelColor: AppColors.gold,
+          unselectedLabelColor: AppColors.textSecondary,
+          tabs: [
+            Tab(
+              text: provider.incomingCount > 0
+                  ? 'Incoming (${provider.incomingCount})'
+                  : 'Incoming',
             ),
+            Tab(
+              text: provider.outgoingCount > 0
+                  ? 'Sent (${provider.outgoingCount})'
+                  : 'Sent',
+            ),
+          ],
+        ),
+      ),
+      body: RefreshIndicator(
+        color: AppColors.gold,
+        onRefresh: () => provider.fetchRequests(force: true),
+        child: TabBarView(
+          controller: _tabController,
+          children: [
+            _buildIncoming(provider),
+            _buildOutgoing(provider),
+          ],
+        ),
+      ),
     );
   }
 }

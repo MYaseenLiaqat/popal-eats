@@ -14,6 +14,7 @@ from app.schemas.group_location import (
 )
 from app.schemas.group_session import (
     GroupInvitationResponse,
+    GroupInvitationsListResponse,
     GroupInviteCreate,
     GroupSessionCreate,
     GroupSessionListResponse,
@@ -23,13 +24,26 @@ from app.services.group_location_service import (
     list_group_member_locations,
     upsert_group_member_location,
 )
-from app.services.group_recommendation_service import get_group_recommendations
+from app.schemas.group_voting import (
+    GroupDecisionResponse,
+    GroupVoteCreate,
+    GroupVoteResponse,
+    GroupVoteSummaryResponse,
+)
+from app.services.group_voting_service import (
+    cast_group_vote,
+    get_group_decision,
+    get_group_recommendations_with_snapshots,
+    get_vote_summary,
+    mark_group_decision_ordered,
+)
 from app.services.group_session_service import (
     accept_group_invitation,
     create_group_session,
     get_group_session,
     invite_to_group_session,
     leave_group_session,
+    list_group_invitations,
     list_group_sessions,
     reject_group_invitation,
 )
@@ -57,6 +71,18 @@ def list_groups(
     current_user: User = Depends(get_current_user),
 ) -> GroupSessionListResponse:
     return list_group_sessions(db, current_user.id)
+
+
+@router.get(
+    "/groups/invitations",
+    response_model=GroupInvitationsListResponse,
+    summary="List pending group session invitations",
+)
+def list_invitations(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> GroupInvitationsListResponse:
+    return list_group_invitations(db, current_user.id)
 
 
 @router.get("/groups/{session_id}", response_model=GroupSessionResponse, summary="Get group session")
@@ -159,4 +185,57 @@ def read_group_recommendations(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> GroupRecommendationsResponse:
-    return get_group_recommendations(db, current_user.id, session_id)
+    return get_group_recommendations_with_snapshots(db, current_user.id, session_id)
+
+
+@router.post(
+    "/groups/recommendations/{recommendation_id}/vote",
+    response_model=GroupVoteResponse,
+    summary="Cast or update a vote on a group recommendation",
+)
+def vote_on_recommendation(
+    recommendation_id: int,
+    body: GroupVoteCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> GroupVoteResponse:
+    return cast_group_vote(db, current_user.id, recommendation_id, body.vote_type)
+
+
+@router.get(
+    "/groups/recommendations/{recommendation_id}/votes",
+    response_model=GroupVoteSummaryResponse,
+    summary="Get vote summary for a group recommendation",
+)
+def read_recommendation_votes(
+    recommendation_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> GroupVoteSummaryResponse:
+    return get_vote_summary(db, current_user.id, recommendation_id)
+
+
+@router.get(
+    "/groups/{session_id}/decision",
+    response_model=GroupDecisionResponse,
+    summary="Get group consensus decision",
+)
+def read_group_decision(
+    session_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> GroupDecisionResponse:
+    return get_group_decision(db, current_user.id, session_id)
+
+
+@router.post(
+    "/groups/{session_id}/decision/ordered",
+    response_model=GroupDecisionResponse,
+    summary="Mark agreed group decision as ordered",
+)
+def mark_decision_ordered(
+    session_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> GroupDecisionResponse:
+    return mark_group_decision_ordered(db, current_user.id, session_id)

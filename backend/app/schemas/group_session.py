@@ -61,3 +61,15 @@ class GroupSessionResponse(BaseModel):
 
 class GroupSessionListResponse(BaseModel):
     groups: list[GroupSessionResponse]
+
+
+class GroupInvitationEnrichedResponse(GroupInvitationResponse):
+    """Invitation with session context for list UIs."""
+
+    session_name: str | None = None
+    session_host: UserPublicProfile | None = None
+
+
+class GroupInvitationsListResponse(BaseModel):
+    incoming: list[GroupInvitationEnrichedResponse]
+    outgoing: list[GroupInvitationEnrichedResponse]

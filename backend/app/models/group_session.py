@@ -36,3 +36,14 @@ class GroupSession(Base):
         back_populates="session",
         cascade="all, delete-orphan",
     )
+    group_recommendations = relationship(
+        "GroupRecommendation",
+        back_populates="session",
+        cascade="all, delete-orphan",
+    )
+    group_decision = relationship(
+        "GroupDecision",
+        back_populates="session",
+        uselist=False,
+        cascade="all, delete-orphan",
+    )
