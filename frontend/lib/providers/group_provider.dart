@@ -1,9 +1,11 @@
 import 'package:flutter/foundation.dart';
 
 import '../models/group_member_location.dart';
+import '../models/group_recommendation.dart';
 import '../models/group_session.dart';
 import '../services/api_client.dart';
 import '../services/device_location_service.dart';
+import '../services/dish_service.dart';
 import '../services/group_service.dart';
 
 class GroupProvider extends ChangeNotifier {
@@ -22,11 +24,14 @@ class GroupProvider extends ChangeNotifier {
   List<GroupInvitation> outgoingInvitations = [];
   List<GroupMemberLocation> memberLocations = [];
   int? locationsSessionId;
+  GroupRecommendationsResult? groupRecommendations;
+  int? recommendationsSessionId;
 
   bool loadingGroups = false;
   bool loadingDetail = false;
   bool loadingInvitations = false;
   bool loadingLocations = false;
+  bool loadingRecommendations = false;
   bool sharingLocation = false;
   bool actionLoading = false;
 
@@ -34,6 +39,7 @@ class GroupProvider extends ChangeNotifier {
   String? detailError;
   String? invitationsError;
   String? locationsError;
+  String? recommendationsError;
   String? actionError;
   String? locationActionError;
 
@@ -48,16 +54,20 @@ class GroupProvider extends ChangeNotifier {
     outgoingInvitations = [];
     memberLocations = [];
     locationsSessionId = null;
+    groupRecommendations = null;
+    recommendationsSessionId = null;
     loadingGroups = false;
     loadingDetail = false;
     loadingInvitations = false;
     loadingLocations = false;
+    loadingRecommendations = false;
     sharingLocation = false;
     actionLoading = false;
     groupsError = null;
     detailError = null;
     invitationsError = null;
     locationsError = null;
+    recommendationsError = null;
     actionError = null;
     locationActionError = null;
     notifyListeners();
@@ -198,6 +208,55 @@ class GroupProvider extends ChangeNotifier {
 
   DeviceLocationService get locationService => _locationService;
 
+  Future<void> loadRecommendations(int sessionId, {bool force = false}) async {
+    if (loadingRecommendations) return;
+    if (!force &&
+        recommendationsSessionId == sessionId &&
+        groupRecommendations != null &&
+        recommendationsError == null) {
+      return;
+    }
+
+    loadingRecommendations = true;
+    recommendationsError = null;
+    notifyListeners();
+
+    try {
+      final result = await _service.getGroupRecommendations(sessionId);
+      final enriched = await _enrichRecommendationsWithImages(result.recommendations);
+      groupRecommendations = GroupRecommendationsResult(
+        groupId: result.groupId,
+        memberCount: result.memberCount,
+        groupLatitude: result.groupLatitude,
+        groupLongitude: result.groupLongitude,
+        recommendations: enriched,
+      );
+      recommendationsSessionId = sessionId;
+    } on ApiException catch (e) {
+      recommendationsError = e.message;
+    } finally {
+      loadingRecommendations = false;
+      notifyListeners();
+    }
+  }
+
+  Future<List<GroupDishRecommendation>> _enrichRecommendationsWithImages(
+    List<GroupDishRecommendation> items,
+  ) async {
+    final dishService = DishService();
+    return Future.wait(
+      items.map((item) async {
+        try {
+          final dish = await dishService.getById(item.dishId);
+          if (dish.image == null || dish.image!.isEmpty) return item;
+          return item.copyWith(dishImageUrl: dish.image);
+        } catch (_) {
+          return item;
+        }
+      }),
+    );
+  }
+
   Future<void> fetchInvitations({bool force = false}) async {
     if (!ApiClient.instance.isAuthenticated) return;
     if (loadingInvitations) return;
@@ -313,7 +372,10 @@ class GroupProvider extends ChangeNotifier {
     detailError = null;
     memberLocations = [];
     locationsSessionId = null;
+    groupRecommendations = null;
+    recommendationsSessionId = null;
     locationsError = null;
+    recommendationsError = null;
     locationActionError = null;
     notifyListeners();
   }

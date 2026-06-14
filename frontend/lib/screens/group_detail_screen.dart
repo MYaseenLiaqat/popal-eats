@@ -9,6 +9,7 @@ import '../utils/date_display.dart';
 import '../widgets/groups/group_locations_section.dart';
 import '../widgets/groups/group_session_card.dart';
 import '../widgets/ui/app_ui_widgets.dart';
+import 'group_recommendations_screen.dart';
 import 'invite_friends_to_group_screen.dart';
 
 /// Group session detail with members, locations, and actions.
@@ -90,9 +91,15 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
     }
   }
 
-  void _showComingSoon(String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$feature coming in the next update')),
+  void _openRecommendations(GroupSession session) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => GroupRecommendationsScreen(
+          sessionId: session.id,
+          groupName: session.name,
+        ),
+      ),
     );
   }
 
@@ -222,7 +229,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
           title: 'View Recommendations',
           subtitle: 'See dishes ranked for your group',
           iconColor: AppColors.gold,
-          onTap: () => _showComingSoon('Group recommendations'),
+          onTap: () => _openRecommendations(session),
         ),
         const SizedBox(height: 24),
       ],

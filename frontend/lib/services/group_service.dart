@@ -1,5 +1,6 @@
 import 'api_client.dart';
 import '../models/group_member_location.dart';
+import '../models/group_recommendation.dart';
 import '../models/group_session.dart';
 
 class GroupService {
@@ -80,5 +81,11 @@ class GroupService {
     );
     _client.throwIfError(response);
     return GroupMemberLocation.fromJson(_client.decodeJson(response));
+  }
+
+  Future<GroupRecommendationsResult> getGroupRecommendations(int sessionId) async {
+    final response = await _client.get('/groups/$sessionId/recommendations');
+    _client.throwIfError(response);
+    return GroupRecommendationsResult.fromJson(_client.decodeJson(response));
   }
 }
