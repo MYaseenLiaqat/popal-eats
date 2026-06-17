@@ -6,6 +6,7 @@ import '../providers/cart_provider.dart';
 import '../services/api_client.dart';
 import '../services/order_service.dart';
 import '../theme/app_colors.dart';
+import '../utils/price_formatter.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 import 'order_success_screen.dart';
 
@@ -248,7 +249,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                           ),
                                         ),
                                         Text(
-                                          '\$${(unitPrice * item.quantity).toStringAsFixed(2)}',
+                                          PriceFormatter.format(unitPrice * item.quantity),
                                           style: Theme.of(context)
                                               .textTheme
                                               .titleMedium
@@ -264,7 +265,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                 SummaryLine(
                                   label: 'Subtotal',
                                   value:
-                                      '\$${cart.subtotal.toStringAsFixed(2)}',
+                                      PriceFormatter.format(cart.subtotal),
                                 ),
                               ],
                             ),
@@ -288,7 +289,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           const SizedBox(height: 12),
                           TotalAmountCard(
                             label: 'Total amount',
-                            amount: '\$${cart.subtotal.toStringAsFixed(2)}',
+                            amount: PriceFormatter.format(cart.subtotal),
                           ),
                           const SizedBox(height: 100),
                         ],

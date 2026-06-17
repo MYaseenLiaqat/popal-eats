@@ -27,12 +27,33 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   Future<void> _submit() async {
+    final name = _name.text.trim();
+    final email = _email.text.trim();
+    final password = _password.text;
+
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter your full name')),
+      );
+      return;
+    }
+    if (email.isEmpty || !email.contains('@') || !email.contains('.')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Use a valid email like demoA@example.com (avoid .test domains)'),
+        ),
+      );
+      return;
+    }
+    if (password.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Password must be at least 6 characters')),
+      );
+      return;
+    }
+
     final auth = context.read<AuthProvider>();
-    final ok = await auth.register(
-      _name.text.trim(),
-      _email.text.trim(),
-      _password.text,
-    );
+    final ok = await auth.register(name, email, password);
     if (!mounted) return;
     if (ok) {
       Navigator.of(context).popUntil((route) => route.isFirst);
@@ -55,7 +76,7 @@ class _SignupScreenState extends State<SignupScreen> {
           children: [
             const AuthBrandedHeader(
               title: 'Create your account',
-              subtitle: 'Join Popal Eats for smart food recommendations',
+              subtitle: 'Find meals tailored to your taste',
             ),
             const SizedBox(height: 20),
             AuthFormCard(
@@ -80,8 +101,10 @@ class _SignupScreenState extends State<SignupScreen> {
                     decoration: authInputDecoration(
                       label: 'Email',
                       icon: Icons.email_outlined,
+                      hint: 'you@example.com',
                     ),
                     keyboardType: TextInputType.emailAddress,
+                    autofillHints: const [AutofillHints.email],
                   ),
                   const SizedBox(height: 14),
                   TextField(

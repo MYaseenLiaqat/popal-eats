@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/order.dart';
 import '../theme/app_colors.dart';
+import '../utils/price_formatter.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 
 /// Shown after a successful checkout.
@@ -99,7 +100,7 @@ class OrderSuccessScreen extends StatelessWidget {
             const SizedBox(height: 12),
             TotalAmountCard(
               label: 'Total paid',
-              amount: '\$${order.totalPrice.toStringAsFixed(2)}',
+              amount: PriceFormatter.format(order.totalPrice),
             ),
             const Spacer(),
             GoldActionButton(

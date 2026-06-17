@@ -7,17 +7,17 @@ import '../providers/friends_provider.dart';
 import '../providers/group_provider.dart';
 import '../providers/onboarding_provider.dart';
 import '../providers/preferences_provider.dart';
+import '../providers/reels_provider.dart';
 import '../theme/app_colors.dart';
 import '../utils/preference_display.dart';
 import '../widgets/ui/app_ui_widgets.dart';
-import 'friend_requests_screen.dart';
+import '../widgets/social/notification_hub_button.dart';
 import 'friends_list_screen.dart';
 import 'groups_screen.dart';
-import 'group_invitations_screen.dart';
-import 'search_users_screen.dart';
 import 'budget_preferences_screen.dart';
 import 'health_dashboard_screen.dart';
 import 'nutrition_preferences_screen.dart';
+import 'orders_screen.dart';
 
 /// Profile — FYP dark theme layout.
 class ProfileScreen extends StatefulWidget {
@@ -52,6 +52,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     context.read<PreferencesProvider>().reset();
     context.read<FriendsProvider>().reset();
     context.read<GroupProvider>().reset();
+    context.read<ReelsProvider>().reset();
   }
 
   String _nutritionSubtitle(PreferencesProvider prefs) {
@@ -177,7 +178,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
+      appBar: AppBar(
+        title: const Text('Profile'),
+        actions: const [NotificationHubButton()],
+      ),
       body: RefreshIndicator(
         color: AppColors.gold,
         onRefresh: () async {
@@ -235,6 +239,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             const SizedBox(height: 16),
+            Text('Orders', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            ProfileActionCard(
+              icon: Icons.receipt_long_outlined,
+              title: 'Your Orders',
+              subtitle: 'View order history and track status',
+              iconColor: AppColors.gold,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const OrdersScreen()),
+              ),
+            ),
+            const SizedBox(height: 20),
             ModernCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -368,50 +385,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ).then((_) => friends.fetchFriends(force: true)),
             ),
             ProfileActionCard(
-              icon: Icons.person_add_outlined,
-              title: 'Friend Requests',
-              subtitle: friends.incomingCount > 0
-                  ? '${friends.incomingCount} incoming · ${friends.outgoingCount} sent'
-                  : '${friends.outgoingCount} sent requests',
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const FriendRequestsScreen(),
-                ),
-              ).then((_) => friends.fetchRequests(force: true)),
-            ),
-            ProfileActionCard(
-              icon: Icons.person_search_outlined,
-              title: 'Search Users',
-              subtitle: 'Find people by name or username',
-              iconColor: AppColors.gold,
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SearchUsersScreen()),
-              ).then((_) => friends.fetchAll(force: true)),
-            ),
-            ProfileActionCard(
               icon: Icons.groups,
               title: 'Group Sessions',
               subtitle: groups.loadingGroups && groups.groupCount == 0
                   ? 'Loading…'
-                  : '${groups.groupCount} active · ${groups.incomingInvitationCount} invites',
+                  : '${groups.groupCount} active · ${groups.incomingInvitationCount} invites in Activity',
               iconColor: AppColors.green,
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const GroupsScreen()),
               ).then((_) => groups.fetchAll(force: true)),
-            ),
-            ProfileActionCard(
-              icon: Icons.mail_outline,
-              title: 'Group Invitations',
-              subtitle: groups.incomingInvitationCount > 0
-                  ? '${groups.incomingInvitationCount} pending invites'
-                  : 'No pending group invites',
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const GroupInvitationsScreen()),
-              ).then((_) => groups.fetchInvitations(force: true)),
             ),
             const SizedBox(height: 20),
             Text('Preferences', style: Theme.of(context).textTheme.titleMedium),

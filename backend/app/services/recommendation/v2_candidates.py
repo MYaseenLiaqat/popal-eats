@@ -11,6 +11,7 @@ import re
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.dish import Dish
+from app.services.recommendation.market_filter import filter_dishes_for_market
 from app.services.recommendation.v2_debug import log_pipeline_stage
 
 logger = logging.getLogger("popal.recommendations.v2")
@@ -155,7 +156,18 @@ def load_eligible_dishes(db: Session, *, user_id: int | None = None) -> list[Dis
     if len(eligible) > 30:
         logger.debug("V2 logged 30 of %d eligible candidates (truncated)", len(eligible))
 
-    return eligible
+    market_filtered = filter_dishes_for_market(eligible)
+    if eligible and not market_filtered:
+        logger.warning(
+            "V2 Lahore market filter removed all %d eligible dishes — check restaurant.city values",
+            len(eligible),
+        )
+    logger.info(
+        "V2 Lahore market filter: %d of %d eligible dishes",
+        len(market_filtered),
+        len(eligible),
+    )
+    return market_filtered
 
 
 def _exclusion_reason(dish: Dish) -> str:

@@ -212,7 +212,7 @@ class HealthDashboardScreen extends StatelessWidget {
           ),
           const SectionHeader(
             title: 'Health insights',
-            subtitle: 'AI-powered tips',
+            subtitle: 'Helpful tips for your goals',
           ),
           ..._insights.map(
             (tip) => Padding(

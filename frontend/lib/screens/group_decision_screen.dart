@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/group_decision.dart';
 import '../providers/group_provider.dart';
 import '../theme/app_colors.dart';
+import '../utils/price_formatter.dart';
 import '../widgets/groups/group_vote_widgets.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 import 'dish_detail_screen.dart';
@@ -166,7 +167,7 @@ class _GroupDecisionScreenState extends State<GroupDecisionScreen> {
                 if (decision.price != null) ...[
                   const SizedBox(height: 8),
                   Text(
-                    '\$${decision.price!.toStringAsFixed(2)}',
+                    PriceFormatter.format(decision.price!),
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           color: AppColors.green,
                           fontWeight: FontWeight.w700,

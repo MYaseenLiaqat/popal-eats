@@ -86,7 +86,10 @@ class GroupService {
   }
 
   Future<GroupRecommendationsResult> getGroupRecommendations(int sessionId) async {
-    final response = await _client.get('/groups/$sessionId/recommendations');
+    final response = await _client.get(
+      '/groups/$sessionId/recommendations',
+      timeout: const Duration(minutes: 3),
+    );
     _client.throwIfError(response);
     return GroupRecommendationsResult.fromJson(_client.decodeJson(response));
   }

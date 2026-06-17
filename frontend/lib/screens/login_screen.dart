@@ -26,8 +26,24 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _submit() async {
+    final email = _email.text.trim();
+    final password = _password.text;
+
+    if (email.isEmpty || !email.contains('@')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter a valid email (e.g. you@example.com)')),
+      );
+      return;
+    }
+    if (password.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Password must be at least 6 characters')),
+      );
+      return;
+    }
+
     final auth = context.read<AuthProvider>();
-    final ok = await auth.login(_email.text.trim(), _password.text);
+    final ok = await auth.login(email, password);
     if (!mounted) return;
     if (!ok) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -48,7 +64,7 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 12),
             const AuthBrandedHeader(
               title: 'Welcome back',
-              subtitle: 'AI-powered food, nutrition & community',
+              subtitle: 'Discover food you\'ll love',
             ),
             const SizedBox(height: 20),
             AuthFormCard(

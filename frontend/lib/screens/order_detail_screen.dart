@@ -4,6 +4,7 @@ import '../models/order.dart';
 import '../services/dish_service.dart';
 import '../services/order_service.dart';
 import '../theme/app_colors.dart';
+import '../utils/price_formatter.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 
 /// Single order from `GET /orders/{id}`.
@@ -218,7 +219,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                                         ),
                                       ),
                                       Text(
-                                        '\$${(item.price * item.quantity).toStringAsFixed(2)}',
+                                        PriceFormatter.format(item.price * item.quantity),
                                         style: Theme.of(context)
                                             .textTheme
                                             .titleMedium
@@ -233,7 +234,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                           const SizedBox(height: 12),
                           TotalAmountCard(
                             label: 'Total amount',
-                            amount: '\$${o.totalPrice.toStringAsFixed(2)}',
+                            amount: PriceFormatter.format(o.totalPrice),
                           ),
                           const SizedBox(height: 16),
                         ],

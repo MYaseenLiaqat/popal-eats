@@ -7,6 +7,7 @@ import '../services/category_service.dart';
 import '../services/dish_service.dart';
 import '../services/restaurant_service.dart';
 import '../theme/app_colors.dart';
+import '../utils/price_formatter.dart';
 import '../widgets/cart_icon_button.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 
@@ -195,7 +196,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        '\$${d.price.toStringAsFixed(2)}',
+                        PriceFormatter.format(d.price),
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                               color: AppColors.gold,
                             ),

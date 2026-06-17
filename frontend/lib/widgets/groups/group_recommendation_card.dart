@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/group_recommendation.dart';
 import '../../models/group_vote.dart';
+import '../../utils/price_formatter.dart';
 import '../../theme/app_colors.dart';
 import '../ui/app_ui_widgets.dart';
 import 'group_vote_widgets.dart';
@@ -136,7 +137,7 @@ class GroupRecommendationCard extends StatelessWidget {
                     Row(
                       children: [
                         Text(
-                          '\$${recommendation.price.toStringAsFixed(2)}',
+                          PriceFormatter.format(recommendation.price),
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                 color: AppColors.gold,
                                 fontWeight: FontWeight.w700,
@@ -150,7 +151,7 @@ class GroupRecommendationCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(99),
                           ),
                           child: Text(
-                            'Group score',
+                            'Group match',
                             style: Theme.of(context).textTheme.labelSmall?.copyWith(
                                   color: AppColors.green,
                                   fontWeight: FontWeight.w600,

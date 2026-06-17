@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../theme/app_colors.dart';
+import '../../utils/price_formatter.dart';
+import '../../utils/recommendation_copy.dart';
 
 class SectionHeader extends StatelessWidget {
   const SectionHeader({
@@ -151,7 +153,7 @@ class AiMatchBadge extends StatelessWidget {
           ),
           const SizedBox(width: 4),
           Text(
-            'AI Match',
+            'Great match',
             style: TextStyle(
               color: AppColors.green,
               fontSize: compact ? 11 : 12,
@@ -411,7 +413,7 @@ class RecommendationCard extends StatelessWidget {
     required this.explanation,
     this.calories,
     this.onTap,
-    this.showAiBadge = true,
+    this.showAiBadge = false,
     this.whyReasons = const [],
     this.matchPercent,
   });
@@ -452,7 +454,7 @@ class RecommendationCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(
-                    Icons.psychology_outlined,
+                    Icons.restaurant_outlined,
                     color: AppColors.green,
                     size: 22,
                   ),
@@ -486,7 +488,7 @@ class RecommendationCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            if (score > 0)
+            if (calories != null)
               Row(
                 children: [
                   Container(
@@ -495,50 +497,20 @@ class RecommendationCard extends StatelessWidget {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.gold.withValues(alpha: 0.12),
+                      color: AppColors.green.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      'Score ${score.toStringAsFixed(1)}',
+                      '$calories kcal',
                       style: const TextStyle(
-                        color: AppColors.gold,
-                        fontWeight: FontWeight.w600,
+                        color: AppColors.green,
+                        fontWeight: FontWeight.w500,
                         fontSize: 13,
                       ),
                     ),
                   ),
-                  if (calories != null) ...[
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.green.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        '$calories kcal',
-                        style: const TextStyle(
-                          color: AppColors.green,
-                          fontWeight: FontWeight.w500,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                  ],
                 ],
               ),
-            if (explanation.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              Text(
-                explanation,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      height: 1.4,
-                    ),
-              ),
-            ],
             if (matchPercent != null || whyReasons.isNotEmpty) ...[
               const SizedBox(height: 14),
               Container(
@@ -564,7 +536,9 @@ class RecommendationCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 6),
                           Text(
-                            'AI Match: $matchPercent%',
+                            matchPercent != null
+                                ? RecommendationCopy.matchLabel(matchPercent!)
+                                : 'Great match',
                             style: const TextStyle(
                               color: AppColors.green,
                               fontWeight: FontWeight.w700,
@@ -575,7 +549,7 @@ class RecommendationCard extends StatelessWidget {
                     if (whyReasons.isNotEmpty) ...[
                       if (matchPercent != null) const SizedBox(height: 10),
                       Text(
-                        'Why recommended:',
+                        'Why you\'ll like it:',
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                               fontSize: 14,
                             ),
@@ -612,7 +586,7 @@ class RecommendationCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '\$${price.toStringAsFixed(2)}',
+                  PriceFormatter.format(price),
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         color: AppColors.gold,
                       ),

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../providers/preferences_provider.dart';
 import '../theme/app_colors.dart';
+import '../utils/price_formatter.dart';
 import '../utils/preference_display.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 
@@ -150,7 +151,7 @@ class _BudgetPreferencesScreenState extends State<BudgetPreferencesScreen> {
                   color: AppColors.gold,
                 ),
             decoration: const InputDecoration(
-              prefixText: '\$ ',
+              prefixText: PriceFormatter.fieldPrefix,
               prefixStyle: TextStyle(color: AppColors.gold),
               border: InputBorder.none,
               isDense: true,
@@ -170,7 +171,7 @@ class _BudgetPreferencesScreenState extends State<BudgetPreferencesScreen> {
                   color: AppColors.green,
                 ),
             decoration: const InputDecoration(
-              prefixText: '\$ ',
+              prefixText: PriceFormatter.fieldPrefix,
               prefixStyle: TextStyle(color: AppColors.green),
               border: InputBorder.none,
               isDense: true,

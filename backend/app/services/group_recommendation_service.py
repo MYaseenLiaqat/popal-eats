@@ -28,6 +28,8 @@ from app.services.group_recommendation.scoring import (
     score_popularity,
 )
 from app.services.group_session_service import _get_session_or_404, _is_session_active, _require_member
+from app.services.recommendation.market_filter import filter_dishes_for_market
+from app.services.recommendation.price_adjustment import apply_price_outlier_penalty
 from app.services.recommendation.v2_candidates import load_eligible_dishes
 from app.services.recommendation.v2_catalog import load_tag_maps
 
@@ -116,6 +118,7 @@ def _score_dishes(
             budget_score=budget_score,
             popularity_score=popularity_score,
         )
+        final_score = apply_price_outlier_penalty(final_score, dish.price)
         reasons = build_reasons(
             matching_members=matching,
             total_members=total,
@@ -167,19 +170,21 @@ def get_group_recommendations(
     candidates = load_eligible_dishes(db, user_id=user_id)
     dish_tags_map, restaurant_tags_map = load_tag_maps(db)
     filtered = _filter_candidates(candidates, context, dish_tags_map, restaurant_tags_map)
+    market_filtered = filter_dishes_for_market(filtered)
     logger.info(
-        "GROUP_FILTERING_COMPLETE session_id=%s candidates=%d after_filter=%d",
+        "GROUP_FILTERING_COMPLETE session_id=%s candidates=%d after_filter=%d lahore=%d",
         session_id,
         len(candidates),
         len(filtered),
+        len(market_filtered),
     )
 
-    restaurants = [dish.restaurant for dish in filtered if dish.restaurant]
+    restaurants = [dish.restaurant for dish in market_filtered if dish.restaurant]
     restaurant_coords = build_restaurant_coordinate_map(restaurants)
     order_counts = _load_order_counts(db)
 
     recommendations = _score_dishes(
-        filtered,
+        market_filtered,
         context,
         dish_tags_map=dish_tags_map,
         restaurant_tags_map=restaurant_tags_map,

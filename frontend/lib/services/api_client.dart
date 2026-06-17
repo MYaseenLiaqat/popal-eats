@@ -51,10 +51,11 @@ class ApiClient {
     String path, {
     Map<String, String>? query,
     bool auth = true,
+    Duration? timeout,
   }) async {
     return http
         .get(_uri(path, query), headers: _headers(auth: auth))
-        .timeout(ApiConfig.timeout);
+        .timeout(timeout ?? ApiConfig.timeout);
   }
 
   Future<http.Response> post(
@@ -109,8 +110,30 @@ class ApiClient {
     try {
       err = decodeJson(r);
     } catch (_) {}
-    final msg = err['error'] ?? err['detail'] ?? r.body;
-    throw ApiException(r.statusCode, msg.toString());
+    final msg = _formatErrorMessage(err, r.body);
+    throw ApiException(r.statusCode, msg);
+  }
+
+  String _formatErrorMessage(Map<String, dynamic> err, String fallback) {
+    final details = err['details'];
+    if (details is List && details.isNotEmpty) {
+      final messages = details
+          .whereType<Map>()
+          .map((item) {
+            final field = (item['loc'] is List && (item['loc'] as List).length > 1)
+                ? (item['loc'] as List).last.toString()
+                : 'field';
+            final msg = item['msg']?.toString() ?? 'Invalid value';
+            return '${field == 'body' ? 'input' : field}: $msg';
+          })
+          .where((m) => m.isNotEmpty)
+          .toList();
+      if (messages.isNotEmpty) return messages.join('\n');
+    }
+
+    final error = err['error'] ?? err['detail'];
+    if (error != null) return error.toString();
+    return fallback;
   }
 }
 
