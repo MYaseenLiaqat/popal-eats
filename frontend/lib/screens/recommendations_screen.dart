@@ -3,10 +3,13 @@ import 'package:flutter/material.dart';
 import '../models/recommendation.dart';
 import '../services/recommendation_service.dart';
 import '../theme/app_colors.dart';
+import '../utils/recommendation_copy.dart';
+import '../widgets/social/notification_hub_button.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 import 'dish_detail_screen.dart';
+import 'reels_screen.dart';
 
-/// Recommendation Engine V2 — personalized, trending, and popular dishes.
+/// Personalized, trending, and popular dishes.
 class RecommendationsScreen extends StatefulWidget {
   const RecommendationsScreen({super.key});
 
@@ -73,52 +76,6 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
     return rec.score.round().clamp(0, 100);
   }
 
-  List<String> _whyReasons(Recommendation rec) {
-    final reasons = <String>[];
-    final breakdown = rec.scoreBreakdown;
-
-    if (breakdown != null) {
-      if (breakdown.cuisineScore >= 1) {
-        reasons.add('Matches cuisine preference');
-      }
-      if (breakdown.budgetScore >= 1) {
-        reasons.add('Within budget');
-      }
-      if (breakdown.nutritionScore >= 1) {
-        reasons.add('Fits nutrition goals');
-      }
-      if (breakdown.popularityScore >= 1 && reasons.length < 4) {
-        reasons.add('Popular with other users');
-      }
-      if (breakdown.contentScore >= 1 && reasons.length < 4) {
-        reasons.add('Matches your taste profile');
-      }
-    }
-
-    for (final signal in rec.signalsUsed) {
-      if (reasons.length >= 4) break;
-      if (signal.trim().isEmpty) continue;
-      final normalized = signal.trim();
-      if (!reasons.contains(normalized)) {
-        reasons.add(normalized);
-      }
-    }
-
-    if (reasons.isEmpty && rec.explanation.isNotEmpty) {
-      reasons.add(rec.explanation);
-    }
-
-    if (reasons.isEmpty) {
-      return const [
-        'Matches cuisine preference',
-        'Within budget',
-        'High protein',
-      ];
-    }
-
-    return reasons.take(4).toList();
-  }
-
   Widget _buildSection({
     required String title,
     required String subtitle,
@@ -146,7 +103,7 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
         if (items.isEmpty)
           ModernCard(
             child: Text(
-              'Check back later for AI-powered picks',
+              'Check back later for new picks',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
           )
@@ -160,7 +117,7 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
               explanation: rec.explanation,
               calories: rec.calories,
               matchPercent: _matchPercent(rec),
-              whyReasons: _whyReasons(rec),
+              whyReasons: RecommendationCopy.humanReasons(rec),
               onTap: () => _openDish(rec),
             ),
           ),
@@ -172,15 +129,31 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Recommendations')),
+      appBar: AppBar(
+        title: const Text('Discover'),
+        actions: const [NotificationHubButton()],
+      ),
       body: loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: AppColors.gold))
           : error != null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppColors.screenPadding),
-                    child: Text(error!, textAlign: TextAlign.center),
-                  ),
+              ? ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  children: [
+                    SizedBox(
+                      height: MediaQuery.of(context).size.height * 0.5,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          EmptyState(
+                            icon: Icons.cloud_off_outlined,
+                            title: 'Could not load recommendations',
+                            subtitle: error,
+                          ),
+                          TextButton(onPressed: _load, child: const Text('Retry')),
+                        ],
+                      ),
+                    ),
+                  ],
                 )
               : RefreshIndicator(
                   onRefresh: _load,
@@ -204,7 +177,7 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: const Icon(
-                                    Icons.psychology,
+                                    Icons.restaurant_outlined,
                                     color: AppColors.green,
                                     size: 28,
                                   ),
@@ -216,7 +189,7 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'AI Nutrition Engine',
+                                        RecommendationCopy.sectionHeroTitle,
                                         style: Theme.of(context)
                                             .textTheme
                                             .titleLarge
@@ -224,7 +197,7 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
-                                        'Personalized picks based on your taste & health goals',
+                                        RecommendationCopy.sectionHeroSubtitle,
                                         style: Theme.of(context)
                                             .textTheme
                                             .bodyMedium,
@@ -234,15 +207,13 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 14),
-                            const AiMatchBadge(),
                           ],
                         ),
                       ),
                       _buildSection(
                         title: 'For You',
                         subtitle:
-                            '${personalized.length} personalized matches',
+                            '${personalized.length} dishes picked for you',
                         icon: Icons.favorite_outline,
                         accent: AppColors.gold,
                         items: personalized,
@@ -260,6 +231,55 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                         icon: Icons.local_fire_department_outlined,
                         accent: AppColors.gold,
                         items: popular,
+                      ),
+                      const SectionHeader(
+                        title: 'Recipe & chef reels',
+                        subtitle: 'Short food stories — video coming soon',
+                      ),
+                      ModernCard(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const ReelsScreen()),
+                        ),
+                        borderColor: AppColors.gold.withValues(alpha: 0.35),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: AppColors.gold.withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(
+                                Icons.play_circle_outline,
+                                color: AppColors.gold,
+                                size: 28,
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Watch reels',
+                                    style: Theme.of(context).textTheme.titleMedium,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Swipe through recipe and chef previews',
+                                    style: Theme.of(context).textTheme.bodyMedium,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(
+                              Icons.arrow_forward_ios,
+                              size: 16,
+                              color: AppColors.textSecondary,
+                            ),
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 16),
                     ],

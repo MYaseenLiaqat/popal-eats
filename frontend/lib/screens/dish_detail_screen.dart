@@ -5,6 +5,7 @@ import '../models/dish.dart';
 import '../providers/cart_provider.dart';
 import '../services/dish_service.dart';
 import '../theme/app_colors.dart';
+import '../utils/price_formatter.dart';
 import '../widgets/cart_icon_button.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 
@@ -137,7 +138,7 @@ class _DishDetailScreenState extends State<DishDetailScreen> {
                                           .bodyLarge,
                                     ),
                                     Text(
-                                      '\$${d.price.toStringAsFixed(2)}',
+                                      PriceFormatter.format(d.price),
                                       style: Theme.of(context)
                                           .textTheme
                                           .headlineSmall

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../models/order.dart';
 import '../theme/app_colors.dart';
+import '../utils/price_formatter.dart';
 import '../widgets/ui/app_ui_widgets.dart';
-import 'main_shell.dart';
 
 /// Shown after a successful checkout.
 class OrderSuccessScreen extends StatelessWidget {
@@ -100,18 +100,14 @@ class OrderSuccessScreen extends StatelessWidget {
             const SizedBox(height: 12),
             TotalAmountCard(
               label: 'Total paid',
-              amount: '\$${order.totalPrice.toStringAsFixed(2)}',
+              amount: PriceFormatter.format(order.totalPrice),
             ),
             const Spacer(),
             GoldActionButton(
               label: 'Continue Shopping',
               icon: Icons.home_outlined,
               onPressed: () {
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (_) => const MainShell()),
-                  (_) => false,
-                );
+                Navigator.of(context).popUntil((route) => route.isFirst);
               },
             ),
             const SizedBox(height: 8),

@@ -1,37 +1,42 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../providers/friends_provider.dart';
+import '../providers/group_provider.dart';
 import '../theme/app_colors.dart';
 import 'community_screen.dart';
 import 'home_screen.dart';
-import 'orders_screen.dart';
 import 'profile_screen.dart';
 import 'recommendations_screen.dart';
 
-/// Persistent bottom navigation container for primary app tabs.
+/// Primary app shell: Home · Discover · Community · Profile.
 class MainShell extends StatefulWidget {
   const MainShell({super.key, this.initialIndex = 0});
 
   final int initialIndex;
-
-  static MainShellState? of(BuildContext context) {
-    return context.findAncestorStateOfType<MainShellState>();
-  }
 
   @override
   State<MainShell> createState() => MainShellState();
 }
 
 class MainShellState extends State<MainShell> {
+  static const tabCount = 4;
+
   late int _index;
 
   @override
   void initState() {
     super.initState();
-    _index = widget.initialIndex;
+    _index = widget.initialIndex.clamp(0, tabCount - 1);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<FriendsProvider>().fetchAll(force: true);
+      context.read<GroupProvider>().fetchAll(force: true);
+    });
   }
 
   void navigateToTab(int index) {
-    if (index < 0 || index > 4) return;
+    if (index < 0 || index >= tabCount) return;
     setState(() => _index = index);
   }
 
@@ -43,9 +48,8 @@ class MainShellState extends State<MainShell> {
         children: [
           HomeScreen(onRecommendationsTap: () => navigateToTab(1)),
           const RecommendationsScreen(),
-          const OrdersScreen(),
-          const ProfileScreen(),
           const CommunityScreen(),
+          const ProfileScreen(),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -62,24 +66,19 @@ class MainShellState extends State<MainShell> {
             label: 'Home',
           ),
           NavigationDestination(
-            icon: Icon(Icons.auto_awesome_outlined),
-            selectedIcon: Icon(Icons.auto_awesome, color: AppColors.gold),
-            label: 'For You',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.receipt_long_outlined),
-            selectedIcon: Icon(Icons.receipt_long, color: AppColors.gold),
-            label: 'Orders',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person, color: AppColors.gold),
-            label: 'Profile',
+            icon: Icon(Icons.explore_outlined),
+            selectedIcon: Icon(Icons.explore, color: AppColors.gold),
+            label: 'Discover',
           ),
           NavigationDestination(
             icon: Icon(Icons.groups_outlined),
             selectedIcon: Icon(Icons.groups, color: AppColors.gold),
             label: 'Community',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            selectedIcon: Icon(Icons.person, color: AppColors.gold),
+            label: 'Profile',
           ),
         ],
       ),

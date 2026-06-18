@@ -6,6 +6,7 @@ Scoring (max 100):
 """
 
 from decimal import Decimal
+from typing import Any
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -19,6 +20,7 @@ from app.services.recommendation.preference_scoring import (
     score_dietary_preferences,
 )
 from app.services.recommendation.v2_candidates import load_eligible_dishes
+from app.services.recommendation.price_adjustment import apply_price_outlier_penalty
 from app.services.recommendation.v2_catalog import FOODPANDA_SOURCE, load_tag_maps
 from app.services.recommendation.v2_debug import log_pipeline_stage, log_ranked_recommendations
 from app.services.user_preferences_service import load_recommendation_preferences
@@ -323,6 +325,7 @@ def _score_dish(
     total = round(cuisine_pts + nutrition_pts + budget_pts + popularity_pts, 1)
     if dietary_adj < 0:
         total = max(0.0, total + dietary_adj)
+    total = apply_price_outlier_penalty(total, dish.price)
     has_budget_prefs = prefs.budget_min is not None or prefs.budget_max is not None
     explanation, signals = _build_explanation(
         matched_cuisine=matched_cuisine,

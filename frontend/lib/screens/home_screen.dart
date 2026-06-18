@@ -1,25 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../models/food_feed_item.dart';
+import '../models/group_decision.dart';
+import '../models/group_session.dart';
+import '../models/recommendation.dart';
 import '../providers/auth_provider.dart';
 import '../providers/cart_provider.dart';
 import '../providers/friends_provider.dart';
 import '../providers/group_provider.dart';
 import '../providers/onboarding_provider.dart';
 import '../providers/preferences_provider.dart';
-import '../data/chef_specials_mock_data.dart';
-import '../services/category_service.dart';
-import '../services/dish_service.dart';
-import '../services/restaurant_service.dart';
-import '../services/review_service.dart';
+import '../providers/reels_provider.dart';
+import '../services/feed_image_loader.dart';
+import '../services/food_feed_builder.dart';
+import '../services/group_service.dart';
+import '../services/recommendation_service.dart';
 import '../theme/app_colors.dart';
+import '../widgets/feed/food_feed_card.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 import 'admin_dashboard_screen.dart';
+import 'dish_detail_screen.dart';
+import 'group_decision_screen.dart';
+import 'group_recommendations_screen.dart';
 import 'menu_upload_screen.dart';
-import 'recommendations_screen.dart';
-import 'restaurant_detail_screen.dart';
-import 'review_status_screen.dart';
 import '../widgets/cart_icon_button.dart';
+import '../widgets/social/notification_hub_button.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key, this.onRecommendationsTap});
@@ -31,29 +37,21 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final _restaurants = RestaurantService();
-  final _categories = CategoryService();
-  final _dishes = DishService();
-  final _reviews = ReviewService();
+  final _recommendations = RecommendationService();
+  final _groups = GroupService();
+  final _imageLoader = FeedImageLoader();
 
-  List<dynamic> restaurants = [];
-  List<dynamic> categories = [];
-  List<dynamic> dishes = [];
+  List<FoodFeedItem> feedItems = [];
   bool loading = true;
   String? error;
-  final _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _load();
-    context.read<CartProvider>().load();
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<CartProvider>().load();
+    });
   }
 
   Future<void> _load() async {
@@ -61,15 +59,41 @@ class _HomeScreenState extends State<HomeScreen> {
       loading = true;
       error = null;
     });
+
     try {
-      final r = await _restaurants.list();
-      final c = await _categories.list();
-      final d = await _dishes.list();
+      final recResults = await Future.wait([
+        _recommendations.list(),
+        _recommendations.trending(limit: 10),
+      ]);
+      final personalized = recResults[0];
+      final trending = recResults[1];
+
+      if (!mounted) return;
+      final groupProvider = context.read<GroupProvider>();
+      await groupProvider.fetchGroups(force: true);
+      final sessions = groupProvider.groups;
+
+      final groupDecisions =
+          await _loadGroupDecisions(sessions.where((s) => s.isActive).take(3));
+
+      final dishIds = <int>{
+        ...personalized.map((r) => r.dishId),
+        ...trending.map((r) => r.dishId),
+        ...groupDecisions
+            .map((e) => e.decision.dishId)
+            .whereType<int>(),
+      };
+
+      final images = await _imageLoader.loadImages(dishIds);
+
       if (!mounted) return;
       setState(() {
-        restaurants = r;
-        categories = c;
-        dishes = d;
+        feedItems = FoodFeedBuilder.build(
+          personalized: personalized,
+          trending: trending,
+          groupDecisions: groupDecisions,
+          dishImages: images,
+        );
         loading = false;
       });
     } catch (e) {
@@ -81,46 +105,92 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _addReview(int restaurantId) async {
-    try {
-      final created = await _reviews.create(
-        restaurantId: restaurantId,
-        rating: 5,
-        comment: 'Great experience from app!',
-      );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Review submitted — processing AI...')),
-        );
-        final reviewId = created['id'] as int?;
-        if (reviewId != null) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => ReviewStatusScreen(reviewId: reviewId),
-            ),
-          );
+  Future<List<({GroupSession session, GroupDecision decision})>> _loadGroupDecisions(
+    Iterable<GroupSession> sessions,
+  ) async {
+    final results = <({GroupSession session, GroupDecision decision})>[];
+
+    await Future.wait(sessions.map((session) async {
+      try {
+        final decision = await _groups.getDecision(session.id);
+        if (_isInterestingDecision(decision)) {
+          results.add((session: session, decision: decision));
         }
-        _load();
+      } catch (_) {
+        // Skip groups without a decision endpoint response.
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+    }));
+
+    results.sort((a, b) {
+      int rank(GroupDecision d) {
+        if (d.isAgreed) return 0;
+        if (d.isConsidering) return 1;
+        if (d.isPending) return 2;
+        return 3;
       }
+
+      return rank(a.decision).compareTo(rank(b.decision));
+    });
+
+    return results;
+  }
+
+  bool _isInterestingDecision(GroupDecision decision) {
+    return decision.isPending ||
+        decision.isConsidering ||
+        decision.isAgreed ||
+        decision.dishId != null;
+  }
+
+  void _openDiscover() {
+    if (widget.onRecommendationsTap != null) {
+      widget.onRecommendationsTap!();
     }
   }
 
-  void _openRecommendations() {
-    if (widget.onRecommendationsTap != null) {
-      widget.onRecommendationsTap!();
-      return;
+  void _onFeedTap(FoodFeedItem item) {
+    switch (item.kind) {
+      case FoodFeedKind.recommended:
+      case FoodFeedKind.trending:
+        if (item.dishId != null) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => DishDetailScreen(dishId: item.dishId!),
+            ),
+          );
+        }
+        break;
+      case FoodFeedKind.groupDecision:
+        if (item.groupSessionId == null) return;
+        if (item.groupAgreed) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => GroupDecisionScreen(
+                sessionId: item.groupSessionId!,
+                groupName: item.groupName,
+              ),
+            ),
+          );
+        } else {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => GroupRecommendationsScreen(
+                sessionId: item.groupSessionId!,
+                groupName: item.groupName,
+              ),
+            ),
+          );
+        }
+        break;
+      case FoodFeedKind.discover:
+        _openDiscover();
+        break;
+      case FoodFeedKind.friendPlaceholder:
+        break;
     }
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const RecommendationsScreen()),
-    );
   }
 
   @override
@@ -132,6 +202,7 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('Popal Eats'),
         actions: [
+          const NotificationHubButton(),
           const CartIconButton(),
           if (auth.user?['role'] == 'admin')
             IconButton(
@@ -159,17 +230,29 @@ class _HomeScreenState extends State<HomeScreen> {
               context.read<FriendsProvider>().reset();
               context.read<GroupProvider>().reset();
               context.read<PreferencesProvider>().reset();
+              context.read<ReelsProvider>().reset();
             },
           ),
         ],
       ),
       body: loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: AppColors.gold))
           : error != null
               ? Center(
                   child: Padding(
                     padding: const EdgeInsets.all(24),
-                    child: Text(error!, textAlign: TextAlign.center),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        EmptyState(
+                          icon: Icons.cloud_off_outlined,
+                          title: 'Could not load your feed',
+                          subtitle: error,
+                        ),
+                        const SizedBox(height: 12),
+                        TextButton(onPressed: _load, child: const Text('Retry')),
+                      ],
+                    ),
                   ),
                 )
               : RefreshIndicator(
@@ -178,30 +261,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: ListView(
                     padding: const EdgeInsets.all(AppColors.screenPadding),
                     children: [
-                      ModernCard(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 4,
-                        ),
-                        child: TextField(
-                          controller: _searchController,
-                          decoration: const InputDecoration(
-                            hintText: 'Search dishes, restaurants, cuisines…',
-                            prefixIcon: Icon(
-                              Icons.search,
-                              color: AppColors.gold,
-                            ),
-                            border: InputBorder.none,
-                          ),
-                          textInputAction: TextInputAction.search,
-                          onSubmitted: (_) =>
-                              FocusManager.instance.primaryFocus?.unfocus(),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ModernCard(
-                        gradient: AppColors.headerGradient,
-                        borderColor: AppColors.gold.withValues(alpha: 0.35),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8, top: 4),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -212,435 +273,35 @@ class _HomeScreenState extends State<HomeScreen> {
                                   .headlineSmall
                                   ?.copyWith(color: AppColors.gold),
                             ),
-                            const SizedBox(height: 6),
+                            const SizedBox(height: 4),
                             Text(
-                              'Discover meals tailored to your taste',
+                              'Your food feed',
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
                           ],
                         ),
                       ),
-                      SectionHeader(
-                        title: 'For You',
-                        subtitle: 'AI-powered recommendations',
-                        trailing: TextButton(
-                          onPressed: _openRecommendations,
-                          child: const Text('See all'),
-                        ),
-                      ),
-                      ModernCard(
-                        onTap: _openRecommendations,
-                        borderColor: AppColors.green.withValues(alpha: 0.4),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: AppColors.green.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(
-                                Icons.auto_awesome,
-                                color: AppColors.green,
-                              ),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Personalized picks',
-                                    style:
-                                        Theme.of(context).textTheme.titleMedium,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Trending, popular & hybrid recommendations',
-                                    style:
-                                        Theme.of(context).textTheme.bodyMedium,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const Icon(
-                              Icons.arrow_forward_ios,
-                              size: 16,
-                              color: AppColors.textSecondary,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SectionHeader(
-                        title: 'Chef Specials',
-                        subtitle: 'Featured chef & recipes',
-                      ),
-                      ModernCard(
-                        gradient: AppColors.headerGradient,
-                        borderColor: AppColors.gold.withValues(alpha: 0.4),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 64,
-                              height: 64,
-                              decoration: const BoxDecoration(
-                                gradient: AppColors.goldGradient,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.emoji_events,
-                                color: Color(0xFF1A1400),
-                                size: 32,
-                              ),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    mockFeaturedChef.title,
-                                    style: const TextStyle(
-                                      color: AppColors.gold,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    mockFeaturedChef.name,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    mockFeaturedChef.specialty,
-                                    style:
-                                        Theme.of(context).textTheme.bodyMedium,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '${mockFeaturedChef.recipeCount} signature recipes',
-                                    style: const TextStyle(
-                                      color: AppColors.green,
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      ...mockChefRecipes.map(
-                        (recipe) => Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: ModernCard(
-                            borderColor:
-                                AppColors.green.withValues(alpha: 0.35),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(10),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.gold
-                                            .withValues(alpha: 0.15),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: const Icon(
-                                        Icons.restaurant_menu,
-                                        color: AppColors.gold,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            recipe.name,
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .titleMedium,
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            recipe.chefName,
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .bodyMedium,
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Row(
-                                            children: [
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                  horizontal: 8,
-                                                  vertical: 4,
-                                                ),
-                                                decoration: BoxDecoration(
-                                                  color: AppColors.green
-                                                      .withValues(alpha: 0.12),
-                                                  borderRadius:
-                                                      BorderRadius.circular(8),
-                                                ),
-                                                child: Text(
-                                                  '${recipe.calories} kcal',
-                                                  style: const TextStyle(
-                                                    color: AppColors.green,
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                ),
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                  horizontal: 8,
-                                                  vertical: 4,
-                                                ),
-                                                decoration: BoxDecoration(
-                                                  color: AppColors.gold
-                                                      .withValues(alpha: 0.12),
-                                                  borderRadius:
-                                                      BorderRadius.circular(8),
-                                                ),
-                                                child: Text(
-                                                  recipe.cuisine,
-                                                  style: const TextStyle(
-                                                    color: AppColors.gold,
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.w500,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: OutlinedButton(
-                                    onPressed: () {
-                                      ScaffoldMessenger.of(context)
-                                          .showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            'Viewing ${recipe.name}',
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: AppColors.gold,
-                                      side: BorderSide(
-                                        color: AppColors.gold
-                                            .withValues(alpha: 0.5),
-                                      ),
-                                    ),
-                                    child: const Text('View Recipe'),
-                                  ),
-                                ),
-                              ],
-                            ),
+                      if (feedItems.isEmpty)
+                        const ModernCard(
+                          child: EmptyState(
+                            icon: Icons.restaurant_outlined,
+                            title: 'Nothing in your feed yet',
+                            subtitle: 'Pull to refresh or explore Discover for picks.',
                           ),
-                        ),
-                      ),
-                      SectionHeader(
-                        title: 'Restaurants',
-                        subtitle: '${restaurants.length} nearby',
-                      ),
-                      ...restaurants.map((r) {
-                        final id = r['id'] as int;
-                        final rating =
-                            r['average_rating'] ?? r['rating'] ?? 0;
-                        final reviews = r['total_reviews'] ?? 0;
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: ModernCard(
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => RestaurantDetailScreen(
-                                  restaurantId: id,
-                                ),
-                              ),
-                            ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  width: 52,
-                                  height: 52,
-                                  decoration: BoxDecoration(
-                                    gradient: AppColors.goldGradient,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Icon(
-                                    Icons.restaurant,
-                                    color: Color(0xFF1A1400),
-                                  ),
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        r['name']?.toString() ?? '',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleMedium,
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        r['city']?.toString() ?? '',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodyMedium,
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Row(
-                                        children: [
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 8,
-                                              vertical: 4,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: AppColors.gold
-                                                  .withValues(alpha: 0.15),
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                            ),
-                                            child: Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                const Icon(
-                                                  Icons.star,
-                                                  size: 14,
-                                                  color: AppColors.gold,
-                                                ),
-                                                const SizedBox(width: 4),
-                                                Text(
-                                                  '$rating',
-                                                  style: const TextStyle(
-                                                    color: AppColors.gold,
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            '$reviews reviews',
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .bodyMedium,
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.rate_review_outlined,
-                                    color: AppColors.green,
-                                  ),
-                                  onPressed: () => _addReview(id),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      }),
-                      SectionHeader(
-                        title: 'Categories',
-                        subtitle: '${categories.length} cuisines',
-                      ),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: categories.map((c) {
-                          return Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.surfaceLight,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: AppColors.green.withValues(alpha: 0.35),
-                              ),
-                            ),
-                            child: Text(
-                              c['name']?.toString() ?? '',
-                              style: const TextStyle(
-                                color: AppColors.green,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
+                        )
+                      else
+                        ...feedItems.map((item) {
+                          final tappable = item.kind == FoodFeedKind.discover ||
+                              item.kind == FoodFeedKind.recommended ||
+                              item.kind == FoodFeedKind.trending ||
+                              item.kind == FoodFeedKind.groupDecision;
+
+                          return FoodFeedCard(
+                            item: item,
+                            onTap: tappable ? () => _onFeedTap(item) : null,
                           );
-                        }).toList(),
-                      ),
-                      const SectionHeader(
-                        title: 'Popular dishes',
-                        subtitle: 'Top picks from the menu',
-                      ),
-                      ...dishes.take(10).map((d) {
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: ModernCard(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.lunch_dining,
-                                  color: AppColors.gold,
-                                  size: 22,
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    d['name']?.toString() ?? '',
-                                    style:
-                                        Theme.of(context).textTheme.bodyLarge,
-                                  ),
-                                ),
-                                Text(
-                                  '\$${d['price']}',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium
-                                      ?.copyWith(color: AppColors.gold),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      }),
-                      const SizedBox(height: 24),
+                        }),
+                      const SizedBox(height: 8),
                     ],
                   ),
                 ),

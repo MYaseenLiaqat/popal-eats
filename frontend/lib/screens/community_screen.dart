@@ -5,60 +5,13 @@ import '../providers/friends_provider.dart';
 import '../providers/group_provider.dart';
 import '../theme/app_colors.dart';
 import '../widgets/community_avatar.dart';
+import '../widgets/social/notification_hub_button.dart';
 import '../widgets/ui/app_ui_widgets.dart';
-import 'friend_requests_screen.dart';
 import 'friends_list_screen.dart';
 import 'groups_screen.dart';
-import 'group_invitations_screen.dart';
-import 'search_users_screen.dart';
+import 'notification_center_screen.dart';
 
-class MockCommunityActivity {
-  const MockCommunityActivity({
-    required this.message,
-    required this.icon,
-    this.accent = 0,
-  });
-
-  final String message;
-  final String icon;
-  final int accent;
-}
-
-const mockCommunityActivity = [
-  MockCommunityActivity(
-    message: 'Ahmed liked Healthy Chicken Bowl',
-    icon: 'favorite',
-  ),
-  MockCommunityActivity(
-    message: 'Sara completed nutrition goal',
-    icon: 'flag',
-    accent: 1,
-  ),
-  MockCommunityActivity(
-    message: 'Ali tried Chef Special Pizza',
-    icon: 'restaurant',
-  ),
-  MockCommunityActivity(
-    message: 'Fatima shared a new recipe',
-    icon: 'share',
-    accent: 1,
-  ),
-];
-
-IconData _activityIcon(String key) {
-  switch (key) {
-    case 'favorite':
-      return Icons.favorite_outline;
-    case 'flag':
-      return Icons.flag_outlined;
-    case 'share':
-      return Icons.ios_share_outlined;
-    default:
-      return Icons.restaurant_outlined;
-  }
-}
-
-/// Community hub with live friends and requests.
+/// Community hub — friends, groups, and activity feed.
 class CommunityScreen extends StatefulWidget {
   const CommunityScreen({super.key});
 
@@ -76,26 +29,28 @@ class _CommunityScreenState extends State<CommunityScreen> {
     });
   }
 
+  void _openActivityHub() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const NotificationCenterScreen()),
+    ).then((_) {
+      if (!mounted) return;
+      context.read<FriendsProvider>().fetchAll(force: true);
+      context.read<GroupProvider>().fetchAll(force: true);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final friends = context.watch<FriendsProvider>();
     final groups = context.watch<GroupProvider>();
-    final previewRequests = friends.incomingRequests.take(2).toList();
     final previewFriends = friends.friends.take(3).toList();
+    final pending = friends.incomingCount + groups.incomingInvitationCount;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Community'),
-        actions: [
-          IconButton(
-            tooltip: 'Search users',
-            icon: const Icon(Icons.person_search_outlined),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SearchUsersScreen()),
-            ).then((_) => friends.fetchAll(force: true)),
-          ),
-        ],
+        actions: const [NotificationHubButton()],
       ),
       body: RefreshIndicator(
         color: AppColors.gold,
@@ -142,10 +97,30 @@ class _CommunityScreenState extends State<CommunityScreen> {
                 ],
               ),
             ),
+            if (pending > 0) ...[
+              const SizedBox(height: 12),
+              ModernCard(
+                onTap: _openActivityHub,
+                borderColor: AppColors.gold.withValues(alpha: 0.35),
+                child: Row(
+                  children: [
+                    const Icon(Icons.favorite, color: AppColors.gold),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        '$pending new request${pending == 1 ? '' : 's'} — tap to review',
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right, color: AppColors.textSecondary, size: 18),
+                  ],
+                ),
+              ),
+            ],
             SectionHeader(
               title: 'Group Sessions',
               subtitle: groups.incomingInvitationCount > 0
-                  ? '${groups.groupCount} groups · ${groups.incomingInvitationCount} invites'
+                  ? '${groups.groupCount} groups · ${groups.incomingInvitationCount} invites in Activity'
                   : '${groups.groupCount} active groups',
               trailing: TextButton(
                 onPressed: () => Navigator.push(
@@ -155,30 +130,6 @@ class _CommunityScreenState extends State<CommunityScreen> {
                 child: const Text('View all'),
               ),
             ),
-            if (groups.incomingInvitationCount > 0)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: ModernCard(
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const GroupInvitationsScreen()),
-                  ).then((_) => groups.fetchAll(force: true)),
-                  borderColor: AppColors.gold.withValues(alpha: 0.35),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.mail_outline, color: AppColors.gold),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          '${groups.incomingInvitationCount} pending group invitation${groups.incomingInvitationCount == 1 ? '' : 's'}',
-                          style: Theme.of(context).textTheme.bodyLarge,
-                        ),
-                      ),
-                      const Icon(Icons.chevron_right, color: AppColors.textSecondary, size: 18),
-                    ],
-                  ),
-                ),
-              ),
             if (groups.groups.isEmpty)
               Padding(
                 padding: const EdgeInsets.only(bottom: 10),
@@ -202,7 +153,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                 ),
               )
             else
-              ...groups.groups.take(2).map(
+              ...groups.groups.take(3).map(
                 (session) => Padding(
                   padding: const EdgeInsets.only(bottom: 10),
                   child: ModernCard(
@@ -232,93 +183,6 @@ class _CommunityScreenState extends State<CommunityScreen> {
                 ),
               ),
             SectionHeader(
-              title: 'Friend Requests',
-              subtitle: friends.incomingCount > 0
-                  ? '${friends.incomingCount} pending'
-                  : 'No pending incoming',
-              trailing: TextButton(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const FriendRequestsScreen(),
-                  ),
-                ).then((_) => friends.fetchAll(force: true)),
-                child: const Text('View all'),
-              ),
-            ),
-            if (friends.loadingRequests && previewRequests.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 24),
-                child: Center(
-                  child: CircularProgressIndicator(color: AppColors.gold),
-                ),
-              )
-            else if (previewRequests.isEmpty)
-              ModernCard(
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const SearchUsersScreen()),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.person_add_alt_1_outlined, color: AppColors.gold),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Find people to connect with',
-                        style: Theme.of(context).textTheme.bodyLarge,
-                      ),
-                    ),
-                    const Icon(Icons.chevron_right, color: AppColors.textSecondary, size: 18),
-                  ],
-                ),
-              )
-            else
-              ...previewRequests.map((request) {
-                final user = request.sender;
-                if (user == null) return const SizedBox.shrink();
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: ModernCard(
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const FriendRequestsScreen(),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        CommunityAvatar(
-                          name: user.fullName,
-                          imageUrl: user.profileImage,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                user.fullName,
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                              Text(
-                                user.displayHandle,
-                                style: Theme.of(context).textTheme.bodyMedium,
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Icon(
-                          Icons.chevron_right,
-                          color: AppColors.textSecondary,
-                          size: 18,
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }),
-            SectionHeader(
               title: 'Friends',
               subtitle: '${friends.friendsCount} connected',
               trailing: TextButton(
@@ -338,20 +202,18 @@ class _CommunityScreenState extends State<CommunityScreen> {
               )
             else if (previewFriends.isEmpty)
               ModernCard(
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const SearchUsersScreen()),
-                ),
+                onTap: _openActivityHub,
                 child: Row(
                   children: [
-                    const Icon(Icons.search, color: AppColors.green),
+                    const Icon(Icons.person_add_alt_1_outlined, color: AppColors.gold),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Search users to grow your network',
+                        'Find people in Activity → Search',
                         style: Theme.of(context).textTheme.bodyLarge,
                       ),
                     ),
+                    const Icon(Icons.chevron_right, color: AppColors.textSecondary, size: 18),
                   ],
                 ),
               )
@@ -394,44 +256,13 @@ class _CommunityScreenState extends State<CommunityScreen> {
               ),
             const SectionHeader(
               title: 'Community Activity',
-              subtitle: 'Recent updates',
+              subtitle: 'From your network',
             ),
-            ...mockCommunityActivity.map(
-              (activity) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: ModernCard(
-                  borderColor: activity.accent == 1
-                      ? AppColors.green.withValues(alpha: 0.35)
-                      : null,
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: (activity.accent == 1
-                                  ? AppColors.green
-                                  : AppColors.gold)
-                              .withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Icon(
-                          _activityIcon(activity.icon),
-                          color: activity.accent == 1
-                              ? AppColors.green
-                              : AppColors.gold,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          activity.message,
-                          style: Theme.of(context).textTheme.bodyLarge,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+            const ModernCard(
+              child: EmptyState(
+                icon: Icons.dynamic_feed_outlined,
+                title: 'Your friends\' activity will appear here.',
+                subtitle: 'Likes, orders, and shares from friends show up in this feed.',
               ),
             ),
             const SizedBox(height: 16),

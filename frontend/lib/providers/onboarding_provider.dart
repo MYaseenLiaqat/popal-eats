@@ -53,7 +53,6 @@ class OnboardingProvider extends ChangeNotifier {
       await _cacheStatus(status.completed);
     } on ApiException catch (e) {
       error = e.message;
-      completed ??= false;
     } finally {
       loading = false;
       notifyListeners();

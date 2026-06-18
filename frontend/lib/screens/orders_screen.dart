@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/order.dart';
 import '../services/order_service.dart';
 import '../theme/app_colors.dart';
+import '../utils/price_formatter.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 import 'order_detail_screen.dart';
 
@@ -156,7 +157,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
                                       Text(
-                                        '\$${order.totalPrice.toStringAsFixed(2)}',
+                                        PriceFormatter.format(order.totalPrice),
                                         style: Theme.of(context)
                                             .textTheme
                                             .titleMedium

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/cart_item.dart';
 import '../providers/cart_provider.dart';
 import '../theme/app_colors.dart';
+import '../utils/price_formatter.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 import 'checkout_screen.dart';
 
@@ -182,7 +183,7 @@ class _CartScreenState extends State<CartScreen> {
                                                     ),
                                                     const SizedBox(height: 4),
                                                     Text(
-                                                      '\$${unitPrice.toStringAsFixed(2)} each',
+                                                      '${PriceFormatter.format(unitPrice)} each',
                                                       style: Theme.of(context)
                                                           .textTheme
                                                           .bodyMedium,
@@ -228,7 +229,7 @@ class _CartScreenState extends State<CartScreen> {
                                               ),
                                               const Spacer(),
                                               Text(
-                                                '\$${lineTotal.toStringAsFixed(2)}',
+                                                PriceFormatter.format(lineTotal),
                                                 style: Theme.of(context)
                                                     .textTheme
                                                     .titleMedium
@@ -273,7 +274,7 @@ class _CartScreenState extends State<CartScreen> {
                                       SummaryLine(
                                         label: 'Subtotal',
                                         value:
-                                            '\$${cart.subtotal.toStringAsFixed(2)}',
+                                            PriceFormatter.format(cart.subtotal),
                                         emphasize: true,
                                       ),
                                     ],
@@ -304,7 +305,7 @@ class _CartScreenState extends State<CartScreen> {
                                 TotalAmountCard(
                                   label: 'Total',
                                   amount:
-                                      '\$${cart.subtotal.toStringAsFixed(2)}',
+                                      PriceFormatter.format(cart.subtotal),
                                 ),
                                 const SizedBox(height: 12),
                                 GoldActionButton(
