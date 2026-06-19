@@ -147,7 +147,7 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                           EmptyState(
                             icon: Icons.cloud_off_outlined,
                             title: 'Could not load recommendations',
-                            subtitle: error,
+                            subtitle: RecommendationCopy.friendlyError(error),
                           ),
                           TextButton(onPressed: _load, child: const Text('Retry')),
                         ],
@@ -234,7 +234,7 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                       ),
                       const SectionHeader(
                         title: 'Recipe & chef reels',
-                        subtitle: 'Short food stories — video coming soon',
+                        subtitle: 'Recipes, chefs, and restaurants',
                       ),
                       ModernCard(
                         onTap: () => Navigator.push(
@@ -267,7 +267,7 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    'Swipe through recipe and chef previews',
+                                    'Swipe through recipes, chefs, and restaurants',
                                     style: Theme.of(context).textTheme.bodyMedium,
                                   ),
                                 ],

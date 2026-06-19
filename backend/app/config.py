@@ -67,6 +67,8 @@ class Settings(BaseSettings):
     enable_hf_sentiment: bool = Field(False, alias="ENABLE_HF_SENTIMENT")
     enable_marian_translation: bool = Field(False, alias="ENABLE_MARIAN_TRANSLATION")
 
+    google_client_id: str = Field("", alias="GOOGLE_CLIENT_ID")
+
     # Foodpanda (Pakistan) external API — used by app.integrations.foodpanda
     foodpanda_vendors_api_url: str = Field(
         "https://pk.fd-api.com/vendors-gateway/api/v1/pandora/vendors",

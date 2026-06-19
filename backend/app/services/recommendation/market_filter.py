@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from app.models.restaurant import Restaurant
+from app.services.recommendation.v2_catalog import FOODPANDA_SOURCE
 
 LAHORE_MARKET = "lahore"
 
@@ -15,17 +16,17 @@ def is_lahore_market_restaurant(restaurant: Restaurant | None) -> bool:
     """
     Include Lahore vendors; exclude known other-city imports (e.g. Karachi).
 
-    Dishes with missing city are excluded unless clearly Lahore-tagged.
+    Foodpanda Lahore catalog rows without city are treated as Lahore.
     """
     if restaurant is None:
         return False
 
     city = normalize_city(restaurant.city)
-    if not city:
+    if city and ("karachi" in city or city == "khi"):
         return False
-    if "karachi" in city or city == "khi":
-        return False
-    if "lahore" in city or city == "lhr":
+    if city and ("lahore" in city or city == "lhr"):
+        return True
+    if getattr(restaurant, "source", None) == FOODPANDA_SOURCE:
         return True
     return False
 

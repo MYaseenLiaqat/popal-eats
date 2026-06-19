@@ -45,6 +45,8 @@ class RestaurantResponse(BaseModel):
     is_open: bool
     average_rating: float = 0.0
     total_reviews: int = 0
+    approval_status: str = "approved"
+    rejection_reason: str | None = None
     created_at: datetime | None = None
 
     @computed_field
@@ -52,3 +54,26 @@ class RestaurantResponse(BaseModel):
     def rating(self) -> float:
         """Backward-compatible alias for average_rating."""
         return self.average_rating
+
+
+class RestaurantApprovalUpdate(BaseModel):
+    approval_status: str = Field(..., pattern="^(approved|rejected)$")
+    rejection_reason: str | None = Field(None, max_length=500)
+
+
+class PopularDishStat(BaseModel):
+    dish_id: int
+    dish_name: str
+    order_count: int
+
+
+class RestaurantDashboardResponse(BaseModel):
+    restaurant_id: int
+    restaurant_name: str
+    approval_status: str
+    total_dishes: int
+    available_dishes: int
+    average_rating: float
+    total_reviews: int
+    total_orders: int
+    popular_dishes: list[PopularDishStat]

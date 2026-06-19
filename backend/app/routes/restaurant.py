@@ -1,24 +1,38 @@
-"""Restaurant CRUD with RBAC and pagination."""
+"""Restaurant CRUD with RBAC, approval workflow, and owner dashboard."""
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from app.core.dependencies import get_current_user
+from app.core.dependencies import get_current_user, get_optional_current_user
 from app.core.rbac import promote_to_restaurant_owner
 from app.core.roles import ADMIN, CUSTOMER, RESTAURANT_OWNER, normalize_role
 from app.core.permissions import assert_restaurant_owner, get_restaurant_or_404
+from app.core.restaurant_constants import APPROVED, PENDING
 from app.database import get_db
 from app.models.restaurant import Restaurant
 from app.models.user import User
 from app.schemas.pagination import PaginatedResponse
 from app.schemas.restaurant import (
     RestaurantCreate,
+    RestaurantDashboardResponse,
     RestaurantResponse,
     RestaurantUpdate,
 )
+from app.services.restaurant_dashboard_service import build_restaurant_dashboard
 from app.utils.pagination import apply_sort, build_paginated_response, paginate_query
 
 router = APIRouter(prefix="/restaurants", tags=["restaurants"])
+
+
+def _can_view_restaurant(restaurant: Restaurant, user: User | None) -> bool:
+    if restaurant.approval_status == APPROVED:
+        return True
+    if user is None:
+        return False
+    role = normalize_role(user.role)
+    if role == ADMIN:
+        return True
+    return restaurant.owner_id == user.id
 
 
 @router.post(
@@ -41,12 +55,33 @@ def create_restaurant(
     if role == CUSTOMER:
         promote_to_restaurant_owner(current_user)
 
-    restaurant = Restaurant(owner_id=current_user.id, **body.model_dump())
+    approval_status = APPROVED if role == ADMIN else PENDING
+    restaurant = Restaurant(
+        owner_id=current_user.id,
+        approval_status=approval_status,
+        **body.model_dump(),
+    )
     db.add(restaurant)
     db.add(current_user)
     db.commit()
     db.refresh(restaurant)
     return restaurant
+
+
+@router.get("/mine", response_model=PaginatedResponse[RestaurantResponse], summary="My restaurants")
+def list_my_restaurants(
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    query = (
+        db.query(Restaurant)
+        .filter(Restaurant.owner_id == current_user.id)
+        .order_by(Restaurant.created_at.desc())
+    )
+    items, total = paginate_query(query, page=page, limit=limit)
+    return build_paginated_response(items, page=page, limit=limit, total_count=total)
 
 
 @router.get("", response_model=PaginatedResponse[RestaurantResponse], summary="List restaurants")
@@ -60,7 +95,7 @@ def list_restaurants(
     sort: str | None = Query(None, description="asc or desc by average_rating"),
     db: Session = Depends(get_db),
 ):
-    query = db.query(Restaurant)
+    query = db.query(Restaurant).filter(Restaurant.approval_status == APPROVED)
     if search:
         pattern = f"%{search}%"
         query = query.filter(
@@ -81,8 +116,30 @@ def list_restaurants(
 
 
 @router.get("/{restaurant_id}", response_model=RestaurantResponse)
-def get_restaurant(restaurant_id: int, db: Session = Depends(get_db)):
-    return get_restaurant_or_404(db, restaurant_id)
+def get_restaurant(
+    restaurant_id: int,
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_optional_current_user),
+):
+    restaurant = get_restaurant_or_404(db, restaurant_id)
+    if not _can_view_restaurant(restaurant, current_user):
+        raise HTTPException(status_code=404, detail="Restaurant not found")
+    return restaurant
+
+
+@router.get(
+    "/{restaurant_id}/dashboard",
+    response_model=RestaurantDashboardResponse,
+    summary="Owner dashboard metrics",
+)
+def get_restaurant_dashboard(
+    restaurant_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    restaurant = get_restaurant_or_404(db, restaurant_id)
+    assert_restaurant_owner(restaurant, current_user)
+    return build_restaurant_dashboard(db, restaurant)
 
 
 @router.put("/{restaurant_id}", response_model=RestaurantResponse, summary="Update (owner/admin)")

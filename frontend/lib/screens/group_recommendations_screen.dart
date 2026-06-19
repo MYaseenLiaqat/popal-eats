@@ -35,9 +35,13 @@ class _GroupRecommendationsScreenState extends State<GroupRecommendationsScreen>
     });
   }
 
-  Future<void> _refresh() async {
+  Future<void> _refresh({bool regenerate = false}) async {
     final provider = context.read<GroupProvider>();
-    await provider.loadRecommendations(widget.sessionId, force: true);
+    await provider.loadRecommendations(
+      widget.sessionId,
+      force: true,
+      refresh: regenerate,
+    );
   }
 
   Future<void> _vote(int recommendationId, String voteType) async {
@@ -100,7 +104,7 @@ class _GroupRecommendationsScreenState extends State<GroupRecommendationsScreen>
       ),
       body: RefreshIndicator(
         color: AppColors.gold,
-        onRefresh: _refresh,
+        onRefresh: () => _refresh(regenerate: true),
         child: _buildBody(provider, result, decision),
       ),
     );
@@ -126,7 +130,7 @@ class _GroupRecommendationsScreenState extends State<GroupRecommendationsScreen>
                   subtitle: provider.recommendationsError,
                 ),
                 TextButton(
-                  onPressed: _refresh,
+                  onPressed: () => _refresh(regenerate: true),
                   child: const Text('Retry'),
                 ),
               ],
@@ -153,7 +157,9 @@ class _GroupRecommendationsScreenState extends State<GroupRecommendationsScreen>
             label: 'Refresh',
             icon: Icons.refresh,
             loading: provider.loadingRecommendations,
-            onPressed: provider.loadingRecommendations ? null : _refresh,
+            onPressed: provider.loadingRecommendations
+                ? null
+                : () => _refresh(regenerate: true),
           ),
         ],
       );

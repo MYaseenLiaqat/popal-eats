@@ -32,4 +32,39 @@ class AdminService {
     _api.throwIfError(r);
     return _api.decodeList(r);
   }
+
+  Future<List<dynamic>> listRestaurants({
+    int page = 1,
+    String? approvalStatus,
+  }) async {
+    final r = await _api.get('/admin/restaurants', query: {
+      'page': '$page',
+      'limit': '20',
+      if (approvalStatus != null) 'approval_status': approvalStatus,
+    });
+    _api.throwIfError(r);
+    return _api.decodeList(r);
+  }
+
+  Future<Map<String, dynamic>> pendingRestaurantCount() async {
+    final r = await _api.get('/admin/restaurants/pending/count');
+    _api.throwIfError(r);
+    return _api.decodeJson(r);
+  }
+
+  Future<Map<String, dynamic>> updateRestaurantApproval(
+    int restaurantId, {
+    required String approvalStatus,
+    String? rejectionReason,
+  }) async {
+    final r = await _api.patch(
+      '/admin/restaurants/$restaurantId/approval',
+      body: {
+        'approval_status': approvalStatus,
+        if (rejectionReason != null) 'rejection_reason': rejectionReason,
+      },
+    );
+    _api.throwIfError(r);
+    return _api.decodeJson(r);
+  }
 }

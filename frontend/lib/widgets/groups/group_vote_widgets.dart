@@ -331,7 +331,7 @@ class VoteSummarySection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Live scores',
+            'Vote breakdown',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 14),
           ),
           const SizedBox(height: 10),
@@ -350,7 +350,7 @@ class VoteSummarySection extends StatelessWidget {
               Expanded(
                 child: _scoreBar(
                   context,
-                  label: 'Consensus',
+                  label: 'Group agreement',
                   percent: summary!.consensusPercent,
                   color: AppColors.green,
                 ),
@@ -359,7 +359,7 @@ class VoteSummarySection extends StatelessWidget {
               Expanded(
                 child: _scoreBar(
                   context,
-                  label: 'Final score',
+                  label: 'Overall match',
                   percent: summary!.finalPercent,
                   color: AppColors.gold,
                 ),

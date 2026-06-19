@@ -1,6 +1,6 @@
 """Group recommendation session endpoints."""
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_current_user
@@ -182,10 +182,13 @@ def get_group_locations(
 )
 def read_group_recommendations(
     session_id: int,
+    refresh: bool = Query(False, description="Regenerate rankings and replace snapshots"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> GroupRecommendationsResponse:
-    return get_group_recommendations_with_snapshots(db, current_user.id, session_id)
+    return get_group_recommendations_with_snapshots(
+        db, current_user.id, session_id, refresh=refresh
+    )
 
 
 @router.post(

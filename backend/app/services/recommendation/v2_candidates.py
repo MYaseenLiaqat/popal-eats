@@ -10,6 +10,7 @@ import re
 
 from sqlalchemy.orm import Session, joinedload
 
+from app.core.restaurant_constants import APPROVED
 from app.models.dish import Dish
 from app.services.recommendation.market_filter import filter_dishes_for_market
 from app.services.recommendation.v2_debug import log_pipeline_stage
@@ -66,6 +67,8 @@ def is_eligible_dish(dish: Dish) -> bool:
     restaurant = dish.restaurant
     if restaurant is None or not restaurant.is_open:
         return False
+    if getattr(restaurant, "approval_status", APPROVED) != APPROVED:
+        return False
     if is_placeholder_name(dish.name, entity="dish"):
         return False
     if is_placeholder_name(restaurant.name, entity="restaurant"):
@@ -85,6 +88,7 @@ def load_eligible_dishes(db: Session, *, user_id: int | None = None) -> list[Dis
         .options(joinedload(Dish.restaurant), joinedload(Dish.category))
         .filter(Dish.is_available.is_(True))
         .filter(Dish.restaurant.has(is_open=True))
+        .filter(Dish.restaurant.has(approval_status=APPROVED))
         .all()
     )
 

@@ -55,14 +55,6 @@ class FoodFeedBuilder {
 
     items.add(
       const FoodFeedItem(
-        kind: FoodFeedKind.friendPlaceholder,
-        title: 'Your friends\' activity will appear here',
-        subtitle: 'When friends save or order dishes, you\'ll see it in your feed.',
-      ),
-    );
-
-    items.add(
-      const FoodFeedItem(
         kind: FoodFeedKind.discover,
         title: 'Explore more dishes',
         subtitle: 'Browse personalized picks and crowd favorites',

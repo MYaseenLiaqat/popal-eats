@@ -30,26 +30,31 @@ class _LoginScreenState extends State<LoginScreen> {
     final password = _password.text;
 
     if (email.isEmpty || !email.contains('@')) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter a valid email (e.g. you@example.com)')),
-      );
+      _snack('Enter a valid email');
       return;
     }
     if (password.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password must be at least 6 characters')),
-      );
+      _snack('Password must be at least 6 characters');
       return;
     }
 
     final auth = context.read<AuthProvider>();
     final ok = await auth.login(email, password);
     if (!mounted) return;
-    if (!ok) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(auth.error ?? 'Login failed')),
-      );
+    if (!ok) _snack(auth.error ?? 'Login failed');
+  }
+
+  Future<void> _googleSignIn() async {
+    final auth = context.read<AuthProvider>();
+    final ok = await auth.loginWithGoogle();
+    if (!mounted) return;
+    if (!ok && auth.error != null) {
+      _snack(auth.error!);
     }
+  }
+
+  void _snack(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -71,10 +76,7 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(
-                    'Sign in',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
+                  Text('Sign in', style: Theme.of(context).textTheme.titleLarge),
                   const SizedBox(height: 16),
                   TextField(
                     controller: _email,
@@ -101,6 +103,26 @@ class _LoginScreenState extends State<LoginScreen> {
                     loading: auth.loading,
                     onPressed: auth.loading ? null : _submit,
                   ),
+                  if (auth.googleSignInAvailable) ...[
+                    const SizedBox(height: 16),
+                    const AuthDivider(label: 'or'),
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: auth.loading ? null : _googleSignIn,
+                      icon: Image.network(
+                        'https://www.google.com/favicon.ico',
+                        width: 18,
+                        height: 18,
+                        errorBuilder: (_, __, ___) =>
+                            const Icon(Icons.g_mobiledata, size: 22),
+                      ),
+                      label: const Text('Continue with Google'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        side: BorderSide(color: AppColors.surfaceLight.withValues(alpha: 0.6)),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -108,10 +130,7 @@ class _LoginScreenState extends State<LoginScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  "Don't have an account?",
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
+                Text("Don't have an account?", style: Theme.of(context).textTheme.bodyMedium),
                 TextButton(
                   onPressed: () => Navigator.push(
                     context,

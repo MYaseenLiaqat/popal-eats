@@ -112,4 +112,50 @@ class RecommendationCopy {
   static bool _containsBlocked(String lower) {
     return _blockedTerms.any((term) => lower.contains(term));
   }
+
+  /// Sanitize backend reason strings for group recommendation chips.
+  static List<String> humanGroupReasons(List<String> raw) {
+    final out = <String>[];
+    for (final reason in raw) {
+      final human = _sanitizeGroupReason(reason);
+      if (human != null && !out.contains(human)) {
+        out.add(human);
+      }
+    }
+    if (out.isEmpty) {
+      return const ['A good fit for your group'];
+    }
+    return out.take(4).toList();
+  }
+
+  static String? _sanitizeGroupReason(String text) {
+    final lower = text.trim().toLowerCase();
+    if (lower.isEmpty || _containsBlocked(lower)) return null;
+    if (lower.contains('close to group') || lower.contains('distance')) {
+      return 'Near your group';
+    }
+    if (lower.contains('budget')) return 'Matches your group budget';
+    if (lower.contains('matches') && lower.contains('member')) {
+      return text.replaceAll('members', 'friends');
+    }
+    if (lower.contains('balanced group')) return 'A solid pick for the group';
+    return _sanitize(text);
+  }
+
+  /// Short user-facing error from exceptions.
+  static String friendlyError(Object? error) {
+    if (error == null) return 'Something went wrong. Please try again.';
+    final text = error.toString();
+    if (text.contains('ApiException')) {
+      final match = RegExp(r'ApiException\(\d+\):\s*(.+)').firstMatch(text);
+      if (match != null) return match.group(1)!.trim();
+    }
+    if (text.contains('SocketException') || text.contains('Failed host lookup')) {
+      return 'Cannot reach the server. Check your connection and try again.';
+    }
+    if (text.length > 120) {
+      return 'Something went wrong. Pull to refresh or try again.';
+    }
+    return text;
+  }
 }

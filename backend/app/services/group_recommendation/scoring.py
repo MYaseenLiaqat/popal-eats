@@ -213,13 +213,18 @@ def build_reasons(
 ) -> list[str]:
     reasons: list[str] = []
     if total_members > 0 and matching_members > 0:
-        reasons.append(f"Matches {matching_members} of {total_members} members")
+        if matching_members == total_members:
+            reasons.append("Works for everyone in your group")
+        else:
+            reasons.append(f"Works for {matching_members} of {total_members} friends")
     if budget_score >= 70:
-        reasons.append("Fits group budget")
+        reasons.append("Matches your group budget")
     if distance_score >= 70:
-        reasons.append("Close to group location")
-    if cuisine_score >= 70 and not reasons:
-        reasons.append("Matches group cuisine preferences")
+        reasons.append("Near your group")
+    elif distance_score >= 50:
+        reasons.append("Popular nearby")
+    if cuisine_score >= 70 and len(reasons) < 3:
+        reasons.append("Matches your group's tastes")
     if not reasons:
-        reasons.append("Balanced group pick")
+        reasons.append("A solid pick for the group")
     return reasons

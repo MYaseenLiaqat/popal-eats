@@ -106,3 +106,23 @@ InputDecoration authInputDecoration({
     ),
   );
 }
+
+class AuthDivider extends StatelessWidget {
+  const AuthDivider({super.key, required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(child: Divider(color: AppColors.surfaceLight.withValues(alpha: 0.8))),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Text(label, style: Theme.of(context).textTheme.bodySmall),
+        ),
+        Expanded(child: Divider(color: AppColors.surfaceLight.withValues(alpha: 0.8))),
+      ],
+    );
+  }
+}

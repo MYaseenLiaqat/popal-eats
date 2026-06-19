@@ -9,15 +9,20 @@ import '../providers/onboarding_provider.dart';
 import '../providers/preferences_provider.dart';
 import '../providers/reels_provider.dart';
 import '../theme/app_colors.dart';
+import '../utils/app_roles.dart';
 import '../utils/preference_display.dart';
+import '../utils/user_display.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 import '../widgets/social/notification_hub_button.dart';
 import 'friends_list_screen.dart';
 import 'groups_screen.dart';
 import 'budget_preferences_screen.dart';
-import 'health_dashboard_screen.dart';
 import 'nutrition_preferences_screen.dart';
 import 'orders_screen.dart';
+import 'restaurant_dashboard_screen.dart';
+import 'restaurant_register_screen.dart';
+import 'admin_dashboard_screen.dart';
+import 'admin_restaurant_approvals_screen.dart';
 
 /// Profile — FYP dark theme layout.
 class ProfileScreen extends StatefulWidget {
@@ -28,11 +33,6 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  static const _mockAvgDay = 1840;
-  static const _mockGoal = 2100;
-  static const _mockProgress = 0.88;
-  static const _weekBars = [0.6, 0.75, 0.7, 0.85, 0.65, 0.9, 0.72];
-
   @override
   void initState() {
     super.initState();
@@ -173,9 +173,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final friends = context.watch<FriendsProvider>();
     final groups = context.watch<GroupProvider>();
     final name = user?['full_name']?.toString() ?? 'Guest';
-    final email = user?['email']?.toString() ?? '—';
-    final progressPct = (_mockProgress * 100).round();
-    const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    final handle = UserDisplay.handle(
+      username: user?['username']?.toString(),
+      email: user?['email']?.toString(),
+      userId: user?['id'] as int?,
+    );
+    final city = UserDisplay.cityLine(user?['city']?.toString());
 
     return Scaffold(
       appBar: AppBar(
@@ -197,11 +200,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ModernCard(
               gradient: AppColors.headerGradient,
               borderColor: AppColors.gold.withValues(alpha: 0.4),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               child: Row(
                 children: [
                   Container(
-                    width: 64,
-                    height: 64,
+                    width: 52,
+                    height: 52,
                     decoration: const BoxDecoration(
                       gradient: AppColors.goldGradient,
                       shape: BoxShape.circle,
@@ -214,36 +218,46 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(name, style: Theme.of(context).textTheme.titleLarge),
+                        const SizedBox(height: 2),
+                        Text(
+                          handle,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: AppColors.gold,
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
+                        if (city != null) ...[
+                          const SizedBox(height: 2),
+                          Text(city, style: Theme.of(context).textTheme.bodySmall),
+                        ],
                         const SizedBox(height: 4),
-                        Text(email, style: Theme.of(context).textTheme.bodyMedium),
-                      const SizedBox(height: 6),
-                      Text(
-                        friends.loadingFriends && friends.friendsCount == 0
-                            ? 'Loading friends…'
-                            : '${friends.friendsCount} friends',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppColors.green,
-                              fontWeight: FontWeight.w600,
-                            ),
-                      ),
+                        Text(
+                          friends.loadingFriends && friends.friendsCount == 0
+                              ? 'Loading friends…'
+                              : '${friends.friendsCount} friends',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: AppColors.green,
+                                fontWeight: FontWeight.w600,
+                              ),
+                        ),
                       ],
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             Text('Orders', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             ProfileActionCard(
               icon: Icons.receipt_long_outlined,
-              title: 'Your Orders',
+              title: 'My Orders',
               subtitle: 'View order history and track status',
               iconColor: AppColors.gold,
               onTap: () => Navigator.push(
@@ -251,127 +265,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 MaterialPageRoute(builder: (_) => const OrdersScreen()),
               ),
             ),
-            const SizedBox(height: 20),
-            ModernCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Weekly analytics',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Calorie overview',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    height: 100,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: List.generate(_weekBars.length, (i) {
-                        return Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 3),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                Flexible(
-                                  child: FractionallySizedBox(
-                                    heightFactor: _weekBars[i],
-                                    child: Container(
-                                      width: double.infinity,
-                                      decoration: BoxDecoration(
-                                        gradient: LinearGradient(
-                                          begin: Alignment.bottomCenter,
-                                          end: Alignment.topCenter,
-                                          colors: [
-                                            AppColors.green.withValues(alpha: 0.5),
-                                            AppColors.gold.withValues(alpha: 0.9),
-                                          ],
-                                        ),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  days[i],
-                                  style: Theme.of(context).textTheme.bodyMedium,
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      }),
-                    ),
-                  ),
-                ],
-              ),
-            ),
             const SizedBox(height: 12),
-            const Row(
-              children: [
-                StatChip(
-                  label: 'Avg/Day',
-                  value: '$_mockAvgDay kcal',
-                ),
-                SizedBox(width: 8),
-                StatChip(
-                  label: 'Goal',
-                  value: '$_mockGoal kcal',
-                  accent: AppColors.green,
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            ModernCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Progress',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      Text(
-                        '$progressPct%',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              color: AppColors.green,
-                            ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    height: 10,
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: AppColors.surfaceLight,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        widthFactor: _mockProgress,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            gradient: AppColors.goldGradient,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
             Text('Social', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             ProfileActionCard(
               icon: Icons.people,
               title: 'Friends',
@@ -396,22 +292,61 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 MaterialPageRoute(builder: (_) => const GroupsScreen()),
               ).then((_) => groups.fetchAll(force: true)),
             ),
-            const SizedBox(height: 20),
-            Text('Preferences', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
-            _preferencesSummary(prefs),
-            ProfileActionCard(
-              icon: Icons.monitor_heart_outlined,
-              title: 'Health Dashboard',
-              subtitle: 'Weekly stats & nutrition insights',
-              iconColor: AppColors.green,
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const HealthDashboardScreen(),
+            const SizedBox(height: 12),
+            if (AppRoles.isRestaurantOwner(user)) ...[
+              Text('Business', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 6),
+              ProfileActionCard(
+                icon: Icons.storefront_outlined,
+                title: 'Restaurant Dashboard',
+                subtitle: 'Manage menu, dishes, and view stats',
+                iconColor: AppColors.gold,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const RestaurantDashboardScreen()),
                 ),
               ),
-            ),
+              ProfileActionCard(
+                icon: Icons.add_business_outlined,
+                title: 'Register Restaurant',
+                subtitle: 'Submit a new restaurant for approval',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const RestaurantRegisterScreen()),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+            if (AppRoles.isAdmin(user)) ...[
+              Text('Admin', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 6),
+              ProfileActionCard(
+                icon: Icons.dashboard_outlined,
+                title: 'Admin Dashboard',
+                subtitle: 'Platform analytics and moderation',
+                iconColor: AppColors.gold,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
+                ),
+              ),
+              ProfileActionCard(
+                icon: Icons.approval_outlined,
+                title: 'Restaurant Approvals',
+                subtitle: 'Review pending restaurant submissions',
+                iconColor: AppColors.green,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const AdminRestaurantApprovalsScreen(),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+            Text('Preferences', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 6),
+            _preferencesSummary(prefs),
             ProfileActionCard(
               icon: Icons.restaurant_menu,
               title: 'Nutrition Preferences',

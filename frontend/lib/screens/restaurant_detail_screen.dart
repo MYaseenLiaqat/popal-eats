@@ -7,6 +7,7 @@ import '../services/category_service.dart';
 import '../services/dish_service.dart';
 import '../services/restaurant_service.dart';
 import '../theme/app_colors.dart';
+import '../utils/menu_category_filter.dart';
 import '../utils/price_formatter.dart';
 import '../widgets/cart_icon_button.dart';
 import '../widgets/ui/app_ui_widgets.dart';
@@ -90,8 +91,9 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
 
     final groups = <({int categoryId, String label, List<Dish> items})>[];
     for (final d in sorted) {
-      final label = categoryNames[d.categoryId] ?? 'Menu';
-      if (groups.isEmpty || groups.last.categoryId != d.categoryId) {
+      final rawLabel = categoryNames[d.categoryId] ?? 'Menu';
+      final label = MenuCategoryFilter.displayLabel(rawLabel);
+      if (groups.isEmpty || groups.last.label != label) {
         groups.add((categoryId: d.categoryId, label: label, items: [d]));
       } else {
         final last = groups.removeLast();
@@ -121,7 +123,8 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
     }
 
     final groups = _groupedDishes();
-    final showGroupHeaders = groups.length > 1;
+    final distinctLabels = groups.map((g) => g.label).toSet();
+    final showGroupHeaders = distinctLabels.length > 1;
     final widgets = <Widget>[];
 
     for (final group in groups) {

@@ -7,10 +7,13 @@ Step-by-step presentation script for your Final Year Project demonstration. Esti
 ## Before You Start (2 min setup, not shown live)
 
 1. Start backend: `cd backend && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000`
-2. Confirm database has restaurants, dishes, and categories.
-3. Prepare **two accounts** on separate devices/emulators (or one device + web if supported):
-   - **Demo Host** — primary presenter account
-   - **Demo Friend** — second group member for voting
+2. Seed demo content: `python scripts/seed_demo_content.py`
+3. Verify: `python scripts/e2e_demo_verification.py` (expect 14/14 pass)
+4. Confirm database has restaurants, dishes, and categories.
+5. Prepare **two accounts** on separate devices/emulators:
+   - **Demo Host** — `demo.host@example.com` / `Demo1234!`
+   - **Demo Friend** — `demo.friend@example.com` / `Demo1234!`
+   - Optional owner: `demo.owner@example.com` · admin: `demo.admin@example.com`
 4. Run Flutter app with correct API URL:
    ```bash
    cd frontend
@@ -145,7 +148,7 @@ Step-by-step presentation script for your Final Year Project demonstration. Esti
 | Section | Why |
 |--------|-----|
 | Home → Chef of the Week | Mock data |
-| Community Activity feed | Mock data |
+| Community Activity feed | Redirected | Activity lives on **Home** feed (posts/stories) |
 | Profile calorie chart | Mock data |
 | Health Dashboard | Mock data |
 | Admin → Import Menu (OCR) | Placeholder screen |

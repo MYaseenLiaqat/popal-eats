@@ -854,10 +854,10 @@ class ProfileActionCard extends StatelessWidget {
         destructive ? AppColors.error : AppColors.textPrimary;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: 6),
       child: ModernCard(
         onTap: onTap,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
         child: ListTile(
           contentPadding: EdgeInsets.zero,
           leading: Container(

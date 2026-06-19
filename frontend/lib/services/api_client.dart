@@ -86,6 +86,20 @@ class ApiClient {
         .timeout(ApiConfig.timeout);
   }
 
+  Future<http.Response> patch(
+    String path, {
+    Object? body,
+    bool auth = true,
+  }) async {
+    return http
+        .patch(
+          _uri(path),
+          headers: _headers(auth: auth),
+          body: body == null ? null : jsonEncode(body),
+        )
+        .timeout(ApiConfig.timeout);
+  }
+
   Future<http.Response> delete(String path, {bool auth = true}) async {
     return http
         .delete(_uri(path), headers: _headers(auth: auth))

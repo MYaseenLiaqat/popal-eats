@@ -145,9 +145,17 @@ class _PreviewBackdrop extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = kind == ReelKind.chef
-        ? [const Color(0xFF2A2418), const Color(0xFF1A2830)]
-        : [const Color(0xFF1A2830), const Color(0xFF2A2418)];
+    final colors = switch (kind) {
+      ReelKind.chef => [const Color(0xFF2A2418), const Color(0xFF1A2830)],
+      ReelKind.restaurant => [const Color(0xFF1A2028), const Color(0xFF283018)],
+      ReelKind.recipe => [const Color(0xFF1A2830), const Color(0xFF2A2418)],
+    };
+
+    final icon = switch (kind) {
+      ReelKind.chef => Icons.emoji_events_outlined,
+      ReelKind.restaurant => Icons.storefront_outlined,
+      ReelKind.recipe => Icons.menu_book_outlined,
+    };
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -159,7 +167,7 @@ class _PreviewBackdrop extends StatelessWidget {
       ),
       child: Center(
         child: Icon(
-          kind == ReelKind.chef ? Icons.emoji_events_outlined : Icons.menu_book_outlined,
+          icon,
           size: 88,
           color: AppColors.gold.withValues(alpha: 0.35),
         ),

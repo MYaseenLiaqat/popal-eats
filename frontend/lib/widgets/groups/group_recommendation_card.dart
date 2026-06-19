@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/group_recommendation.dart';
 import '../../models/group_vote.dart';
 import '../../utils/price_formatter.dart';
+import '../../utils/recommendation_copy.dart';
 import '../../theme/app_colors.dart';
 import '../ui/app_ui_widgets.dart';
 import 'group_vote_widgets.dart';
@@ -170,7 +171,9 @@ class GroupRecommendationCard extends StatelessWidget {
                       Wrap(
                         spacing: 8,
                         runSpacing: 8,
-                        children: recommendation.reasons.map(_reasonChip).toList(),
+                        children: RecommendationCopy.humanGroupReasons(recommendation.reasons)
+                            .map(_reasonChip)
+                            .toList(),
                       ),
                     ],
                     if (_canVote) ...[

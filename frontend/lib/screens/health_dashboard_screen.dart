@@ -31,6 +31,22 @@ class HealthDashboardScreen extends StatelessWidget {
         padding: const EdgeInsets.all(AppColors.screenPadding),
         children: [
           ModernCard(
+            borderColor: AppColors.gold.withValues(alpha: 0.35),
+            child: Row(
+              children: [
+                const Icon(Icons.info_outline, color: AppColors.gold, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Preview screen — numbers shown are sample data, not your real intake.',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          ModernCard(
             gradient: AppColors.headerGradient,
             borderColor: AppColors.green.withValues(alpha: 0.4),
             child: Column(

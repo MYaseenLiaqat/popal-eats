@@ -232,9 +232,14 @@ class GroupProvider extends ChangeNotifier {
 
   DeviceLocationService get locationService => _locationService;
 
-  Future<void> loadRecommendations(int sessionId, {bool force = false}) async {
+  Future<void> loadRecommendations(
+    int sessionId, {
+    bool force = false,
+    bool refresh = false,
+  }) async {
     if (loadingRecommendations) return;
     if (!force &&
+        !refresh &&
         recommendationsSessionId == sessionId &&
         groupRecommendations != null &&
         recommendationsError == null) {
@@ -246,7 +251,10 @@ class GroupProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final result = await _service.getGroupRecommendations(sessionId);
+      final result = await _service.getGroupRecommendations(
+        sessionId,
+        refresh: refresh,
+      );
       final enriched = await _enrichRecommendationsWithImages(result.recommendations);
       groupRecommendations = GroupRecommendationsResult(
         groupId: result.groupId,

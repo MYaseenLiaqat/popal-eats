@@ -42,10 +42,16 @@ def _request(method: str, path: str, token: str | None = None, body: dict | None
 
 def register_and_login(label: str) -> Client:
     email = f"fyp_{label}_{uuid.uuid4().hex[:8]}@example.com"
+    username = f"fyp{label.lower()}{uuid.uuid4().hex[:6]}"
     _request(
         "POST",
         "/register",
-        body={"full_name": f"FYP {label}", "email": email, "password": PASSWORD},
+        body={
+            "full_name": f"FYP {label}",
+            "username": username,
+            "email": email,
+            "password": PASSWORD,
+        },
     )
     login = _request("POST", "/login", body={"email": email, "password": PASSWORD})
     me = _request("GET", "/me", token=login["access_token"])

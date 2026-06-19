@@ -4,7 +4,8 @@ import 'package:provider/provider.dart';
 import '../models/onboarding_option.dart';
 import '../providers/onboarding_provider.dart';
 import '../theme/app_colors.dart';
-import '../widgets/onboarding/selection_card.dart';
+import '../widgets/onboarding/allergy_choice_chip.dart';
+import '../widgets/onboarding/cuisine_thumbnail_tile.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 
 class PreferenceOnboardingScreen extends StatefulWidget {
@@ -131,32 +132,55 @@ class _PreferenceOnboardingScreenState extends State<PreferenceOnboardingScreen>
     );
   }
 
-  Widget _buildOptionsGrid({
+  Widget _buildInterestsGrid({
     required List<OnboardingOption> options,
     required Set<String> selected,
     required void Function(String key) onToggle,
     required IconData Function(String key) iconFor,
-    required Color accent,
   }) {
     return GridView.builder(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
-        childAspectRatio: 0.92,
+        crossAxisCount: 4,
+        crossAxisSpacing: 4,
+        mainAxisSpacing: 2,
+        childAspectRatio: 0.72,
       ),
       itemCount: options.length,
       itemBuilder: (context, index) {
         final option = options[index];
-        return OnboardingSelectionCard(
+        return CuisineThumbnailTile(
           label: option.displayName,
           icon: iconFor(option.key),
           selected: selected.contains(option.key),
-          accent: accent,
+          accent: AppColors.gold,
           onTap: () => onToggle(option.key),
         );
       },
+    );
+  }
+
+  Widget _buildAllergyChips({
+    required List<OnboardingOption> options,
+    required Set<String> selected,
+    required void Function(String key) onToggle,
+  }) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: options.map((option) {
+            final isSelected = selected.contains(option.key);
+            return AllergyChoiceChip(
+              label: option.displayName,
+              selected: isSelected,
+              onSelected: (_) => onToggle(option.key),
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 
@@ -264,10 +288,9 @@ class _PreferenceOnboardingScreenState extends State<PreferenceOnboardingScreen>
                             physics: const NeverScrollableScrollPhysics(),
                             onPageChanged: (index) => setState(() => _step = index),
                             children: [
-                              _buildOptionsGrid(
+                              _buildInterestsGrid(
                                 options: provider.options!.foodInterests,
                                 selected: _selectedInterests,
-                                accent: AppColors.gold,
                                 iconFor: _iconForInterest,
                                 onToggle: (key) {
                                   setState(() {
@@ -279,11 +302,9 @@ class _PreferenceOnboardingScreenState extends State<PreferenceOnboardingScreen>
                                   });
                                 },
                               ),
-                              _buildOptionsGrid(
+                              _buildAllergyChips(
                                 options: provider.options!.allergies,
                                 selected: _selectedAllergies,
-                                accent: AppColors.green,
-                                iconFor: _iconForAllergy,
                                 onToggle: (key) {
                                   setState(() {
                                     if (_selectedAllergies.contains(key)) {

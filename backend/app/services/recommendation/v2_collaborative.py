@@ -18,6 +18,8 @@ from app.schemas.recommendation_v2 import (
     V2ScoreBreakdown,
     V2SimilarDishItem,
 )
+from app.services.recommendation.market_filter import filter_dishes_for_market
+from app.services.recommendation.price_adjustment import apply_price_outlier_penalty
 from app.services.recommendation.v2_candidates import is_eligible_dish
 from app.services.recommendation.v2_debug import log_ranked_recommendations
 
@@ -188,6 +190,7 @@ def get_collaborative_recommendations(
         .filter(Dish.restaurant.has(is_open=True))
         .all()
     )
+    dishes = filter_dishes_for_market(dishes)
     dishes_by_id = {d.id: d for d in dishes}
 
     items: list[V2DishRecommendationItem] = []
@@ -200,6 +203,7 @@ def get_collaborative_recommendations(
 
         raw = candidate_scores[dish_id]
         normalized = round((raw / max_score) * 100, 1) if max_score > 0 else 0.0
+        normalized = apply_price_outlier_penalty(normalized, dish.price)
         breakdown = V2ScoreBreakdown(
             cuisine_score=0.0,
             nutrition_score=0.0,
@@ -217,10 +221,7 @@ def get_collaborative_recommendations(
                 calories=dish.calories,
                 score=normalized,
                 score_breakdown=breakdown,
-                explanation=(
-                    f"Often ordered together with dishes you have bought "
-                    f"(co-occurrence +{int(raw)})."
-                ),
+                explanation="Recommended because it pairs well with what you've ordered before",
                 signals_used=["collaborative"],
             )
         )

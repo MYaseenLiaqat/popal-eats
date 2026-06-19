@@ -5,6 +5,7 @@ from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
+from app.core.restaurant_constants import APPROVED
 from app.database import Base
 
 
@@ -28,6 +29,8 @@ class Restaurant(Base):
     external_id = Column(String(64), nullable=True)
     external_code = Column(String(64), nullable=True, index=True)
     tags = Column(JSON, nullable=True)
+    approval_status = Column(String(20), default=APPROVED, nullable=False, index=True)
+    rejection_reason = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     owner = relationship("User", back_populates="restaurants")
@@ -43,3 +46,4 @@ class Restaurant(Base):
     )
     menu_uploads = relationship("MenuUpload", back_populates="restaurant")
     orders = relationship("Order", back_populates="restaurant")
+    posts = relationship("Post", back_populates="restaurant")

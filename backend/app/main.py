@@ -10,6 +10,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
@@ -32,6 +33,8 @@ from app.routes.groups import router as groups_router
 from app.routes.preferences import router as preferences_router
 from app.routes.restaurant import router as restaurant_router
 from app.routes.review import router as review_router
+from app.routes.content import router as content_router
+from app.routes.stories import router as stories_router
 from app.routes.recommendations_v2 import router as recommendations_v2_router
 
 settings = get_settings()
@@ -98,6 +101,8 @@ def create_app() -> FastAPI:
     application.include_router(dish_router)
     application.include_router(review_router)
     application.include_router(recommendations_v2_router)
+    application.include_router(content_router)
+    application.include_router(stories_router)
     application.include_router(preferences_router)
     application.include_router(friends_router)
     application.include_router(groups_router)
@@ -107,6 +112,10 @@ def create_app() -> FastAPI:
     application.include_router(checkout_router)
     application.include_router(order_router)
     application.include_router(restaurant_orders_router)
+
+    uploads_path = settings.upload_path
+    uploads_path.mkdir(parents=True, exist_ok=True)
+    application.mount("/uploads", StaticFiles(directory=str(uploads_path)), name="uploads")
 
     @application.get("/health")
     @limiter.limit(settings.rate_limit_default)

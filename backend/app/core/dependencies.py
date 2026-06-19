@@ -20,6 +20,11 @@ http_bearer = HTTPBearer(
     auto_error=True,
 )
 
+http_bearer_optional = HTTPBearer(
+    scheme_name="BearerAuthOptional",
+    auto_error=False,
+)
+
 _UNAUTHORIZED_HEADERS = {"WWW-Authenticate": "Bearer"}
 
 
@@ -55,3 +60,18 @@ def get_current_user(
         )
 
     return user
+
+
+def get_optional_current_user(
+    credentials: HTTPAuthorizationCredentials | None = Depends(http_bearer_optional),
+    db: Session = Depends(get_db),
+) -> User | None:
+    if credentials is None:
+        return None
+    try:
+        payload = decode_access_token(credentials.credentials)
+        email = get_token_subject(payload)
+        get_token_role(payload)
+    except (TokenExpiredError, TokenValidationError):
+        return None
+    return db.query(User).filter(User.email == email.lower()).first()

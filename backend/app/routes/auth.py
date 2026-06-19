@@ -1,6 +1,6 @@
 """Authentication: register, login, refresh, logout, profile."""
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.config import ACCESS_TOKEN_EXPIRE_MINUTES
@@ -17,13 +17,17 @@ from app.core.security import (
 from app.database import get_db
 from app.models.user import User
 from app.schemas.user import (
+    GoogleAuthRequest,
     LogoutRequest,
     RefreshTokenRequest,
     Token,
     UserLogin,
     UserRegister,
     UserResponse,
+    UsernameAvailabilityResponse,
 )
+from app.services.google_auth_service import authenticate_google_user
+from app.utils.username import normalize_username, validate_username
 
 router = APIRouter(tags=["auth"])
 
@@ -41,16 +45,41 @@ def _issue_tokens(db: Session, user: User) -> Token:
     )
 
 
+@router.get(
+    "/auth/username-available",
+    response_model=UsernameAvailabilityResponse,
+    summary="Check whether a username is available",
+)
+def check_username_available(
+    username: str = Query(..., min_length=3, max_length=32),
+    db: Session = Depends(get_db),
+) -> UsernameAvailabilityResponse:
+    try:
+        normalized = validate_username(username)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    taken = db.query(User).filter(User.username == normalized).first() is not None
+    return UsernameAvailabilityResponse(username=normalized, available=not taken)
+
+
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def register(body: UserRegister, db: Session = Depends(get_db)):
     email = body.email.lower()
     if db.query(User).filter(User.email == email).first():
         raise HTTPException(status_code=400, detail="Email already registered")
 
+    username = normalize_username(body.username)
+    if db.query(User).filter(User.username == username).first():
+        raise HTTPException(status_code=409, detail="Username is already taken")
+
     user = User(
         full_name=body.full_name,
+        username=username,
         email=email,
         password_hash=hash_password(body.password),
+        phone=body.phone,
+        city=body.city,
         role=CUSTOMER,
     )
     db.add(user)
@@ -62,8 +91,14 @@ def register(body: UserRegister, db: Session = Depends(get_db)):
 @router.post("/login", response_model=Token)
 def login(body: UserLogin, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == body.email.lower()).first()
-    if not user or not verify_password(body.password, user.password_hash):
+    if not user or not user.password_hash or not verify_password(body.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid email or password")
+    return _issue_tokens(db, user)
+
+
+@router.post("/auth/google", response_model=Token, summary="Sign in with Google ID token")
+def google_auth(body: GoogleAuthRequest, db: Session = Depends(get_db)):
+    user = authenticate_google_user(db, body.id_token)
     return _issue_tokens(db, user)
 
 

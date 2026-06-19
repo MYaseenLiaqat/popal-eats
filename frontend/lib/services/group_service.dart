@@ -85,9 +85,13 @@ class GroupService {
     return GroupMemberLocation.fromJson(_client.decodeJson(response));
   }
 
-  Future<GroupRecommendationsResult> getGroupRecommendations(int sessionId) async {
+  Future<GroupRecommendationsResult> getGroupRecommendations(
+    int sessionId, {
+    bool refresh = false,
+  }) async {
     final response = await _client.get(
       '/groups/$sessionId/recommendations',
+      query: refresh ? {'refresh': 'true'} : null,
       timeout: const Duration(minutes: 3),
     );
     _client.throwIfError(response);

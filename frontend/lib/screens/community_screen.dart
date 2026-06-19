@@ -8,6 +8,7 @@ import '../widgets/community_avatar.dart';
 import '../widgets/social/notification_hub_button.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 import 'friends_list_screen.dart';
+import 'group_detail_screen.dart';
 import 'groups_screen.dart';
 import 'notification_center_screen.dart';
 
@@ -159,7 +160,9 @@ class _CommunityScreenState extends State<CommunityScreen> {
                   child: ModernCard(
                     onTap: () => Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const GroupsScreen()),
+                      MaterialPageRoute(
+                        builder: (_) => GroupDetailScreen(sessionId: session.id),
+                      ),
                     ),
                     child: Row(
                       children: [
@@ -171,7 +174,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                             children: [
                               Text(session.name, style: Theme.of(context).textTheme.titleMedium),
                               Text(
-                                '${session.memberCount} members · ${session.status}',
+                                '${session.memberCount} members',
                                 style: Theme.of(context).textTheme.bodyMedium,
                               ),
                             ],
@@ -261,8 +264,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
             const ModernCard(
               child: EmptyState(
                 icon: Icons.dynamic_feed_outlined,
-                title: 'Your friends\' activity will appear here.',
-                subtitle: 'Likes, orders, and shares from friends show up in this feed.',
+                title: 'Friend activity lives on Home',
+                subtitle: 'Posts, stories, and restaurant updates appear in the Home feed.',
               ),
             ),
             const SizedBox(height: 16),

@@ -20,6 +20,7 @@ from typing import Any
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.core.restaurant_constants import APPROVED
 from app.core.roles import ADMIN, RESTAURANT_OWNER
 from app.integrations.foodpanda.foodpanda_client import FoodpandaAPIError, FoodpandaClient
 from app.models.category import Category
@@ -644,6 +645,7 @@ class FoodpandaImportService:
             external_id=vendor_id or None,
             external_code=vendor_code or None,
             tags=tags,
+            approval_status=APPROVED,
         )
         self._db.add(restaurant)
         self._db.flush()
@@ -729,7 +731,9 @@ class FoodpandaImportService:
             if existing:
                 existing.description = row.get("description")
                 existing.price = price
-                existing.image = row.get("image_url")
+                image_url = row.get("image_url")
+                if image_url:
+                    existing.image = image_url
                 existing.category_id = category_id
                 existing.is_available = True
                 existing.source = FOODPANDA_SOURCE

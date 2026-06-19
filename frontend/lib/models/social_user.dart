@@ -14,8 +14,11 @@ class UserPublicProfile {
   final String? profileImage;
 
   String get displayHandle {
-    if (username != null && username!.isNotEmpty) return '@$username';
-    return 'User #$id';
+    if (username != null && username!.trim().isNotEmpty) {
+      final u = username!.trim().toLowerCase();
+      return u.startsWith('@') ? u : '@$u';
+    }
+    return '@user$id';
   }
 
   factory UserPublicProfile.fromJson(Map<String, dynamic> json) {

@@ -23,6 +23,7 @@ from app.models.dish import Dish
 from app.models.order import Order
 from app.models.order_item import OrderItem
 from app.schemas.recommendation_v2 import V2DishRecommendationItem, V2ScoreBreakdown
+from app.services.recommendation.price_adjustment import apply_price_outlier_penalty
 from app.services.recommendation.v2_collaborative import (
     build_cooccurrence_matrix,
     get_collaborative_recommendations,
@@ -127,6 +128,7 @@ def _build_fused_item(
         feedback_fusion,
         popularity_fusion,
     )
+    hybrid_score = apply_price_outlier_penalty(hybrid_score, price)
     if hybrid_score <= 0:
         return None
 

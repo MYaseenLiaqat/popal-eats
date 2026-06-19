@@ -19,6 +19,10 @@ LAHORE_GAP_FILL_ANCHORS: list[tuple[str, float, float]] = [
     ("DHA Phase 5", 31.4697, 74.4066),
     ("Johar Town", 31.4692, 74.2724),
     ("Allama Iqbal Town", 31.5126, 74.2901),
+    ("Gulberg", 31.5204, 74.3587),
+    ("Lake City", 31.3850, 74.4550),
+    ("Wapda Town", 31.4444, 74.2870),
+    ("Valencia", 31.4120, 74.2280),
 ]
 
 

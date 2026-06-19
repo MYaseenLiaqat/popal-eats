@@ -6,7 +6,7 @@ import '../theme/app_colors.dart';
 import '../widgets/reels/reel_card.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 
-/// Vertical reels viewer — architecture shell without video playback.
+/// Vertical reels viewer — full-screen swipe, placeholder content only.
 class ReelsScreen extends StatefulWidget {
   const ReelsScreen({super.key, this.initialIndex = 0});
 
@@ -16,13 +16,23 @@ class ReelsScreen extends StatefulWidget {
   State<ReelsScreen> createState() => _ReelsScreenState();
 }
 
-class _ReelsScreenState extends State<ReelsScreen> {
+class _ReelsScreenState extends State<ReelsScreen> with SingleTickerProviderStateMixin {
   late PageController _pageController;
+  late AnimationController _hintController;
+  late Animation<double> _hintOpacity;
+  bool _showSwipeHint = true;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController(initialPage: widget.initialIndex);
+    _hintController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat(reverse: true);
+    _hintOpacity = Tween<double>(begin: 0.35, end: 1).animate(
+      CurvedAnimation(parent: _hintController, curve: Curves.easeInOut),
+    );
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ReelsProvider>().fetch(force: true);
     });
@@ -31,13 +41,21 @@ class _ReelsScreenState extends State<ReelsScreen> {
   @override
   void dispose() {
     _pageController.dispose();
+    _hintController.dispose();
     super.dispose();
+  }
+
+  void _dismissSwipeHint() {
+    if (!_showSwipeHint) return;
+    setState(() => _showSwipeHint = false);
+    _hintController.stop();
   }
 
   void _showPreviewNotice() {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Video playback will be available in a future update'),
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }
@@ -115,17 +133,70 @@ class _ReelsScreenState extends State<ReelsScreen> {
       );
     }
 
-    return PageView.builder(
-      controller: _pageController,
-      scrollDirection: Axis.vertical,
-      itemCount: provider.reels.length,
-      onPageChanged: provider.setCurrentIndex,
-      itemBuilder: (context, index) {
-        return ReelCard(
-          reel: provider.reels[index],
-          onPreviewTap: _showPreviewNotice,
-        );
-      },
+    return Stack(
+      children: [
+        PageView.builder(
+          controller: _pageController,
+          scrollDirection: Axis.vertical,
+          physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+          itemCount: provider.reels.length,
+          onPageChanged: (index) {
+            provider.setCurrentIndex(index);
+            _dismissSwipeHint();
+          },
+          itemBuilder: (context, index) {
+            return AnimatedSwitcher(
+              duration: const Duration(milliseconds: 280),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              child: ReelCard(
+                key: ValueKey(provider.reels[index].id),
+                reel: provider.reels[index],
+                onPreviewTap: _showPreviewNotice,
+              ),
+            );
+          },
+        ),
+        if (_showSwipeHint && provider.reels.length > 1)
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: MediaQuery.paddingOf(context).bottom + 120,
+            child: FadeTransition(
+              opacity: _hintOpacity,
+              child: const Center(
+                child: _SwipeHint(),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _SwipeHint extends StatelessWidget {
+  const _SwipeHint();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white24),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.keyboard_arrow_up_rounded, color: Colors.white70, size: 20),
+          SizedBox(width: 6),
+          Text(
+            'Swipe for more',
+            style: TextStyle(color: Colors.white70, fontSize: 13),
+          ),
+        ],
+      ),
     );
   }
 }

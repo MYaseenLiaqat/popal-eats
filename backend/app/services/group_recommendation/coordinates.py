@@ -43,16 +43,17 @@ def build_restaurant_coordinate_map(
 ) -> dict[int, tuple[float, float]]:
     """Map restaurant_id → (lat, lng) using Foodpanda manifest external_code."""
     manifest = _manifest_coordinate_index()
-    if not manifest:
-        return {}
+    fallback = default_city_centroid()
 
     coords: dict[int, tuple[float, float]] = {}
     for restaurant in restaurants:
         if restaurant.source != FOODPANDA_SOURCE or not restaurant.external_code:
             continue
-        hit = manifest.get(restaurant.external_code)
+        hit = manifest.get(restaurant.external_code) if manifest else None
         if hit:
             coords[restaurant.id] = hit
+        else:
+            coords[restaurant.id] = fallback
     return coords
 
 

@@ -14,6 +14,8 @@ class Restaurant {
     this.isOpen = true,
     this.averageRating = 0,
     this.totalReviews = 0,
+    this.approvalStatus = 'approved',
+    this.rejectionReason,
     this.tags = const [],
     this.createdAt,
   });
@@ -29,6 +31,8 @@ class Restaurant {
   final bool isOpen;
   final double averageRating;
   final int totalReviews;
+  final String approvalStatus;
+  final String? rejectionReason;
   final List<String> tags;
   final DateTime? createdAt;
 
@@ -46,6 +50,8 @@ class Restaurant {
             parseDoubleOrNull(json['rating']) ??
             0,
         totalReviews: parseIntOrNull(json['total_reviews']) ?? 0,
+        approvalStatus: json['approval_status']?.toString() ?? 'approved',
+        rejectionReason: json['rejection_reason']?.toString(),
         tags: _parseTags(json['tags']),
         createdAt: parseDateTimeOrNull(json['created_at']),
       );

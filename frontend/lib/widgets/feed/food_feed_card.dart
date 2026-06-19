@@ -5,20 +5,20 @@ import '../../theme/app_colors.dart';
 import '../../utils/price_formatter.dart';
 import '../ui/app_ui_widgets.dart';
 
-/// Large visual card for the home food feed.
+/// Instagram-style food feed card — image-first, minimal copy.
 class FoodFeedCard extends StatelessWidget {
   const FoodFeedCard({
     super.key,
     required this.item,
     this.onTap,
-    this.imageHeight = 260,
+    this.imageHeight = 340,
   });
 
   final FoodFeedItem item;
   final VoidCallback? onTap;
   final double imageHeight;
 
-  Color _chipColor(FoodFeedKind kind) {
+  Color _accent(FoodFeedKind kind) {
     switch (kind) {
       case FoodFeedKind.recommended:
         return AppColors.green;
@@ -33,160 +33,128 @@ class FoodFeedCard extends StatelessWidget {
     }
   }
 
-  IconData _placeholderIcon(FoodFeedKind kind) {
-    switch (kind) {
-      case FoodFeedKind.groupDecision:
-        return Icons.groups_outlined;
-      case FoodFeedKind.friendPlaceholder:
-        return Icons.favorite_border;
-      case FoodFeedKind.discover:
-        return Icons.explore_outlined;
-      default:
-        return Icons.restaurant_menu;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final isPlaceholder = item.kind == FoodFeedKind.friendPlaceholder;
-    final isDiscover = item.kind == FoodFeedKind.discover;
-    final showImage = !isPlaceholder && !isDiscover;
+    if (item.kind == FoodFeedKind.friendPlaceholder) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 20),
+        child: ModernCard(
+          padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
+          child: EmptyState(
+            icon: Icons.favorite_border,
+            title: item.title,
+            subtitle: item.subtitle,
+          ),
+        ),
+      );
+    }
+
+    if (item.kind == FoodFeedKind.discover) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 20),
+        child: ModernCard(
+          onTap: onTap,
+          padding: const EdgeInsets.all(20),
+          borderColor: AppColors.gold.withValues(alpha: 0.35),
+          child: Row(
+            children: [
+              const Icon(Icons.explore_outlined, color: AppColors.gold, size: 32),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(item.title, style: Theme.of(context).textTheme.titleMedium),
+                    if (item.subtitle != null)
+                      Text(item.subtitle!, style: Theme.of(context).textTheme.bodyMedium),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_forward_ios, size: 14, color: AppColors.textSecondary),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: ModernCard(
-        onTap: onTap,
-        padding: EdgeInsets.zero,
-        borderColor: _chipColor(item.kind).withValues(alpha: 0.3),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (showImage)
-              Stack(
-                children: [
-                  DishImageBanner(
-                    imageUrl: item.imageUrl,
-                    height: imageHeight,
-                  ),
-                  Positioned(
-                    top: 12,
-                    left: 12,
-                    child: _KindChip(
-                      label: item.kindLabel,
-                      color: _chipColor(item.kind),
-                    ),
-                  ),
-                ],
-              )
-            else
-              Container(
-                height: isPlaceholder ? 140 : 120,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      AppColors.surfaceLight.withValues(alpha: 0.5),
-                      AppColors.surface.withValues(alpha: 0.9),
-                    ],
-                  ),
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(AppColors.cardRadius),
+          child: Ink(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppColors.cardRadius),
+              border: Border.all(color: AppColors.surfaceLight.withValues(alpha: 0.5)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ClipRRect(
                   borderRadius: const BorderRadius.vertical(
                     top: Radius.circular(AppColors.cardRadius),
                   ),
-                ),
-                child: Stack(
-                  children: [
-                    Center(
-                      child: Icon(
-                        _placeholderIcon(item.kind),
-                        size: 48,
-                        color: _chipColor(item.kind).withValues(alpha: 0.7),
+                  child: Stack(
+                    children: [
+                      DishImageBanner(
+                        imageUrl: item.imageUrl,
+                        height: imageHeight,
                       ),
-                    ),
-                    Positioned(
-                      top: 12,
-                      left: 12,
-                      child: _KindChip(
-                        label: item.kindLabel,
-                        color: _chipColor(item.kind),
+                      Positioned(
+                        top: 14,
+                        left: 14,
+                        child: _KindChip(label: item.kindLabel, color: _accent(item.kind)),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.title,
-                    style: Theme.of(context).textTheme.titleLarge,
+                    ],
                   ),
-                  if (item.restaurantName != null) ...[
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.storefront_outlined,
-                          size: 16,
-                          color: AppColors.textSecondary,
-                        ),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            item.restaurantName!,
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                  if (item.subtitle != null) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      item.subtitle!,
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: AppColors.textSecondary,
-                            height: 1.35,
-                          ),
-                    ),
-                  ],
-                  if (item.price != null) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      PriceFormatter.format(item.price!),
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: AppColors.gold,
-                            fontWeight: FontWeight.w700,
-                          ),
-                    ),
-                  ],
-                  if (onTap != null && !isPlaceholder) ...[
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.title,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                      if (item.restaurantName != null) ...[
+                        const SizedBox(height: 4),
                         Text(
-                          isDiscover ? 'Browse' : 'View',
-                          style: const TextStyle(
-                            color: AppColors.gold,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        const Icon(
-                          Icons.arrow_forward_ios,
-                          size: 12,
-                          color: AppColors.gold,
+                          item.restaurantName!,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
                         ),
                       ],
-                    ),
-                  ],
-                ],
-              ),
+                      if (item.subtitle != null) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          item.subtitle!,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodyLarge,
+                        ),
+                      ],
+                      if (item.price != null) ...[
+                        const SizedBox(height: 10),
+                        Text(
+                          PriceFormatter.format(item.price!),
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                color: AppColors.gold,
+                                fontWeight: FontWeight.w700,
+                              ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -206,7 +174,7 @@ class _KindChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.6)),
+        border: Border.all(color: color.withValues(alpha: 0.65)),
       ),
       child: Text(
         label,

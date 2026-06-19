@@ -55,9 +55,27 @@ def normalize_popularity_for_fusion(popularity_score: float) -> float:
 
 
 def build_fusion_explanation(*, feedback_detail: str | None = None, detail: str | None = None) -> str:
-    parts = [FUSION_EXPLANATION_HEADER]
+    """Consumer-friendly explanation — no fusion/weight jargon."""
+    parts: list[str] = []
+    if detail and not _is_technical_explanation(detail):
+        parts.append(detail.strip())
     if feedback_detail:
-        parts.append(feedback_detail)
-    if detail:
-        parts.append(detail)
-    return "\n".join(parts)
+        parts.append(feedback_detail.strip())
+    if parts:
+        return " ".join(parts)
+    return "Recommended based on your taste and what's popular nearby."
+
+
+def _is_technical_explanation(text: str) -> bool:
+    lower = text.lower()
+    blocked = (
+        "hybrid",
+        "fusion",
+        "collaborative",
+        "content (",
+        "feedback (",
+        "popularity (",
+        "co-occurrence",
+        "signals",
+    )
+    return any(term in lower for term in blocked)

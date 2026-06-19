@@ -232,7 +232,7 @@ class _GroupDecisionScreenState extends State<GroupDecisionScreen> {
                 )
               else
                 Text(
-                  'Scores will appear once members start voting',
+                  'Votes will show up once your group starts voting',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: AppColors.textSecondary,
                       ),

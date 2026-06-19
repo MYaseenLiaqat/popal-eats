@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from app.models.dish import Dish
+from app.core.restaurant_constants import USER_ALLERGY_TO_DISH_TAG
 from app.services.recommendation.preference_scoring import normalize_preference_token
 
 _MEAT_KEYWORDS = frozenset(
@@ -98,6 +99,17 @@ def _contains_any(blob: str, keywords: tuple[str, ...] | frozenset[str]) -> bool
     return any(keyword in blob for keyword in keywords)
 
 
+def _dish_allergen_tags(dish: Dish) -> set[str]:
+    raw = dish.allergens if isinstance(dish.allergens, list) else []
+    return {str(tag).strip().lower() for tag in raw if tag}
+
+
+def _user_allergy_to_dish_tags(allergy: str) -> set[str]:
+    key = allergy.strip().lower()
+    mapped = USER_ALLERGY_TO_DISH_TAG.get(key, key.replace(" ", "_"))
+    return {mapped}
+
+
 def is_dish_safe_for_group(
     dish: Dish,
     group_allergies: set[str],
@@ -107,6 +119,13 @@ def is_dish_safe_for_group(
 ) -> bool:
     """Hard filter — False when any group allergy appears in dish signals."""
     if not group_allergies:
+        return True
+
+    structured = _dish_allergen_tags(dish)
+    if structured:
+        for allergy in group_allergies:
+            if _user_allergy_to_dish_tags(allergy) & structured:
+                return False
         return True
 
     blob = _dish_text_blob(dish, dish_tags or [], restaurant_tags or [])

@@ -33,6 +33,8 @@ from app.services.group_recommendation.consensus import (
     should_mark_agreed,
     summarize_votes,
 )
+from app.services.group_recommendation.context import load_group_context
+from app.services.group_recommendation.scoring import compute_group_centroid
 from app.services.group_recommendation_service import get_group_recommendations
 from app.services.group_session_service import _get_session_or_404, _require_member
 
@@ -72,6 +74,78 @@ def _get_or_create_decision(db: Session, session_id: int) -> GroupDecision:
         db.add(decision)
         db.flush()
     return decision
+
+
+def _clear_session_snapshots(db: Session, session_id: int) -> None:
+    """Remove prior snapshot rows (votes cascade) before a fresh ranking."""
+    db.query(GroupRecommendation).filter(
+        GroupRecommendation.session_id == session_id
+    ).delete(synchronize_session=False)
+    db.flush()
+
+
+def _active_snapshots(db: Session, session_id: int) -> list[GroupRecommendation]:
+    """Latest snapshot batch for a session, one row per dish."""
+    rows = (
+        db.query(GroupRecommendation)
+        .options(joinedload(GroupRecommendation.dish).joinedload(Dish.restaurant))
+        .filter(GroupRecommendation.session_id == session_id)
+        .order_by(GroupRecommendation.final_score.desc(), GroupRecommendation.id.asc())
+        .all()
+    )
+    if not rows:
+        return []
+
+    latest_created = max(row.created_at for row in rows)
+    batch = [
+        row
+        for row in rows
+        if abs((row.created_at - latest_created).total_seconds()) < 3
+    ]
+    source = batch if len(batch) >= len(rows) // 2 else rows
+
+    by_dish: dict[int, GroupRecommendation] = {}
+    for row in sorted(source, key=lambda item: item.id):
+        by_dish[row.dish_id] = row
+    return sorted(
+        by_dish.values(),
+        key=lambda row: (-float(row.final_score), row.dish_id),
+    )
+
+
+def _response_from_snapshots(
+    db: Session,
+    session,
+    snapshots: list[GroupRecommendation],
+) -> GroupRecommendationsResponse:
+    context = load_group_context(db, session)
+    centroid = compute_group_centroid(context.active_locations)
+    items: list[GroupDishRecommendation] = []
+    for row in snapshots:
+        dish = row.dish
+        if dish is None:
+            continue
+        restaurant = dish.restaurant
+        items.append(
+            GroupDishRecommendation(
+                recommendation_id=row.id,
+                dish_id=dish.id,
+                dish_name=dish.name,
+                restaurant_name=restaurant.name if restaurant else "",
+                price=dish.price,
+                score=float(row.recommendation_score),
+                consensus_score=float(row.consensus_score),
+                final_score=float(row.final_score),
+                reasons=["A solid pick for your group"],
+            )
+        )
+    return GroupRecommendationsResponse(
+        group_id=session.id,
+        member_count=context.member_count,
+        group_latitude=centroid[0] if centroid else None,
+        group_longitude=centroid[1] if centroid else None,
+        recommendations=items,
+    )
 
 
 def persist_recommendation_snapshots(
@@ -130,9 +204,41 @@ def get_group_recommendations_with_snapshots(
     db: Session,
     user_id: int,
     session_id: int,
+    *,
+    refresh: bool = False,
 ) -> GroupRecommendationsResponse:
-    """Generate recommendations via existing engine, then persist snapshots."""
+    """
+    Return stable recommendation snapshots for voting.
+
+  First load (or explicit refresh) runs the engine and persists rows.
+  Subsequent loads reuse the same snapshot IDs so all members vote on
+  the same recommendations.
+    """
+    session = _get_session_or_404(db, session_id)
+    _require_member(session, user_id)
+
+    decision = db.query(GroupDecision).filter(GroupDecision.session_id == session_id).first()
+    ordered = decision is not None and decision.status == ORDERED
+
+    snapshots = _active_snapshots(db, session_id)
+    if snapshots and not refresh and not ordered:
+        logger.info(
+            "GROUP_RECOMMENDATIONS_REUSE session_id=%s count=%d",
+            session_id,
+            len(snapshots),
+        )
+        return _response_from_snapshots(db, session, snapshots)
+
+    if refresh and snapshots:
+        _clear_session_snapshots(db, session_id)
+
     response = get_group_recommendations(db, user_id, session_id)
+    if not response.recommendations:
+        return response
+
+    if snapshots and refresh:
+        _clear_session_snapshots(db, session_id)
+
     persisted = persist_recommendation_snapshots(db, session_id, response.recommendations)
     return enrich_recommendations_response(db, response, persisted)
 

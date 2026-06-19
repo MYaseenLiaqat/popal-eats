@@ -14,9 +14,12 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     full_name = Column(String, nullable=False)
     email = Column(String(255), unique=True, index=True, nullable=False)
-    password_hash = Column(String, nullable=False)
+    password_hash = Column(String, nullable=True)
     role = Column(String(32), default=CUSTOMER, nullable=False, index=True)
     username = Column(String(32), unique=True, index=True, nullable=True)
+    phone = Column(String(20), nullable=True)
+    city = Column(String(100), nullable=True)
+    google_id = Column(String(128), unique=True, index=True, nullable=True)
     bio = Column(Text, nullable=True)
     profile_image = Column(String(500), nullable=True)
     onboarding_completed = Column(Boolean, default=False, nullable=False, server_default="false")
@@ -83,3 +86,10 @@ class User(Base):
         back_populates="user",
         cascade="all, delete-orphan",
     )
+    posts = relationship("Post", back_populates="author", cascade="all, delete-orphan")
+    stories = relationship("Story", back_populates="user", cascade="all, delete-orphan")
+    post_likes = relationship("PostLike", back_populates="user", cascade="all, delete-orphan")
+    post_comments = relationship(
+        "PostComment", back_populates="user", cascade="all, delete-orphan"
+    )
+    post_saves = relationship("PostSave", back_populates="user", cascade="all, delete-orphan")
