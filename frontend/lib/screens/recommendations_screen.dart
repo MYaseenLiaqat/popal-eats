@@ -54,7 +54,7 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        error = e.toString();
+        error = RecommendationCopy.friendlyError(e);
         loading = false;
       });
     }

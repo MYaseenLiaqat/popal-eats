@@ -71,6 +71,37 @@ def load_tag_maps(db: Session) -> tuple[dict[int, list[str]], dict[int, list[str
     return dish_tags, restaurant_tags
 
 
+def build_tag_maps_from_dishes(
+    dishes: list[Dish],
+) -> tuple[dict[int, list[str]], dict[int, list[str]]]:
+    """
+    Build tag maps from already-loaded Dish rows (no extra DB round-trip).
+
+    Use in group recommendations after ``load_eligible_dishes`` which eager-loads
+    restaurant + category.
+    """
+    dish_tags: dict[int, list[str]] = {}
+    restaurant_tags: dict[int, list[str]] = {}
+
+    for dish in dishes:
+        tags = _normalize_tags(dish.tags)
+        if not tags and dish.category and dish.category.name:
+            tags = [dish.category.name.strip().lower()]
+        if tags:
+            dish_tags[dish.id] = tags
+
+        restaurant = dish.restaurant
+        if restaurant is None or restaurant.id in restaurant_tags:
+            continue
+        rtags = _normalize_tags(restaurant.tags)
+        if not rtags:
+            rtags = cuisines_from_description(restaurant.description)
+        if rtags:
+            restaurant_tags[restaurant.id] = rtags
+
+    return dish_tags, restaurant_tags
+
+
 def get_catalog_stats(db: Session) -> dict[str, int]:
     """Aggregate restaurant/dish counts including Foodpanda imports."""
     total_restaurants = db.query(func.count(Restaurant.id)).scalar() or 0

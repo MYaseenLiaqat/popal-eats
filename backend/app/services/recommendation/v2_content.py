@@ -5,6 +5,7 @@ Scoring (max 100):
   Cuisine 50 | Nutrition 25 | Budget 15 | Popularity 10
 """
 
+import heapq
 from decimal import Decimal
 from typing import Any
 
@@ -21,7 +22,7 @@ from app.services.recommendation.preference_scoring import (
 )
 from app.services.recommendation.v2_candidates import load_eligible_dishes
 from app.services.recommendation.price_adjustment import apply_price_outlier_penalty
-from app.services.recommendation.v2_catalog import FOODPANDA_SOURCE, load_tag_maps
+from app.services.recommendation.v2_catalog import FOODPANDA_SOURCE, build_tag_maps_from_dishes
 from app.services.recommendation.v2_debug import log_pipeline_stage, log_ranked_recommendations
 from app.services.user_preferences_service import load_recommendation_preferences
 
@@ -51,18 +52,16 @@ def _normalize_tags(raw: Any) -> list[str]:
     return []
 
 
-def _load_tags_maps(db: Session) -> tuple[dict[int, list[str]], dict[int, list[str]]]:
-    """Delegate to catalog integration layer (ORM tags + Foodpanda cuisine fallback)."""
-    return load_tag_maps(db)
+def _load_tags_maps(dishes: list[Dish]) -> tuple[dict[int, list[str]], dict[int, list[str]]]:
+    return build_tag_maps_from_dishes(dishes)
 
 
-def _load_order_counts(db: Session) -> dict[int, int]:
+def _load_order_counts(db: Session, dish_ids: list[int] | None = None) -> dict[int, int]:
     try:
-        rows = (
-            db.query(OrderItem.dish_id, func.count(OrderItem.id))
-            .group_by(OrderItem.dish_id)
-            .all()
-        )
+        query = db.query(OrderItem.dish_id, func.count(OrderItem.id)).group_by(OrderItem.dish_id)
+        if dish_ids:
+            query = query.filter(OrderItem.dish_id.in_(dish_ids))
+        rows = query.all()
         return {dish_id: int(count) for dish_id, count in rows}
     except Exception:
         return {}
@@ -370,10 +369,10 @@ def get_content_recommendations(
     Content-based recommendations for a user (Phase 1).
     """
     prefs = load_recommendation_preferences(db, user_id)
-    dish_tags_map, restaurant_tags_map = _load_tags_maps(db)
-    order_counts = _load_order_counts(db)
-
     dishes = load_eligible_dishes(db, user_id=user_id)
+    dish_tags_map, restaurant_tags_map = _load_tags_maps(dishes)
+    candidate_ids = [d.id for d in dishes]
+    order_counts = _load_order_counts(db, candidate_ids)
     log_pipeline_stage(
         "content_scoring_start",
         user_id=user_id,
@@ -394,8 +393,7 @@ def get_content_recommendations(
         item = _score_dish(dish, prefs, dish_tags_map, restaurant_tags_map, order_counts)
         if item is not None:
             scored.append(item)
-    scored.sort(key=lambda item: item.score, reverse=True)
-    top = scored[:limit]
+    top = heapq.nlargest(limit, scored, key=lambda item: item.score)
     source_by_id = {d.id: d.source for d in dishes}
     log_pipeline_stage(
         "content_ranking_complete",
