@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.content_constants import DISCOVER_POST_TYPES, RECIPE, RESTAURANT_POST
@@ -33,22 +33,54 @@ def _friend_ids(db: Session, user_id: int) -> set[int]:
     return {row[0] for row in rows}
 
 
-def _serialize_post(post: Post, viewer_id: int | None, db: Session) -> PostResponse:
+def _viewer_interaction_ids(
+    db: Session, viewer_id: int, post_ids: list[int]
+) -> tuple[set[int], set[int]]:
+    """Batch-load liked/saved post ids for a viewer (avoids N+1 per post)."""
+    if not post_ids:
+        return set(), set()
+    liked_rows = (
+        db.query(PostLike.post_id)
+        .filter(PostLike.user_id == viewer_id, PostLike.post_id.in_(post_ids))
+        .all()
+    )
+    saved_rows = (
+        db.query(PostSave.post_id)
+        .filter(PostSave.user_id == viewer_id, PostSave.post_id.in_(post_ids))
+        .all()
+    )
+    return {row[0] for row in liked_rows}, {row[0] for row in saved_rows}
+
+
+def _serialize_post(
+    post: Post,
+    viewer_id: int | None,
+    db: Session,
+    *,
+    liked_ids: set[int] | None = None,
+    saved_ids: set[int] | None = None,
+) -> PostResponse:
     liked = False
     saved = False
     if viewer_id is not None:
-        liked = (
-            db.query(PostLike.id)
-            .filter(PostLike.post_id == post.id, PostLike.user_id == viewer_id)
-            .first()
-            is not None
-        )
-        saved = (
-            db.query(PostSave.id)
-            .filter(PostSave.post_id == post.id, PostSave.user_id == viewer_id)
-            .first()
-            is not None
-        )
+        if liked_ids is not None:
+            liked = post.id in liked_ids
+        else:
+            liked = (
+                db.query(PostLike.id)
+                .filter(PostLike.post_id == post.id, PostLike.user_id == viewer_id)
+                .first()
+                is not None
+            )
+        if saved_ids is not None:
+            saved = post.id in saved_ids
+        else:
+            saved = (
+                db.query(PostSave.id)
+                .filter(PostSave.post_id == post.id, PostSave.user_id == viewer_id)
+                .first()
+                is not None
+            )
 
     author_profile = None
     if post.author is not None:
@@ -198,36 +230,40 @@ def list_home_feed(
     friends = _friend_ids(db, user_id)
     visible_authors = friends | {user_id}
 
-    restaurant_posts = (
+    restaurant_post_ids = (
         db.query(Post.id)
         .join(Post.restaurant)
         .filter(
             Post.post_type == RESTAURANT_POST,
             Restaurant.approval_status == APPROVED,
         )
-        .subquery()
     )
 
-    query = (
+    visibility_filter = or_(
+        Post.author_id.in_(visible_authors),
+        Post.id.in_(restaurant_post_ids),
+    )
+
+    total = db.query(func.count(Post.id)).filter(visibility_filter).scalar() or 0
+
+    posts = (
         db.query(Post)
         .options(
             joinedload(Post.author),
             joinedload(Post.restaurant),
             joinedload(Post.dish),
         )
-        .filter(
-            or_(
-                Post.author_id.in_(visible_authors),
-                Post.id.in_(restaurant_posts),
-            )
-        )
+        .filter(visibility_filter)
         .order_by(Post.created_at.desc())
+        .offset((page - 1) * limit)
+        .limit(limit)
+        .all()
     )
-
-    total = query.count()
-    offset = (page - 1) * limit
-    posts = query.offset(offset).limit(limit).all()
-    return [_serialize_post(p, user_id, db) for p in posts], total
+    post_ids = [p.id for p in posts]
+    liked_ids, saved_ids = _viewer_interaction_ids(db, user_id, post_ids)
+    return [
+        _serialize_post(p, user_id, db, liked_ids=liked_ids, saved_ids=saved_ids) for p in posts
+    ], total
 
 
 def list_discover_reels(db: Session, *, limit: int = 30) -> list[DiscoverReelResponse]:

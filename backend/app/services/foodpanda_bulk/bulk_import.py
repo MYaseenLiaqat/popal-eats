@@ -61,6 +61,16 @@ class FoodpandaBulkImportRunner:
             if checkpoint.manifest_path != str(manifest_path):
                 checkpoint.manifest_path = str(manifest_path)
             effective_limit = checkpoint.vendor_limit
+            if limit is not None and (
+                effective_limit is None or limit > (effective_limit or 0)
+            ):
+                effective_limit = limit
+                checkpoint.vendor_limit = effective_limit
+                if (
+                    checkpoint.status == "completed"
+                    and checkpoint.next_vendor_index < effective_limit
+                ):
+                    checkpoint.status = "running"
             log_event(
                 "IMPORT_RESUME",
                 run_id=checkpoint.run_id,

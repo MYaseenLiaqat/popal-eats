@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import heapq
 import logging
 
 from fastapi import HTTPException, status
@@ -31,15 +32,18 @@ from app.services.group_session_service import _get_session_or_404, _is_session_
 from app.services.recommendation.market_filter import filter_dishes_for_market
 from app.services.recommendation.price_adjustment import apply_price_outlier_penalty
 from app.services.recommendation.v2_candidates import load_eligible_dishes
-from app.services.recommendation.v2_catalog import load_tag_maps
+from app.services.recommendation.v2_catalog import build_tag_maps_from_dishes
 
 logger = logging.getLogger("popal.group_recommendations")
 
 TOP_N = 20
 
 
-def _load_order_counts(db: Session) -> dict[int, int]:
-    rows = db.query(OrderItem.dish_id, func.count(OrderItem.id)).group_by(OrderItem.dish_id).all()
+def _load_order_counts(db: Session, dish_ids: list[int] | None = None) -> dict[int, int]:
+    query = db.query(OrderItem.dish_id, func.count(OrderItem.id)).group_by(OrderItem.dish_id)
+    if dish_ids:
+        query = query.filter(OrderItem.dish_id.in_(dish_ids))
+    rows = query.all()
     return {dish_id: int(count) for dish_id, count in rows}
 
 
@@ -137,8 +141,7 @@ def _score_dishes(
             )
         )
 
-    scored.sort(key=lambda item: (-item.score, item.dish_id))
-    return scored[:TOP_N]
+    return heapq.nlargest(TOP_N, scored, key=lambda item: (item.score, item.dish_id))
 
 
 def get_group_recommendations(
@@ -168,7 +171,7 @@ def get_group_recommendations(
     )
 
     candidates = load_eligible_dishes(db, user_id=user_id)
-    dish_tags_map, restaurant_tags_map = load_tag_maps(db)
+    dish_tags_map, restaurant_tags_map = build_tag_maps_from_dishes(candidates)
     filtered = _filter_candidates(candidates, context, dish_tags_map, restaurant_tags_map)
     market_filtered = filter_dishes_for_market(filtered)
     logger.info(
@@ -181,7 +184,8 @@ def get_group_recommendations(
 
     restaurants = [dish.restaurant for dish in market_filtered if dish.restaurant]
     restaurant_coords = build_restaurant_coordinate_map(restaurants)
-    order_counts = _load_order_counts(db)
+    candidate_ids = [dish.id for dish in market_filtered]
+    order_counts = _load_order_counts(db, candidate_ids)
 
     recommendations = _score_dishes(
         market_filtered,

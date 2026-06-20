@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../models/post.dart';
 import '../services/content_service.dart';
 import '../theme/app_colors.dart';
+import '../utils/recommendation_copy.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 
 /// Create a recipe post with ingredients and steps.
@@ -92,7 +93,7 @@ class _CreateRecipeScreenState extends State<CreateRecipeScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
+        SnackBar(content: Text(RecommendationCopy.friendlyError(e))),
       );
     } finally {
       if (mounted) setState(() => _submitting = false);

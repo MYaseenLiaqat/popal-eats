@@ -37,13 +37,33 @@ def create_story(db: Session, user: User, image_url: str) -> StoryResponse:
     return _serialize_story(story, user.id, db)
 
 
-def _serialize_story(story: Story, viewer_id: int, db: Session) -> StoryResponse:
-    viewed = (
-        db.query(StoryView.id)
-        .filter(StoryView.story_id == story.id, StoryView.viewer_id == viewer_id)
-        .first()
-        is not None
+def _viewer_story_ids(db: Session, viewer_id: int, story_ids: list[int]) -> set[int]:
+    if not story_ids:
+        return set()
+    rows = (
+        db.query(StoryView.story_id)
+        .filter(StoryView.viewer_id == viewer_id, StoryView.story_id.in_(story_ids))
+        .all()
     )
+    return {row[0] for row in rows}
+
+
+def _serialize_story(
+    story: Story,
+    viewer_id: int,
+    db: Session,
+    *,
+    viewed_ids: set[int] | None = None,
+) -> StoryResponse:
+    if viewed_ids is not None:
+        viewed = story.id in viewed_ids
+    else:
+        viewed = (
+            db.query(StoryView.id)
+            .filter(StoryView.story_id == story.id, StoryView.viewer_id == viewer_id)
+            .first()
+            is not None
+        )
     profile = UserPublicProfile.model_validate(story.user) if story.user else None
     return StoryResponse(
         id=story.id,
@@ -76,10 +96,15 @@ def list_active_stories(db: Session, user_id: int) -> StoryListResponse:
         if story.user is not None:
             users[story.user_id] = story.user
 
+    all_story_ids = [s.id for s in stories]
+    viewed_ids = _viewer_story_ids(db, user_id, all_story_ids)
+
     groups: list[StoryGroupResponse] = []
     for uid in sorted(grouped.keys(), key=lambda x: (0 if x == user_id else 1, x)):
         user_stories = grouped[uid]
-        serialized = [_serialize_story(s, user_id, db) for s in user_stories]
+        serialized = [
+            _serialize_story(s, user_id, db, viewed_ids=viewed_ids) for s in user_stories
+        ]
         has_unviewed = any(not s.viewed_by_me for s in serialized)
         profile = UserPublicProfile.model_validate(users[uid]) if uid in users else None
         if profile is None:
@@ -108,7 +133,9 @@ def get_user_stories(db: Session, target_user_id: int, viewer_id: int) -> list[S
         .order_by(Story.created_at.asc())
         .all()
     )
-    return [_serialize_story(s, viewer_id, db) for s in stories]
+    story_ids = [s.id for s in stories]
+    viewed_ids = _viewer_story_ids(db, viewer_id, story_ids)
+    return [_serialize_story(s, viewer_id, db, viewed_ids=viewed_ids) for s in stories]
 
 
 def mark_story_viewed(db: Session, viewer_id: int, story_id: int) -> None:

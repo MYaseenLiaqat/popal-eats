@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/post.dart';
 import '../../services/content_service.dart';
-import '../../theme/app_colors.dart';
+import '../../utils/recommendation_copy.dart';
 import '../community_avatar.dart';
 
 Future<void> showPostCommentsSheet(BuildContext context, Post post) async {
@@ -73,7 +73,7 @@ class _CommentsSheetState extends State<_CommentsSheet> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
+        SnackBar(content: Text(RecommendationCopy.friendlyError(e))),
       );
     } finally {
       if (mounted) setState(() => _sending = false);

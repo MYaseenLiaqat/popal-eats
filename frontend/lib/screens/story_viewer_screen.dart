@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../models/story.dart';
 import '../services/content_service.dart';
 import '../theme/app_colors.dart';
+import '../utils/recommendation_copy.dart';
 import '../utils/media_url.dart';
 
 /// Full-screen story viewer with tap-to-advance.
@@ -162,7 +163,7 @@ Future<bool?> showCreateStorySheet(BuildContext context) async {
     if (context.mounted) Navigator.pop(context);
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
+        SnackBar(content: Text(RecommendationCopy.friendlyError(e))),
       );
     }
     return false;
