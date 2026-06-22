@@ -269,7 +269,7 @@ def list_home_feed(
 def list_discover_reels(db: Session, *, limit: int = 30) -> list[DiscoverReelResponse]:
     posts = (
         db.query(Post)
-        .options(joinedload(Post.author), joinedload(Post.restaurant))
+        .options(joinedload(Post.author), joinedload(Post.restaurant), joinedload(Post.dish))
         .outerjoin(Post.restaurant)
         .filter(Post.post_type.in_(DISCOVER_POST_TYPES))
         .filter(
@@ -298,6 +298,8 @@ def list_discover_reels(db: Session, *, limit: int = 30) -> list[DiscoverReelRes
         caption = post.caption or post.recipe_description or ""
 
         kind_label = post.post_type.replace("_", " ").title()
+        ingredients = post.recipe_ingredients if isinstance(post.recipe_ingredients, list) else None
+        dish = post.dish
         reels.append(
             DiscoverReelResponse(
                 id=post.id,
@@ -309,6 +311,12 @@ def list_discover_reels(db: Session, *, limit: int = 30) -> list[DiscoverReelRes
                 thumbnail_url=thumb,
                 video_url=post.video_url,
                 duration_label=kind_label,
+                recipe_ingredients=ingredients,
+                recipe_description=post.recipe_description,
+                calories=dish.calories if dish else None,
+                protein=float(dish.protein) if dish and dish.protein is not None else None,
+                carbs=float(dish.carbs) if dish and dish.carbs is not None else None,
+                fats=float(dish.fats) if dish and dish.fats is not None else None,
             )
         )
     return reels

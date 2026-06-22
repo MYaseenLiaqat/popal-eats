@@ -3,13 +3,19 @@ import 'package:flutter/material.dart';
 import 'dish_detail_screen.dart';
 import '../models/dish.dart';
 import '../models/restaurant.dart';
+import '../models/review.dart';
+import '../services/api_client.dart';
 import '../services/category_service.dart';
 import '../services/dish_service.dart';
 import '../services/restaurant_service.dart';
+import '../services/review_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/menu_category_filter.dart';
+import '../utils/preference_display.dart';
 import '../utils/price_formatter.dart';
+import '../utils/recommendation_copy.dart';
 import '../widgets/cart_icon_button.dart';
+import '../widgets/reviews/review_widgets.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 
 /// Restaurant profile and menu (`GET /restaurants/{id}` + dishes).
@@ -26,11 +32,14 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
   final _restaurants = RestaurantService();
   final _dishes = DishService();
   final _categories = CategoryService();
+  final _reviews = ReviewService();
 
   Restaurant? restaurant;
   List<Dish> dishes = [];
+  List<Review> recentReviews = [];
   Map<int, String> categoryNames = {};
   bool loading = true;
+  bool reviewsLoading = false;
   String? error;
 
   @override
@@ -74,12 +83,59 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
         categoryNames = names;
         loading = false;
       });
+      _loadReviews();
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        error = e.toString();
+        error = RecommendationCopy.friendlyError(e);
         loading = false;
       });
+    }
+  }
+
+  Future<void> _loadReviews() async {
+    setState(() => reviewsLoading = true);
+    try {
+      final list = await _reviews.listForRestaurant(widget.restaurantId, limit: 5);
+      if (!mounted) return;
+      setState(() {
+        recentReviews = list;
+        reviewsLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => reviewsLoading = false);
+    }
+  }
+
+  Future<void> _writeReview() async {
+    final r = restaurant;
+    if (r == null) return;
+
+    if (!ApiClient.instance.isAuthenticated) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sign in to leave a review')),
+      );
+      return;
+    }
+
+    final submitted = await showWriteReviewSheet(
+      context: context,
+      restaurantName: r.name,
+      onSubmit: (rating, comment) async {
+        await _reviews.create(
+          restaurantId: r.id,
+          rating: rating,
+          comment: comment,
+        );
+      },
+    );
+
+    if (submitted == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Thanks for your review!')),
+      );
+      await _load();
     }
   }
 
@@ -105,6 +161,36 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
       }
     }
     return groups;
+  }
+
+  Widget? _nutritionHighlights() {
+    final withCal = dishes.where((d) => d.calories != null).toList();
+    if (withCal.isEmpty) return null;
+
+    withCal.sort((a, b) => (a.calories ?? 0).compareTo(b.calories ?? 0));
+    final light = withCal.first;
+    final hearty = withCal.last;
+    final highProtein = dishes
+        .where((d) => (d.protein ?? 0) >= 20)
+        .map((d) => d.name)
+        .take(2)
+        .toList();
+
+    return ModernCard(
+      borderColor: AppColors.green.withValues(alpha: 0.35),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Nutrition highlights', style: Theme.of(context).textTheme.titleSmall),
+          const SizedBox(height: 8),
+          Text('Lighter pick: ${light.name} (${light.calories} kcal)'),
+          if (hearty.id != light.id)
+            Text('Hearty option: ${hearty.name} (${hearty.calories} kcal)'),
+          if (highProtein.isNotEmpty)
+            Text('High protein: ${highProtein.join(', ')}'),
+        ],
+      ),
+    );
   }
 
   List<Widget> _menuSections(BuildContext context) {
@@ -148,17 +234,18 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: AppColors.green.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.lunch_dining,
-                      color: AppColors.green,
-                      size: 24,
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: SizedBox(
+                      width: 56,
+                      height: 56,
+                      child: d.image != null && d.image!.isNotEmpty
+                          ? Image.network(
+                              d.image!,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => _dishThumbFallback(),
+                            )
+                          : _dishThumbFallback(),
                     ),
                   ),
                   const SizedBox(width: 14),
@@ -183,7 +270,8 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                         if (d.calories != null) ...[
                           const SizedBox(height: 6),
                           Text(
-                            '${d.calories} kcal',
+                            '${d.calories} kcal'
+                                '${d.protein != null ? ' · ${d.protein!.toStringAsFixed(0)}g protein' : ''}',
                             style: const TextStyle(
                               color: AppColors.green,
                               fontSize: 12,
@@ -222,9 +310,22 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
     return widgets;
   }
 
+  Widget _dishThumbFallback() {
+    return Container(
+      color: AppColors.green.withValues(alpha: 0.12),
+      child: const Icon(Icons.lunch_dining, color: AppColors.green, size: 24),
+    );
+  }
+
+  String? _primaryCuisine(Restaurant r) {
+    if (r.tags.isEmpty) return null;
+    return PreferenceDisplay.cuisineLabel(r.tags.first);
+  }
+
   @override
   Widget build(BuildContext context) {
     final r = restaurant;
+    final highlights = r != null ? _nutritionHighlights() : null;
 
     return Scaffold(
       appBar: AppBar(
@@ -248,6 +349,11 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                       child: ListView(
                         padding: const EdgeInsets.all(AppColors.screenPadding),
                         children: [
+                          if (r.image != null && r.image!.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: DishImageBanner(imageUrl: r.image, height: 180),
+                            ),
                           ModernCard(
                             gradient: AppColors.headerGradient,
                             borderColor: AppColors.gold.withValues(alpha: 0.35),
@@ -257,19 +363,35 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                                 Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Container(
-                                      width: 72,
-                                      height: 72,
-                                      decoration: BoxDecoration(
-                                        gradient: AppColors.goldGradient,
+                                    if (r.image == null || r.image!.isEmpty)
+                                      Container(
+                                        width: 72,
+                                        height: 72,
+                                        decoration: BoxDecoration(
+                                          gradient: AppColors.goldGradient,
+                                          borderRadius: BorderRadius.circular(16),
+                                        ),
+                                        child: const Icon(
+                                          Icons.storefront,
+                                          color: Color(0xFF1A1400),
+                                          size: 36,
+                                        ),
+                                      )
+                                    else
+                                      ClipRRect(
                                         borderRadius: BorderRadius.circular(16),
+                                        child: Image.network(
+                                          r.image!,
+                                          width: 72,
+                                          height: 72,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) => const Icon(
+                                            Icons.storefront,
+                                            color: AppColors.gold,
+                                            size: 36,
+                                          ),
+                                        ),
                                       ),
-                                      child: const Icon(
-                                        Icons.storefront,
-                                        color: Color(0xFF1A1400),
-                                        size: 36,
-                                      ),
-                                    ),
                                     const SizedBox(width: 16),
                                     Expanded(
                                       child: Column(
@@ -285,6 +407,16 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                                                   color: AppColors.gold,
                                                 ),
                                           ),
+                                          if (_primaryCuisine(r) != null) ...[
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              _primaryCuisine(r)!,
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodyMedium
+                                                  ?.copyWith(color: AppColors.green),
+                                            ),
+                                          ],
                                           const SizedBox(height: 8),
                                           RatingBadge(
                                             rating: r.averageRating,
@@ -357,7 +489,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                                               ),
                                             ),
                                             child: Text(
-                                              tag,
+                                              PreferenceDisplay.cuisineLabel(tag),
                                               style: const TextStyle(
                                                 color: AppColors.green,
                                                 fontWeight: FontWeight.w500,
@@ -372,6 +504,19 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                               ],
                             ),
                           ),
+                          if (highlights != null) ...[
+                            const SizedBox(height: 16),
+                            highlights,
+                          ],
+                          const SizedBox(height: 8),
+                          RestaurantReviewsSection(
+                            reviews: recentReviews,
+                            averageRating: r.averageRating,
+                            totalReviews: r.totalReviews,
+                            loading: reviewsLoading,
+                            onWriteReview: _writeReview,
+                          ),
+                          const SizedBox(height: 8),
                           ..._menuSections(context),
                           const SizedBox(height: 16),
                         ],

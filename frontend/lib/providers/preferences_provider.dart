@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../models/user_preferences.dart';
 import '../services/api_client.dart';
 import '../services/preferences_service.dart';
+import '../utils/recommendation_copy.dart';
 
 class PreferencesProvider extends ChangeNotifier {
   PreferencesProvider({PreferencesService? service})
@@ -38,7 +39,7 @@ class PreferencesProvider extends ChangeNotifier {
     try {
       preferences = await _service.getPreferences();
     } on ApiException catch (e) {
-      error = e.message;
+      error = RecommendationCopy.friendlyError(e);
     } finally {
       loading = false;
       notifyListeners();
@@ -48,11 +49,13 @@ class PreferencesProvider extends ChangeNotifier {
   Future<bool> updateNutrition({
     required List<String> favoriteCuisines,
     required List<String> dietaryPreferences,
+    String? nutritionGoal,
   }) async {
     return _save(
       UserPreferencesUpdate(
         favoriteCuisines: favoriteCuisines,
         dietaryPreferences: dietaryPreferences,
+        nutritionGoal: nutritionGoal,
       ),
     );
   }
@@ -70,7 +73,7 @@ class PreferencesProvider extends ChangeNotifier {
       preferences = await _service.updatePreferences(update);
       return true;
     } on ApiException catch (e) {
-      error = e.message;
+      error = RecommendationCopy.friendlyError(e);
       return false;
     } finally {
       saving = false;

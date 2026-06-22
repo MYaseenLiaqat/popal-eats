@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/reels_provider.dart';
 import '../theme/app_colors.dart';
 import '../widgets/reels/reel_card.dart';
+import '../widgets/reels/reel_recipe_sheet.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 
 /// Vertical reels viewer — full-screen swipe, placeholder content only.
@@ -153,6 +154,10 @@ class _ReelsScreenState extends State<ReelsScreen> with SingleTickerProviderStat
                 key: ValueKey(provider.reels[index].id),
                 reel: provider.reels[index],
                 onPreviewTap: _showPreviewNotice,
+                onRecipeTap: () => showReelRecipeSheet(
+                  context,
+                  provider.reels[index],
+                ),
               ),
             );
           },

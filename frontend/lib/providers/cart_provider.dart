@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../models/cart.dart';
 import '../services/api_client.dart';
 import '../services/cart_service.dart';
+import '../utils/recommendation_copy.dart';
 
 /// Global cart state for Sprint 2+ screens.
 class CartProvider extends ChangeNotifier {
@@ -34,10 +35,10 @@ class CartProvider extends ChangeNotifier {
     try {
       cart = await _cartService.getCart();
     } on ApiException catch (e) {
-      error = e.message;
+      error = RecommendationCopy.friendlyError(e);
       cart = null;
     } catch (e) {
-      error = e.toString();
+      error = RecommendationCopy.friendlyError(e);
       cart = null;
     } finally {
       loading = false;
@@ -51,11 +52,11 @@ class CartProvider extends ChangeNotifier {
       await load();
       return true;
     } on ApiException catch (e) {
-      error = e.message;
+      error = RecommendationCopy.friendlyError(e);
       notifyListeners();
       return false;
     } catch (e) {
-      error = e.toString();
+      error = RecommendationCopy.friendlyError(e);
       notifyListeners();
       return false;
     }
@@ -67,11 +68,11 @@ class CartProvider extends ChangeNotifier {
       await load();
       return true;
     } on ApiException catch (e) {
-      error = e.message;
+      error = RecommendationCopy.friendlyError(e);
       notifyListeners();
       return false;
     } catch (e) {
-      error = e.toString();
+      error = RecommendationCopy.friendlyError(e);
       notifyListeners();
       return false;
     }
@@ -83,11 +84,11 @@ class CartProvider extends ChangeNotifier {
       await load();
       return true;
     } on ApiException catch (e) {
-      error = e.message;
+      error = RecommendationCopy.friendlyError(e);
       notifyListeners();
       return false;
     } catch (e) {
-      error = e.toString();
+      error = RecommendationCopy.friendlyError(e);
       notifyListeners();
       return false;
     }
@@ -99,9 +100,9 @@ class CartProvider extends ChangeNotifier {
       cart = null;
       error = null;
     } on ApiException catch (e) {
-      error = e.message;
+      error = RecommendationCopy.friendlyError(e);
     } catch (e) {
-      error = e.toString();
+      error = RecommendationCopy.friendlyError(e);
     }
     notifyListeners();
   }

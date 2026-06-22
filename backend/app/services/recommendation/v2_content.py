@@ -32,10 +32,12 @@ SCORE_BUDGET = 15
 SCORE_POPULARITY = 10
 TOP_N = 10
 
-_GOAL_HIGH_PROTEIN = frozenset({"muscle_gain", "high_protein", "high-protein", "muscle gain"})
+_GOAL_MUSCLE_GAIN = frozenset({"muscle_gain", "muscle gain", "muscle"})
+_GOAL_HIGH_PROTEIN = frozenset({"high_protein", "high-protein", "high protein", "highprotein"})
+_GOAL_BULKING = frozenset({"bulking", "bulk"})
 _GOAL_LOW_CARB = frozenset({"low_carb", "low-carb", "keto"})
 _GOAL_WEIGHT_LOSS = frozenset({"weight_loss", "weight-loss", "weight loss", "lose_weight"})
-_GOAL_BALANCED = frozenset({"balanced", "maintain", "general", "balanced nutrition"})
+_GOAL_MAINTAIN = frozenset({"maintain", "balanced", "general", "balanced nutrition"})
 
 
 def _normalize_list(values: list | None) -> list[str]:
@@ -119,20 +121,54 @@ def _score_cuisine(
     return 0.0, None
 
 
+def _protein_density(protein: float | None, calories: int | None) -> float | None:
+    if protein is None or calories is None or calories <= 0:
+        return None
+    return (protein / float(calories)) * 100.0
+
+
 def _score_nutrition(dish: Dish, nutrition_goal: str | None) -> tuple[float, bool]:
     if not nutrition_goal:
         return 0.0, False
 
-    goal = nutrition_goal.strip().lower()
+    goal = nutrition_goal.strip().lower().replace(" ", "_").replace("-", "_")
     protein = float(dish.protein) if dish.protein is not None else None
     carbs = float(dish.carbs) if dish.carbs is not None else None
     calories = dish.calories
+    density = _protein_density(protein, calories)
+
+    if goal in _GOAL_WEIGHT_LOSS:
+        if calories is not None and calories <= 450 and protein is not None and protein >= 15:
+            return float(SCORE_NUTRITION), True
+        if calories is not None and calories <= 500:
+            return float(SCORE_NUTRITION) * 0.85, True
+        if calories is not None and calories <= 600 and protein is not None and protein >= 12:
+            return float(SCORE_NUTRITION) * 0.7, True
+        return 0.0, False
+
+    if goal in _GOAL_BULKING:
+        if calories is not None and calories >= 600 and protein is not None and protein >= 20:
+            return float(SCORE_NUTRITION), True
+        if calories is not None and calories >= 500 and protein is not None and protein >= 15:
+            return float(SCORE_NUTRITION) * 0.8, True
+        return 0.0, False
+
+    if goal in _GOAL_MUSCLE_GAIN:
+        if protein is not None and protein >= 28:
+            return float(SCORE_NUTRITION), True
+        if protein is not None and protein >= 22:
+            return float(SCORE_NUTRITION) * 0.85, True
+        if protein is not None and protein >= 18:
+            return float(SCORE_NUTRITION) * 0.65, True
+        return 0.0, False
 
     if goal in _GOAL_HIGH_PROTEIN:
-        if protein is not None and protein >= 20:
+        if density is not None and density >= 8.0:
             return float(SCORE_NUTRITION), True
-        if protein is not None and protein >= 12:
-            return float(SCORE_NUTRITION) * 0.8, True
+        if protein is not None and protein >= 25:
+            return float(SCORE_NUTRITION) * 0.9, True
+        if density is not None and density >= 6.0:
+            return float(SCORE_NUTRITION) * 0.75, True
         return 0.0, False
 
     if goal in _GOAL_LOW_CARB:
@@ -142,14 +178,7 @@ def _score_nutrition(dish: Dish, nutrition_goal: str | None) -> tuple[float, boo
             return float(SCORE_NUTRITION) * 0.8, True
         return 0.0, False
 
-    if goal in _GOAL_WEIGHT_LOSS:
-        if calories is not None and calories <= 450:
-            return float(SCORE_NUTRITION), True
-        if calories is not None and calories <= 600:
-            return float(SCORE_NUTRITION) * 0.8, True
-        return 0.0, False
-
-    if goal in _GOAL_BALANCED:
+    if goal in _GOAL_MAINTAIN:
         if calories is not None and 300 <= calories <= 750:
             return float(SCORE_NUTRITION), True
         if protein is not None and carbs is not None and calories is not None:
@@ -210,15 +239,19 @@ def _score_popularity(
 def _nutrition_label(nutrition_goal: str | None) -> str:
     if not nutrition_goal:
         return "Nutrition"
-    goal = nutrition_goal.strip().lower()
+    goal = nutrition_goal.strip().lower().replace(" ", "_").replace("-", "_")
+    if goal in _GOAL_WEIGHT_LOSS:
+        return "Weight Loss"
+    if goal in _GOAL_BULKING:
+        return "Bulking"
+    if goal in _GOAL_MUSCLE_GAIN:
+        return "Muscle Gain"
     if goal in _GOAL_HIGH_PROTEIN:
         return "High Protein"
     if goal in _GOAL_LOW_CARB:
         return "Low Carb"
-    if goal in _GOAL_WEIGHT_LOSS:
-        return "Weight Loss"
-    if goal in _GOAL_BALANCED:
-        return "Balanced Nutrition"
+    if goal in _GOAL_MAINTAIN:
+        return "Maintain"
     return nutrition_goal.replace("_", " ").title()
 
 

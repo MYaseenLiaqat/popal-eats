@@ -4,6 +4,7 @@ import '../providers/onboarding_provider.dart';
 import '../services/api_client.dart';
 import '../services/auth_service.dart';
 import '../services/google_auth_service.dart';
+import '../utils/recommendation_copy.dart';
 
 class AuthProvider extends ChangeNotifier {
   final _auth = AuthService();
@@ -40,7 +41,7 @@ class AuthProvider extends ChangeNotifier {
       user = await _auth.me();
       return true;
     } on ApiException catch (e) {
-      error = e.message;
+      error = RecommendationCopy.friendlyError(e);
       return false;
     } finally {
       loading = false;
@@ -59,10 +60,10 @@ class AuthProvider extends ChangeNotifier {
       user = await _auth.me();
       return true;
     } on ApiException catch (e) {
-      error = e.message;
+      error = RecommendationCopy.friendlyError(e);
       return false;
     } catch (e) {
-      error = e.toString();
+      error = RecommendationCopy.friendlyError(e);
       return false;
     } finally {
       loading = false;
@@ -92,7 +93,7 @@ class AuthProvider extends ChangeNotifier {
       );
       return await login(email, password);
     } on ApiException catch (e) {
-      error = e.message;
+      error = RecommendationCopy.friendlyError(e);
       return false;
     } finally {
       loading = false;

@@ -29,9 +29,10 @@ class ReviewResponse(BaseModel):
     sentiment: str | None = None
     sentiment_score: float | None = None
     processing_status: str = "pending"
-    processing_error: str | None = None
     created_at: datetime | None = None
     processed_at: datetime | None = None
+    author_name: str | None = None
+    author_username: str | None = None
 
 
 class ReviewProcessingStatus(BaseModel):

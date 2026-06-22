@@ -1,11 +1,19 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-/// OCR menu upload screen — wire file_picker in production.
+/// OCR menu upload screen — developer-only; not linked in customer navigation.
 class MenuUploadScreen extends StatelessWidget {
   const MenuUploadScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    if (!kDebugMode) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Import Menu')),
+        body: const Center(child: Text('This feature is not available.')),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(title: const Text('Import Menu (OCR)')),
       body: const Padding(
@@ -13,7 +21,7 @@ class MenuUploadScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Upload a menu image to extract dishes.'),
+            Text('Developer tool — upload a menu image to extract dishes.'),
             SizedBox(height: 12),
             Text('API: POST /menu/import'),
             SizedBox(height: 12),

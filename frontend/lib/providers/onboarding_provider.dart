@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/onboarding_option.dart';
 import '../services/api_client.dart';
 import '../services/preferences_service.dart';
+import '../utils/recommendation_copy.dart';
 
 class OnboardingProvider extends ChangeNotifier {
   OnboardingProvider({PreferencesService? service})
@@ -52,7 +53,7 @@ class OnboardingProvider extends ChangeNotifier {
       completed = status.completed;
       await _cacheStatus(status.completed);
     } on ApiException catch (e) {
-      error = e.message;
+      error = RecommendationCopy.friendlyError(e);
     } finally {
       loading = false;
       notifyListeners();
@@ -67,7 +68,7 @@ class OnboardingProvider extends ChangeNotifier {
     try {
       options = await _service.getOnboardingOptions();
     } on ApiException catch (e) {
-      error = e.message;
+      error = RecommendationCopy.friendlyError(e);
     } finally {
       optionsLoading = false;
       notifyListeners();
@@ -90,7 +91,7 @@ class OnboardingProvider extends ChangeNotifier {
       await _cacheStatus(status.completed);
       return true;
     } on ApiException catch (e) {
-      error = e.message;
+      error = RecommendationCopy.friendlyError(e);
       return false;
     } finally {
       loading = false;
@@ -108,7 +109,7 @@ class OnboardingProvider extends ChangeNotifier {
       await _cacheStatus(status.completed);
       return true;
     } on ApiException catch (e) {
-      error = e.message;
+      error = RecommendationCopy.friendlyError(e);
       return false;
     } finally {
       loading = false;

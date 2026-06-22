@@ -4,6 +4,7 @@ import '../models/restaurant.dart';
 import '../models/restaurant_dashboard.dart';
 import '../services/restaurant_owner_service.dart';
 import '../theme/app_colors.dart';
+import '../utils/recommendation_copy.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 import 'owner_dish_form_screen.dart';
 import 'owner_dishes_screen.dart';
@@ -48,7 +49,7 @@ class _RestaurantDashboardScreenState extends State<RestaurantDashboardScreen> {
         _dashboard = await _service.dashboard(_selected!.id);
       }
     } catch (e) {
-      _error = e.toString();
+      _error = RecommendationCopy.friendlyError(e);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -62,7 +63,7 @@ class _RestaurantDashboardScreenState extends State<RestaurantDashboardScreen> {
     try {
       _dashboard = await _service.dashboard(restaurant.id);
     } catch (e) {
-      _error = e.toString();
+      _error = RecommendationCopy.friendlyError(e);
     } finally {
       if (mounted) setState(() => _loading = false);
     }

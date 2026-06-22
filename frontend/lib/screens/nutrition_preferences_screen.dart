@@ -20,6 +20,7 @@ class _NutritionPreferencesScreenState
   final _calorieGoalController = TextEditingController(text: '2100');
 
   String _dietType = 'None';
+  String _nutritionGoal = 'Maintain';
   final Set<String> _selectedCuisines = {};
   bool _initialized = false;
 
@@ -52,6 +53,7 @@ class _NutritionPreferencesScreenState
 
     setState(() {
       _dietType = PreferenceDisplay.dietLabelFromBackend(prefs.dietaryPreferences);
+      _nutritionGoal = PreferenceDisplay.nutritionGoalLabel(prefs.nutritionGoal);
       _selectedCuisines
         ..clear()
         ..addAll(prefs.favoriteCuisines);
@@ -70,6 +72,7 @@ class _NutritionPreferencesScreenState
     final ok = await provider.updateNutrition(
       favoriteCuisines: _selectedCuisines.toList(),
       dietaryPreferences: PreferenceDisplay.dietToBackend(_dietType),
+      nutritionGoal: PreferenceDisplay.nutritionGoalToBackend(_nutritionGoal),
     );
     if (!mounted) return;
     if (ok) {
@@ -174,6 +177,21 @@ class _NutritionPreferencesScreenState
               ),
             ],
           ),
+        ),
+        const SectionHeader(
+          title: 'Nutrition goal',
+          subtitle: 'Adjust how we rank dishes for you',
+        ),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: PreferenceDisplay.nutritionGoals.values.map((goal) {
+            return _chip(
+              label: goal,
+              selected: _nutritionGoal == goal,
+              onTap: () => setState(() => _nutritionGoal = goal),
+            );
+          }).toList(),
         ),
         const SectionHeader(
           title: 'Daily calorie goal',

@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../data/reels_placeholder_data.dart';
 import '../models/reel.dart';
 import '../services/reels_service.dart';
+import '../utils/recommendation_copy.dart';
 
 /// State for recipe & chef reels (placeholder content until video API ships).
 class ReelsProvider extends ChangeNotifier {
@@ -44,7 +45,7 @@ class ReelsProvider extends ChangeNotifier {
         currentIndex = 0;
       }
     } catch (e) {
-      error = e.toString();
+      error = RecommendationCopy.friendlyError(e);
       reels = [];
     } finally {
       loading = false;

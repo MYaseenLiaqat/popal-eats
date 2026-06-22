@@ -69,9 +69,13 @@ def _dietary_preferences_list(row: UserPreference | None) -> list[str]:
 def _to_response(row: UserPreference | None) -> UserPreferencesResponse:
     if row is None:
         return UserPreferencesResponse()
+    goal = row.nutrition_goal.strip().lower() if row.nutrition_goal else None
+    if goal and goal not in {"maintain", "weight_loss", "bulking", "muscle_gain", "high_protein"}:
+        goal = None
     return UserPreferencesResponse(
         favorite_cuisines=_normalize_json_list(row.favorite_cuisines),
         dietary_preferences=_dietary_preferences_list(row),
+        nutrition_goal=goal,  # type: ignore[arg-type]
         budget_level=infer_budget_level(row.budget_min, row.budget_max, row.budget_level),
         disliked_categories=_normalize_json_list(row.disliked_categories),
         allergies=_normalize_json_list(row.allergies),
@@ -105,6 +109,8 @@ def upsert_user_preferences(
     if payload.budget_level is not None:
         row.budget_level = payload.budget_level
         row.budget_min, row.budget_max = budget_bounds_for_level(payload.budget_level)
+    if payload.nutrition_goal is not None:
+        row.nutrition_goal = payload.nutrition_goal
 
     db.commit()
     db.refresh(row)

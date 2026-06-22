@@ -1,10 +1,12 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../services/review_service.dart';
+import '../utils/recommendation_copy.dart';
 
-/// Polls GET /reviews/{id}/processing for AI pipeline status.
+/// Polls GET /reviews/{id}/processing — developer-only diagnostic screen.
 class ReviewStatusScreen extends StatefulWidget {
   const ReviewStatusScreen({super.key, required this.reviewId});
 
@@ -23,8 +25,10 @@ class _ReviewStatusScreenState extends State<ReviewStatusScreen> {
   @override
   void initState() {
     super.initState();
-    _poll();
-    _timer = Timer.periodic(const Duration(seconds: 2), (_) => _poll());
+    if (kDebugMode) {
+      _poll();
+      _timer = Timer.periodic(const Duration(seconds: 2), (_) => _poll());
+    }
   }
 
   @override
@@ -47,12 +51,19 @@ class _ReviewStatusScreenState extends State<ReviewStatusScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      setState(() => error = e.toString());
+      setState(() => error = RecommendationCopy.friendlyError(e));
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (!kDebugMode) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Review status')),
+        body: const Center(child: Text('This screen is not available.')),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(title: Text('Review #${widget.reviewId} AI Status')),
       body: Padding(
@@ -80,7 +91,10 @@ class _ReviewStatusScreenState extends State<ReviewStatusScreen> {
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          SizedBox(width: 120, child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold))),
+          SizedBox(
+            width: 120,
+            child: Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+          ),
           Expanded(child: Text(value?.toString() ?? '—')),
         ],
       ),
