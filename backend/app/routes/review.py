@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.core.dependencies import get_current_user
 from app.core.permissions import assert_review_owner, get_restaurant_or_404, get_review_or_404
@@ -23,6 +23,26 @@ from app.utils.pagination import apply_sort, build_paginated_response, paginate_
 
 router = APIRouter(prefix="/reviews", tags=["reviews"])
 _processor = review_processing_service
+
+
+def _review_to_response(review: Review) -> ReviewResponse:
+    author = review.user
+    return ReviewResponse(
+        id=review.id,
+        user_id=review.user_id,
+        restaurant_id=review.restaurant_id,
+        rating=review.rating,
+        comment=review.comment,
+        detected_language=review.detected_language,
+        translated_text=review.translated_text,
+        sentiment=review.sentiment,
+        sentiment_score=review.sentiment_score,
+        processing_status=review.processing_status,
+        created_at=review.created_at,
+        processed_at=review.processed_at,
+        author_name=author.full_name if author else None,
+        author_username=author.username if author else None,
+    )
 
 
 @router.post("", response_model=ReviewResponse, status_code=status.HTTP_201_CREATED)
@@ -62,7 +82,13 @@ def create_review(
     db.commit()
 
     _processor.enqueue_analysis(review.id, review.comment)
-    return review
+    review = (
+        db.query(Review)
+        .options(joinedload(Review.user))
+        .filter(Review.id == review.id)
+        .first()
+    )
+    return _review_to_response(review)
 
 
 @router.get("", response_model=PaginatedResponse[ReviewResponse])
@@ -77,7 +103,7 @@ def list_reviews(
     sort: str | None = None,
     db: Session = Depends(get_db),
 ):
-    query = db.query(Review)
+    query = db.query(Review).options(joinedload(Review.user))
     if restaurant_id is not None:
         query = query.filter(Review.restaurant_id == restaurant_id)
     if user_id is not None:
@@ -91,12 +117,25 @@ def list_reviews(
 
     query = apply_sort(query, Review.created_at, sort)
     items, total = paginate_query(query, page=page, limit=limit)
-    return build_paginated_response(items, page=page, limit=limit, total_count=total)
+    return build_paginated_response(
+        [_review_to_response(item) for item in items],
+        page=page,
+        limit=limit,
+        total_count=total,
+    )
 
 
 @router.get("/{review_id}", response_model=ReviewResponse)
 def get_review(review_id: int, db: Session = Depends(get_db)):
-    return get_review_or_404(db, review_id)
+    review = (
+        db.query(Review)
+        .options(joinedload(Review.user))
+        .filter(Review.id == review_id)
+        .first()
+    )
+    if review is None:
+        get_review_or_404(db, review_id)
+    return _review_to_response(review)
 
 
 @router.get("/{review_id}/processing", response_model=ReviewProcessingStatus)
@@ -132,7 +171,13 @@ def update_review(
     db.commit()
 
     _processor.enqueue_analysis(review.id, review.comment)
-    return review
+    review = (
+        db.query(Review)
+        .options(joinedload(Review.user))
+        .filter(Review.id == review.id)
+        .first()
+    )
+    return _review_to_response(review)
 
 
 @router.delete("/{review_id}", status_code=status.HTTP_204_NO_CONTENT)

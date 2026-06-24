@@ -22,10 +22,11 @@ class GoogleAuthService {
   }
 
   GoogleSignIn _googleSignIn() {
-    const webClientId = String.fromEnvironment('GOOGLE_WEB_CLIENT_ID');
+    final clientId = DefaultFirebaseOptions.webClientId;
     return GoogleSignIn(
       scopes: const ['email', 'profile'],
-      clientId: kIsWeb && webClientId.isNotEmpty ? webClientId : null,
+      clientId: kIsWeb && clientId.isNotEmpty ? clientId : null,
+      serverClientId: !kIsWeb && clientId.isNotEmpty ? clientId : null,
     );
   }
 

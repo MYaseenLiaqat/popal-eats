@@ -2,6 +2,7 @@ class UserPreferences {
   const UserPreferences({
     this.favoriteCuisines = const [],
     this.dietaryPreferences = const [],
+    this.nutritionGoal,
     this.budgetLevel,
     this.dislikedCategories = const [],
     this.allergies = const [],
@@ -9,6 +10,7 @@ class UserPreferences {
 
   final List<String> favoriteCuisines;
   final List<String> dietaryPreferences;
+  final String? nutritionGoal;
   final String? budgetLevel;
   final List<String> dislikedCategories;
   final List<String> allergies;
@@ -16,6 +18,7 @@ class UserPreferences {
   UserPreferences copyWith({
     List<String>? favoriteCuisines,
     List<String>? dietaryPreferences,
+    String? nutritionGoal,
     String? budgetLevel,
     List<String>? dislikedCategories,
     List<String>? allergies,
@@ -23,6 +26,7 @@ class UserPreferences {
     return UserPreferences(
       favoriteCuisines: favoriteCuisines ?? this.favoriteCuisines,
       dietaryPreferences: dietaryPreferences ?? this.dietaryPreferences,
+      nutritionGoal: nutritionGoal ?? this.nutritionGoal,
       budgetLevel: budgetLevel ?? this.budgetLevel,
       dislikedCategories: dislikedCategories ?? this.dislikedCategories,
       allergies: allergies ?? this.allergies,
@@ -33,6 +37,7 @@ class UserPreferences {
     return UserPreferences(
       favoriteCuisines: _stringList(json['favorite_cuisines']),
       dietaryPreferences: _stringList(json['dietary_preferences']),
+      nutritionGoal: json['nutrition_goal']?.toString(),
       budgetLevel: json['budget_level']?.toString(),
       dislikedCategories: _stringList(json['disliked_categories']),
       allergies: _stringList(json['allergies']),
@@ -49,6 +54,7 @@ class UserPreferencesUpdate {
   const UserPreferencesUpdate({
     this.favoriteCuisines,
     this.dietaryPreferences,
+    this.nutritionGoal,
     this.budgetLevel,
     this.dislikedCategories,
     this.allergies,
@@ -56,6 +62,7 @@ class UserPreferencesUpdate {
 
   final List<String>? favoriteCuisines;
   final List<String>? dietaryPreferences;
+  final String? nutritionGoal;
   final String? budgetLevel;
   final List<String>? dislikedCategories;
   final List<String>? allergies;
@@ -64,6 +71,7 @@ class UserPreferencesUpdate {
     final body = <String, dynamic>{};
     if (favoriteCuisines != null) body['favorite_cuisines'] = favoriteCuisines;
     if (dietaryPreferences != null) body['dietary_preferences'] = dietaryPreferences;
+    if (nutritionGoal != null) body['nutrition_goal'] = nutritionGoal;
     if (budgetLevel != null) body['budget_level'] = budgetLevel;
     if (dislikedCategories != null) body['disliked_categories'] = dislikedCategories;
     if (allergies != null) body['allergies'] = allergies;

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/admin_service.dart';
 import '../theme/app_colors.dart';
+import '../utils/recommendation_copy.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 import 'admin_restaurant_approvals_screen.dart';
 
@@ -36,7 +37,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       final pending = await _admin.pendingRestaurantCount();
       _pendingRestaurants = pending['pending_count'] as int? ?? 0;
     } catch (e) {
-      error = e.toString();
+      error = RecommendationCopy.friendlyError(e);
     } finally {
       setState(() => loading = false);
     }

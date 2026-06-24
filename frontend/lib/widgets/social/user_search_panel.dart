@@ -8,6 +8,7 @@ import '../../providers/friends_provider.dart';
 import '../../services/api_client.dart';
 import '../../services/friends_service.dart';
 import '../../theme/app_colors.dart';
+import '../../utils/recommendation_copy.dart';
 import '../social/social_user_card.dart';
 import '../ui/app_ui_widgets.dart';
 
@@ -90,7 +91,7 @@ class _UserSearchPanelState extends State<UserSearchPanel> {
     } on ApiException catch (e) {
       if (!mounted || _searchController.text.trim() != query) return;
       setState(() {
-        _error = e.message;
+        _error = RecommendationCopy.friendlyError(e);
         _loading = false;
       });
     }

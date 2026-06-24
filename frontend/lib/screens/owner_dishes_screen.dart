@@ -4,6 +4,7 @@ import '../models/dish.dart';
 import '../services/restaurant_owner_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/price_formatter.dart';
+import '../utils/recommendation_copy.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 import 'owner_dish_form_screen.dart';
 
@@ -41,7 +42,7 @@ class _OwnerDishesScreenState extends State<OwnerDishesScreen> {
     try {
       _dishes = await _service.listDishes(restaurantId: widget.restaurantId);
     } catch (e) {
-      _error = e.toString();
+      _error = RecommendationCopy.friendlyError(e);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -114,6 +115,22 @@ class _OwnerDishesScreenState extends State<OwnerDishesScreen> {
                                 ).then((_) => _load()),
                                 child: Row(
                                   children: [
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(10),
+                                      child: SizedBox(
+                                        width: 52,
+                                        height: 52,
+                                        child: dish.image != null && dish.image!.isNotEmpty
+                                            ? Image.network(
+                                                dish.image!,
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (_, __, ___) =>
+                                                    _thumbFallback(),
+                                              )
+                                            : _thumbFallback(),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
                                     Expanded(
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -143,6 +160,14 @@ class _OwnerDishesScreenState extends State<OwnerDishesScreen> {
                           },
                         ),
                 ),
+    );
+  }
+
+  Widget _thumbFallback() {
+    return Container(
+      color: AppColors.green.withValues(alpha: 0.12),
+      alignment: Alignment.center,
+      child: const Icon(Icons.restaurant, color: AppColors.green, size: 22),
     );
   }
 }

@@ -34,3 +34,8 @@ build/
 # OS
 .DS_Store
 Thumbs.db
+
+# Local datasets
+backend/data/
+backend/data/datasets/
+*.zip

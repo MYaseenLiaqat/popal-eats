@@ -146,6 +146,12 @@ class DiscoverReelResponse(BaseModel):
     video_url: str | None = None
     duration_label: str | None = None
     post_id: int
+    recipe_ingredients: list[str] | None = None
+    recipe_description: str | None = None
+    calories: int | None = None
+    protein: float | None = None
+    carbs: float | None = None
+    fats: float | None = None
 
 
 class DiscoverReelsListResponse(BaseModel):

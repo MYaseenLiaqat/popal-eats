@@ -4,6 +4,7 @@ import '../models/order.dart';
 import '../services/order_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/price_formatter.dart';
+import '../utils/recommendation_copy.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 import 'order_detail_screen.dart';
 
@@ -44,7 +45,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        error = e.toString();
+        error = RecommendationCopy.friendlyError(e);
         loading = false;
       });
     }

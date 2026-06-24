@@ -1,0 +1,39 @@
+{
+    "project_info": {
+      "project_number": "427158581376",
+      "project_id": "popal-eats-16b36",
+      "storage_bucket": "popal-eats-16b36.firebasestorage.app"
+    },
+    "client": [
+      {
+        "client_info": {
+          "mobilesdk_app_id": "1:427158581376:android:e08914afc33ff7e26f7665",
+          "android_client_info": {
+            "package_name": "com.example.popal_eats"
+          }
+        },
+        "oauth_client": [
+          {
+            "client_id": "427158581376-o1jd1m4bem383gkoj7ji22sdnta6o98t.apps.googleusercontent.com",
+            "client_type": 3
+          }
+        ],
+        "api_key": [
+          {
+            "current_key": "AIzaSyDENXY90UA0mWWUTDmdpeiddGQ0Oz_B_5E"
+          }
+        ],
+        "services": {
+          "appinvite_service": {
+            "other_platform_oauth_client": [
+              {
+                "client_id": "427158581376-o1jd1m4bem383gkoj7ji22sdnta6o98t.apps.googleusercontent.com",
+                "client_type": 3
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "configuration_version": "1"
+  }

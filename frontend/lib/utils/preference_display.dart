@@ -57,6 +57,27 @@ class PreferenceDisplay {
     ('Premium', 'premium'),
   ];
 
+  static const nutritionGoals = <String, String>{
+    'maintain': 'Maintain',
+    'weight_loss': 'Weight Loss',
+    'bulking': 'Bulking',
+    'muscle_gain': 'Muscle Gain',
+    'high_protein': 'High Protein',
+  };
+
+  static String nutritionGoalLabel(String? key) {
+    if (key == null || key.isEmpty) return 'Maintain';
+    final normalized = key.trim().toLowerCase().replaceAll(' ', '_');
+    return nutritionGoals[normalized] ?? cuisineLabel(normalized);
+  }
+
+  static String nutritionGoalToBackend(String label) {
+    for (final entry in nutritionGoals.entries) {
+      if (entry.value == label) return entry.key;
+    }
+    return label.trim().toLowerCase().replaceAll(' ', '_');
+  }
+
   static String cuisineLabel(String key) {
     return nutritionCuisineOptions[key] ??
         foodInterestLabels[key] ??

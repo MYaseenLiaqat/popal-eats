@@ -10,10 +10,12 @@ class ReelCard extends StatelessWidget {
     super.key,
     required this.reel,
     this.onPreviewTap,
+    this.onRecipeTap,
   });
 
   final Reel reel;
   final VoidCallback? onPreviewTap;
+  final VoidCallback? onRecipeTap;
 
   @override
   Widget build(BuildContext context) {
@@ -124,7 +126,7 @@ class ReelCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 12),
-                        _SideActions(reel: reel),
+                        _SideActions(reel: reel, onRecipeTap: onRecipeTap),
                       ],
                     ),
                   ),
@@ -229,9 +231,10 @@ class _PreviewPlayButton extends StatelessWidget {
 }
 
 class _SideActions extends StatelessWidget {
-  const _SideActions({required this.reel});
+  const _SideActions({required this.reel, this.onRecipeTap});
 
   final Reel reel;
+  final VoidCallback? onRecipeTap;
 
   @override
   Widget build(BuildContext context) {
@@ -247,7 +250,9 @@ class _SideActions extends StatelessWidget {
         _ActionIcon(
           icon: Icons.bookmark_border,
           label: 'Recipe',
-          onTap: () => _showPlaceholderSnack(context, 'Recipe details — coming soon'),
+          onTap: reel.hasRecipeDetails
+              ? onRecipeTap
+              : () => _showPlaceholderSnack(context, 'Recipe details not available yet'),
         ),
         const SizedBox(height: 16),
         _ActionIcon(

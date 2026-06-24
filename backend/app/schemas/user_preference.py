@@ -6,6 +6,11 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 BudgetLevel = Literal["low", "medium", "high", "premium"]
+NutritionGoal = Literal["maintain", "weight_loss", "bulking", "muscle_gain", "high_protein"]
+
+ALLOWED_NUTRITION_GOALS = frozenset(
+    {"maintain", "weight_loss", "bulking", "muscle_gain", "high_protein"}
+)
 
 ALLOWED_DIETARY_PREFERENCES = frozenset(
     {
@@ -73,6 +78,7 @@ def _normalize_string_list(values: list[str] | None, *, max_items: int, max_len:
 class UserPreferencesResponse(BaseModel):
     favorite_cuisines: list[str] = Field(default_factory=list)
     dietary_preferences: list[str] = Field(default_factory=list)
+    nutrition_goal: NutritionGoal | None = None
     budget_level: BudgetLevel | None = None
     disliked_categories: list[str] = Field(default_factory=list)
     allergies: list[str] = Field(default_factory=list)
@@ -81,9 +87,30 @@ class UserPreferencesResponse(BaseModel):
 class UserPreferencesUpdate(BaseModel):
     favorite_cuisines: list[str] | None = None
     dietary_preferences: list[str] | None = None
+    nutrition_goal: NutritionGoal | None = None
     budget_level: BudgetLevel | None = None
     disliked_categories: list[str] | None = None
     allergies: list[str] | None = None
+
+    @field_validator("nutrition_goal", mode="before")
+    @classmethod
+    def validate_nutrition_goal(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = str(value).strip().lower().replace(" ", "_").replace("-", "_")
+        aliases = {
+            "weightloss": "weight_loss",
+            "lose_weight": "weight_loss",
+            "muscle": "muscle_gain",
+            "highprotein": "high_protein",
+            "bulk": "bulking",
+            "balanced": "maintain",
+        }
+        normalized = aliases.get(normalized, normalized)
+        if normalized not in ALLOWED_NUTRITION_GOALS:
+            allowed = ", ".join(sorted(ALLOWED_NUTRITION_GOALS))
+            raise ValueError(f"nutrition_goal must be one of: {allowed}")
+        return normalized
 
     @field_validator("favorite_cuisines")
     @classmethod

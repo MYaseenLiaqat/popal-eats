@@ -7,6 +7,7 @@ import '../services/api_client.dart';
 import '../services/order_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/price_formatter.dart';
+import '../utils/recommendation_copy.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 import 'order_success_screen.dart';
 
@@ -56,13 +57,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
-        error = e.message;
+        error = RecommendationCopy.friendlyError(e);
         placing = false;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        error = e.toString();
+        error = RecommendationCopy.friendlyError(e);
         placing = false;
       });
     }

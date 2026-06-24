@@ -5,6 +5,7 @@ import '../services/dish_service.dart';
 import '../services/order_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/price_formatter.dart';
+import '../utils/recommendation_copy.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 
 /// Single order from `GET /orders/{id}`.
@@ -58,7 +59,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        error = e.toString();
+        error = RecommendationCopy.friendlyError(e);
         loading = false;
       });
     }

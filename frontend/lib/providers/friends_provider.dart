@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../models/social_user.dart';
 import '../services/api_client.dart';
 import '../services/friends_service.dart';
+import '../utils/recommendation_copy.dart';
 
 class FriendsProvider extends ChangeNotifier {
   FriendsProvider({FriendsService? service}) : _service = service ?? FriendsService();
@@ -68,7 +69,7 @@ class FriendsProvider extends ChangeNotifier {
       final result = await _service.getFriends();
       friends = result.friends;
     } on ApiException catch (e) {
-      friendsError = e.message;
+      friendsError = RecommendationCopy.friendlyError(e);
     } finally {
       loadingFriends = false;
       notifyListeners();
@@ -93,7 +94,7 @@ class FriendsProvider extends ChangeNotifier {
       incomingRequests = result.incoming;
       outgoingRequests = result.outgoing;
     } on ApiException catch (e) {
-      requestsError = e.message;
+      requestsError = RecommendationCopy.friendlyError(e);
     } finally {
       loadingRequests = false;
       notifyListeners();
@@ -110,7 +111,7 @@ class FriendsProvider extends ChangeNotifier {
       outgoingRequests = [...outgoingRequests, request];
       return true;
     } on ApiException catch (e) {
-      actionError = e.message;
+      actionError = RecommendationCopy.friendlyError(e);
       return false;
     } finally {
       actionLoading = false;
@@ -134,7 +135,7 @@ class FriendsProvider extends ChangeNotifier {
       }
       return true;
     } on ApiException catch (e) {
-      actionError = e.message;
+      actionError = RecommendationCopy.friendlyError(e);
       return false;
     } finally {
       actionLoading = false;
@@ -152,7 +153,7 @@ class FriendsProvider extends ChangeNotifier {
       incomingRequests = incomingRequests.where((r) => r.id != requestId).toList();
       return true;
     } on ApiException catch (e) {
-      actionError = e.message;
+      actionError = RecommendationCopy.friendlyError(e);
       return false;
     } finally {
       actionLoading = false;
@@ -170,7 +171,7 @@ class FriendsProvider extends ChangeNotifier {
       friends = friends.where((f) => f.id != friendId).toList();
       return true;
     } on ApiException catch (e) {
-      actionError = e.message;
+      actionError = RecommendationCopy.friendlyError(e);
       return false;
     } finally {
       actionLoading = false;

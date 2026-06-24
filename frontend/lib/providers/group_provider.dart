@@ -9,6 +9,7 @@ import '../services/api_client.dart';
 import '../services/device_location_service.dart';
 import '../services/dish_service.dart';
 import '../services/group_service.dart';
+import '../utils/recommendation_copy.dart';
 
 class GroupProvider extends ChangeNotifier {
   GroupProvider({
@@ -120,7 +121,7 @@ class GroupProvider extends ChangeNotifier {
       final result = await _service.getGroups();
       groups = result.groups;
     } on ApiException catch (e) {
-      groupsError = e.message;
+      groupsError = RecommendationCopy.friendlyError(e);
     } finally {
       loadingGroups = false;
       notifyListeners();
@@ -138,7 +139,7 @@ class GroupProvider extends ChangeNotifier {
     try {
       selectedGroup = await _service.getGroup(sessionId);
     } on ApiException catch (e) {
-      detailError = e.message;
+      detailError = RecommendationCopy.friendlyError(e);
     } finally {
       loadingDetail = false;
       notifyListeners();
@@ -163,7 +164,7 @@ class GroupProvider extends ChangeNotifier {
       memberLocations = result.locations;
       locationsSessionId = sessionId;
     } on ApiException catch (e) {
-      locationsError = e.message;
+      locationsError = RecommendationCopy.friendlyError(e);
     } finally {
       loadingLocations = false;
       notifyListeners();
@@ -192,7 +193,7 @@ class GroupProvider extends ChangeNotifier {
       ];
       return true;
     } on ApiException catch (e) {
-      locationActionError = e.message;
+      locationActionError = RecommendationCopy.friendlyError(e);
       return false;
     } finally {
       sharingLocation = false;
@@ -219,10 +220,10 @@ class GroupProvider extends ChangeNotifier {
       ];
       return true;
     } on LocationAccessException catch (e) {
-      locationActionError = e.message;
+      locationActionError = RecommendationCopy.friendlyError(e);
       return false;
     } on ApiException catch (e) {
-      locationActionError = e.message;
+      locationActionError = RecommendationCopy.friendlyError(e);
       return false;
     } finally {
       sharingLocation = false;
@@ -269,7 +270,7 @@ class GroupProvider extends ChangeNotifier {
         loadVoteSummariesForRecommendations(enriched),
       ]);
     } on ApiException catch (e) {
-      recommendationsError = e.message;
+      recommendationsError = RecommendationCopy.friendlyError(e);
     } finally {
       loadingRecommendations = false;
       notifyListeners();
@@ -305,7 +306,7 @@ class GroupProvider extends ChangeNotifier {
       voteSummaries[recommendationId] = summary;
       voteError = null;
     } on ApiException catch (e) {
-      voteError = e.message;
+      voteError = RecommendationCopy.friendlyError(e);
     } finally {
       notifyListeners();
     }
@@ -366,7 +367,7 @@ class GroupProvider extends ChangeNotifier {
       _syncRecommendationScores(recommendationId);
       return true;
     } on ApiException catch (e) {
-      voteError = e.message;
+      voteError = RecommendationCopy.friendlyError(e);
       return false;
     } finally {
       votingRecommendationIds.remove(recommendationId);
@@ -419,7 +420,7 @@ class GroupProvider extends ChangeNotifier {
       groupDecision = await _service.getDecision(sessionId);
       decisionSessionId = sessionId;
     } on ApiException catch (e) {
-      decisionError = e.message;
+      decisionError = RecommendationCopy.friendlyError(e);
     } finally {
       loadingDecision = false;
       notifyListeners();
@@ -436,7 +437,7 @@ class GroupProvider extends ChangeNotifier {
       decisionSessionId = sessionId;
       return true;
     } on ApiException catch (e) {
-      decisionError = e.message;
+      decisionError = RecommendationCopy.friendlyError(e);
       return false;
     } finally {
       orderingDecision = false;
@@ -462,7 +463,7 @@ class GroupProvider extends ChangeNotifier {
       incomingInvitations = result.incoming;
       outgoingInvitations = result.outgoing;
     } on ApiException catch (e) {
-      invitationsError = e.message;
+      invitationsError = RecommendationCopy.friendlyError(e);
     } finally {
       loadingInvitations = false;
       notifyListeners();
@@ -480,7 +481,7 @@ class GroupProvider extends ChangeNotifier {
       selectedGroup = session;
       return session;
     } on ApiException catch (e) {
-      actionError = e.message;
+      actionError = RecommendationCopy.friendlyError(e);
       return null;
     } finally {
       actionLoading = false;
@@ -504,7 +505,7 @@ class GroupProvider extends ChangeNotifier {
       outgoingInvitations = [...outgoingInvitations, invitation];
       return true;
     } on ApiException catch (e) {
-      actionError = e.message;
+      actionError = RecommendationCopy.friendlyError(e);
       return false;
     } finally {
       actionLoading = false;
@@ -527,7 +528,7 @@ class GroupProvider extends ChangeNotifier {
       }
       return true;
     } on ApiException catch (e) {
-      actionError = e.message;
+      actionError = RecommendationCopy.friendlyError(e);
       return false;
     } finally {
       actionLoading = false;
@@ -546,7 +547,7 @@ class GroupProvider extends ChangeNotifier {
           incomingInvitations.where((i) => i.id != invitationId).toList();
       return true;
     } on ApiException catch (e) {
-      actionError = e.message;
+      actionError = RecommendationCopy.friendlyError(e);
       return false;
     } finally {
       actionLoading = false;

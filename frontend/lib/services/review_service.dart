@@ -1,17 +1,27 @@
+import '../models/review.dart';
 import 'api_client.dart';
 
 class ReviewService {
   final _api = ApiClient.instance;
 
-  Future<List<dynamic>> list({int? restaurantId, int page = 1}) async {
+  Future<List<Review>> listForRestaurant(
+    int restaurantId, {
+    int page = 1,
+    int limit = 20,
+  }) async {
     final query = {
       'page': '$page',
-      'limit': '20',
-      if (restaurantId != null) 'restaurant_id': '$restaurantId',
+      'limit': '$limit',
+      'restaurant_id': '$restaurantId',
+      'sort': 'desc',
     };
     final r = await _api.get('/reviews', query: query, auth: false);
     _api.throwIfError(r);
-    return _api.decodeList(r);
+    final items = _api.decodeList(r);
+    return items
+        .whereType<Map>()
+        .map((e) => Review.fromJson(Map<String, dynamic>.from(e)))
+        .toList();
   }
 
   Future<Map<String, dynamic>> getProcessingStatus(int reviewId) async {
@@ -20,7 +30,7 @@ class ReviewService {
     return _api.decodeJson(r);
   }
 
-  Future<Map<String, dynamic>> create({
+  Future<Review> create({
     required int restaurantId,
     required int rating,
     String? comment,
@@ -34,6 +44,6 @@ class ReviewService {
       },
     );
     _api.throwIfError(r);
-    return _api.decodeJson(r);
+    return Review.fromJson(_api.decodeJson(r));
   }
 }
