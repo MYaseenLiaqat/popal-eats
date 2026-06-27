@@ -15,10 +15,10 @@ class SentimentBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final normalized = sentiment.trim().toLowerCase();
     final color = switch (normalized) {
-      'positive' => AppColors.green,
+      'positive' => AppColors.accent,
       'negative' => Colors.redAccent,
       'neutral' => AppColors.textSecondary,
-      _ => AppColors.gold,
+      _ => AppColors.accent,
     };
     final label = normalized.isEmpty
         ? 'Review'
@@ -67,7 +67,7 @@ class ReviewStatsSummary extends StatelessWidget {
     }
 
     return ModernCard(
-      borderColor: AppColors.gold.withValues(alpha: 0.35),
+      borderColor: AppColors.accent.withValues(alpha: 0.35),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -85,7 +85,7 @@ class ReviewStatsSummary extends StatelessWidget {
               spacing: 8,
               runSpacing: 6,
               children: [
-                if (positiveCount > 0) _statChip('Positive', positiveCount, AppColors.green),
+                if (positiveCount > 0) _statChip('Positive', positiveCount, AppColors.accent),
                 if (neutralCount > 0) _statChip('Neutral', neutralCount, AppColors.textSecondary),
                 if (negativeCount > 0) _statChip('Negative', negativeCount, Colors.redAccent),
               ],
@@ -212,7 +212,7 @@ class RestaurantReviewsSection extends StatelessWidget {
         if (loading)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 24),
-            child: Center(child: CircularProgressIndicator(color: AppColors.gold)),
+            child: Center(child: CircularProgressIndicator(color: AppColors.accent)),
           )
         else ...[
           ReviewStatsSummary(
@@ -315,7 +315,7 @@ class _WriteReviewSheetState extends State<_WriteReviewSheet> {
         children: [
           Text(
             'Review ${widget.restaurantName}',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(color: AppColors.gold),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(color: AppColors.accent),
           ),
           const SizedBox(height: 16),
           Row(
@@ -326,7 +326,7 @@ class _WriteReviewSheetState extends State<_WriteReviewSheet> {
                 onPressed: _submitting ? null : () => setState(() => _rating = star),
                 icon: Icon(
                   star <= _rating ? Icons.star : Icons.star_border,
-                  color: AppColors.gold,
+                  color: AppColors.accent,
                   size: 32,
                 ),
               );

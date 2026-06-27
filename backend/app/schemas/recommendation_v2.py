@@ -47,6 +47,14 @@ class V2ScoreBreakdown(BaseModel):
     total_score: float = Field(0, ge=0, le=100, description="Final score (sum or hybrid_score)")
 
 
+class V2SignalContribution(BaseModel):
+    """Per-signal contribution toward the final recommendation score."""
+
+    signal: str
+    label: str
+    points: float = Field(..., ge=0, le=100)
+
+
 class V2SimilarDishItem(BaseModel):
     dish_id: int
     dish_name: str
@@ -83,6 +91,20 @@ class V2DishRecommendationItem(BaseModel):
     score_breakdown: V2ScoreBreakdown
     explanation: str
     signals_used: list[str] = Field(default_factory=list)
+    confidence_percent: int | None = Field(
+        None,
+        ge=0,
+        le=100,
+        description="Match confidence from the existing pipeline score (0–100)",
+    )
+    explanation_bullets: list[str] = Field(
+        default_factory=list,
+        description="Top consumer-facing reasons ordered by signal contribution",
+    )
+    contributions: list[V2SignalContribution] = Field(
+        default_factory=list,
+        description="Signal contribution breakdown for transparency",
+    )
 
 
 class RecommendationsV2Response(BaseModel):

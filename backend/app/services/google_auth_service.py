@@ -9,6 +9,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
+from app.core.account_status import ACTIVE
 from app.core.roles import CUSTOMER
 from app.models.user import User
 from app.utils.username import suggest_username_from_email, validate_username
@@ -105,11 +106,18 @@ def authenticate_google_user(db: Session, id_token: str) -> User:
         return user
 
     username = _unique_username(db, suggest_username_from_email(profile["email"]))
+    name_parts = profile["full_name"].split(" ", 1)
+    first_name = name_parts[0]
+    last_name = name_parts[1] if len(name_parts) > 1 else ""
     user = User(
         full_name=profile["full_name"],
+        first_name=first_name,
+        last_name=last_name or first_name,
         email=profile["email"],
         password_hash=None,
         role=CUSTOMER,
+        account_status=ACTIVE,
+        email_verified=True,
         username=username,
         google_id=profile["google_id"],
         profile_image=profile.get("profile_image"),

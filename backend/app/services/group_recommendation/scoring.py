@@ -13,11 +13,15 @@ from app.services.group_recommendation.filters import (
 from app.services.recommendation.preference_scoring import is_disliked_category
 from app.services.user_preferences_service import budget_bounds_for_level
 
-WEIGHT_CUISINE = 0.40
+from app.services.recommendation.v2_content import _score_nutrition
+
+WEIGHT_CUISINE = 0.36
 WEIGHT_AGREEMENT = 0.20
-WEIGHT_DISTANCE = 0.15
-WEIGHT_BUDGET = 0.15
-WEIGHT_POPULARITY = 0.10
+WEIGHT_DISTANCE = 0.14
+WEIGHT_BUDGET = 0.14
+WEIGHT_POPULARITY = 0.08
+WEIGHT_NUTRITION = 0.04
+WEIGHT_ORDER_SIMILARITY = 0.04
 
 MAX_DISTANCE_KM = 10.0
 
@@ -139,18 +143,36 @@ def score_cuisine_match(
     *,
     dish_tags: list[str],
     restaurant_tags: list[str],
-) -> float:
+) -> tuple[float, int, str | None]:
+    """
+    Return (score 0–100, matching_member_count, primary_matched_cuisine_label).
+
+  Rewards dishes that satisfy multiple members' cuisines (conflict handling).
+    """
     if not members:
-        return 0.0
-    matches = sum(
-        1
-        for member in members
-        if _match_cuisine(member["favorite_cuisines"], dish_tags, restaurant_tags)
-    )
-    members_with_cuisines = sum(1 for member in members if member["favorite_cuisines"])
+        return 0.0, 0, None
+
+    matching_members = 0
+    matched_cuisines: set[str] = set()
+    for member in members:
+        member_cuisines = member.get("favorite_cuisines") or []
+        if not member_cuisines:
+            continue
+        for cuisine in member_cuisines:
+            if _match_cuisine([cuisine], dish_tags, restaurant_tags):
+                matching_members += 1
+                matched_cuisines.add(cuisine)
+                break
+
+    members_with_cuisines = sum(1 for member in members if member.get("favorite_cuisines"))
     if members_with_cuisines == 0:
-        return 50.0
-    return round(100.0 * matches / members_with_cuisines, 2)
+        return 50.0, 0, None
+
+    base = 100.0 * matching_members / members_with_cuisines
+    diversity_bonus = min(15.0, max(0, len(matched_cuisines) - 1) * 5.0)
+    score = round(min(100.0, base + diversity_bonus), 2)
+    primary = next(iter(sorted(matched_cuisines)), None)
+    return score, matching_members, primary
 
 
 def _price_in_budget(price: Decimal, budget_level: str | None) -> bool:
@@ -185,6 +207,37 @@ def score_popularity(dish: Dish, order_count: int, max_orders: int) -> float:
     return round((rating_score * 0.6) + (order_score * 0.4), 2)
 
 
+def score_nutrition_compatibility(dish: Dish, members: list[dict]) -> float:
+    goals = [m.get("nutrition_goal") for m in members if m.get("nutrition_goal")]
+    if not goals:
+        return 50.0
+    total = 0.0
+    for goal in goals:
+        pts, _ = _score_nutrition(dish, goal)
+        total += min(100.0, (pts / 25.0) * 100.0) if pts else 0.0
+    return round(total / len(goals), 2)
+
+
+def score_order_similarity(dish: Dish, members: list[dict]) -> float:
+    if not members:
+        return 0.0
+    restaurant_id = dish.restaurant_id
+    hits = 0
+    for member in members:
+        if dish.id in member.get("ordered_dish_ids", set()):
+            return 100.0
+        if restaurant_id and restaurant_id in member.get("ordered_restaurant_ids", set()):
+            hits += 1
+            continue
+        if dish.id in member.get("feedback_dish_ids", set()):
+            hits += 1
+        elif dish.id in member.get("viewed_dish_ids", set()):
+            hits += 0.5
+    if hits <= 0:
+        return 0.0
+    return round(min(100.0, (hits / len(members)) * 100.0), 2)
+
+
 def compute_group_score(
     *,
     cuisine_score: float,
@@ -192,6 +245,8 @@ def compute_group_score(
     distance_score: float,
     budget_score: float,
     popularity_score: float,
+    nutrition_score: float = 50.0,
+    order_similarity_score: float = 0.0,
 ) -> float:
     total = (
         cuisine_score * WEIGHT_CUISINE
@@ -199,6 +254,8 @@ def compute_group_score(
         + distance_score * WEIGHT_DISTANCE
         + budget_score * WEIGHT_BUDGET
         + popularity_score * WEIGHT_POPULARITY
+        + nutrition_score * WEIGHT_NUTRITION
+        + order_similarity_score * WEIGHT_ORDER_SIMILARITY
     )
     return round(min(100.0, max(0.0, total)), 2)
 

@@ -78,7 +78,7 @@ class _BudgetPreferencesScreenState extends State<BudgetPreferencesScreen> {
 
   Widget _buildBody(PreferencesProvider provider) {
     if (!_initialized || (provider.loading && provider.preferences == null)) {
-      return const Center(child: CircularProgressIndicator(color: AppColors.gold));
+      return const Center(child: CircularProgressIndicator(color: AppColors.accent));
     }
 
     if (provider.error != null && provider.preferences == null) {
@@ -103,18 +103,18 @@ class _BudgetPreferencesScreenState extends State<BudgetPreferencesScreen> {
       children: [
         ModernCard(
           gradient: AppColors.headerGradient,
-          borderColor: AppColors.green.withValues(alpha: 0.35),
+          borderColor: AppColors.accent.withValues(alpha: 0.35),
           child: Row(
             children: [
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: AppColors.green.withValues(alpha: 0.15),
+                  color: AppColors.accent.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
                   Icons.account_balance_wallet_outlined,
-                  color: AppColors.green,
+                  color: AppColors.accent,
                 ),
               ),
               const SizedBox(width: 12),
@@ -125,7 +125,7 @@ class _BudgetPreferencesScreenState extends State<BudgetPreferencesScreen> {
                     Text(
                       'Spending limits',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: AppColors.gold,
+                            color: AppColors.accent,
                           ),
                     ),
                     Text(
@@ -143,16 +143,16 @@ class _BudgetPreferencesScreenState extends State<BudgetPreferencesScreen> {
           subtitle: 'Max spend per week (display only)',
         ),
         ModernCard(
-          borderColor: AppColors.gold.withValues(alpha: 0.4),
+          borderColor: AppColors.accent.withValues(alpha: 0.4),
           child: TextField(
             controller: _weeklyBudgetController,
             keyboardType: TextInputType.number,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: AppColors.gold,
+                  color: AppColors.accent,
                 ),
             decoration: const InputDecoration(
               prefixText: PriceFormatter.fieldPrefix,
-              prefixStyle: TextStyle(color: AppColors.gold),
+              prefixStyle: TextStyle(color: AppColors.accent),
               border: InputBorder.none,
               isDense: true,
             ),
@@ -163,16 +163,16 @@ class _BudgetPreferencesScreenState extends State<BudgetPreferencesScreen> {
           subtitle: 'Max spend per month (display only)',
         ),
         ModernCard(
-          borderColor: AppColors.green.withValues(alpha: 0.4),
+          borderColor: AppColors.accent.withValues(alpha: 0.4),
           child: TextField(
             controller: _monthlyBudgetController,
             keyboardType: TextInputType.number,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: AppColors.green,
+                  color: AppColors.accent,
                 ),
             decoration: const InputDecoration(
               prefixText: PriceFormatter.fieldPrefix,
-              prefixStyle: TextStyle(color: AppColors.green),
+              prefixStyle: TextStyle(color: AppColors.accent),
               border: InputBorder.none,
               isDense: true,
             ),
@@ -189,20 +189,20 @@ class _BudgetPreferencesScreenState extends State<BudgetPreferencesScreen> {
             child: ModernCard(
               onTap: () => setState(() => _budgetMode = mode.$1),
               borderColor: selected
-                  ? AppColors.gold.withValues(alpha: 0.5)
+                  ? AppColors.accent.withValues(alpha: 0.5)
                   : null,
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: (selected ? AppColors.gold : AppColors.green)
+                      color: (selected ? AppColors.accent : AppColors.accent)
                           .withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
                       mode.$3,
-                      color: selected ? AppColors.gold : AppColors.green,
+                      color: selected ? AppColors.accent : AppColors.accent,
                     ),
                   ),
                   const SizedBox(width: 14),
@@ -222,7 +222,7 @@ class _BudgetPreferencesScreenState extends State<BudgetPreferencesScreen> {
                     ),
                   ),
                   if (selected)
-                    const Icon(Icons.check_circle, color: AppColors.gold),
+                    const Icon(Icons.check_circle, color: AppColors.accent),
                 ],
               ),
             ),

@@ -1,0 +1,4 @@
+strategy,cold_start_users,hit_rate_at_10
+content,41,1.0
+collaborative,41,0.0
+hybrid,41,1.0

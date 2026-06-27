@@ -9,6 +9,8 @@ from sqlalchemy.orm import Session
 from app.config import MAX_UPLOAD_MB, UPLOAD_DIR
 from app.core.content_constants import CONTENT_IMAGE_EXTENSIONS
 from app.core.dependencies import get_current_user
+from app.core.rbac import assert_active_business_account, require_roles
+from app.core.roles import ADMIN, HOME_CHEF, RESTAURANT, normalize_role
 from app.database import get_db
 from app.models.user import User
 from app.schemas.content import StoryListResponse, StoryResponse
@@ -19,6 +21,7 @@ from app.services.story_service import (
     mark_story_viewed,
 )
 
+require_story_creator = require_roles(ADMIN, RESTAURANT, HOME_CHEF)
 router = APIRouter(prefix="/stories", tags=["stories"])
 
 
@@ -38,8 +41,10 @@ def list_stories(
 async def create_story_route(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_story_creator),
 ) -> StoryResponse:
+    if normalize_role(current_user.role) != ADMIN:
+        assert_active_business_account(current_user)
     suffix = Path(file.filename or "").suffix.lower()
     if suffix not in CONTENT_IMAGE_EXTENSIONS:
         raise HTTPException(

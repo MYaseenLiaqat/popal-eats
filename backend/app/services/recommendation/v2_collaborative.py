@@ -18,10 +18,13 @@ from app.schemas.recommendation_v2 import (
     V2ScoreBreakdown,
     V2SimilarDishItem,
 )
+from app.services.recommendation.allergy_filter import filter_dishes_for_user_allergies
 from app.services.recommendation.market_filter import filter_dishes_for_market
 from app.services.recommendation.price_adjustment import apply_price_outlier_penalty
 from app.services.recommendation.v2_candidates import is_eligible_dish
+from app.services.recommendation.v2_catalog import build_tag_maps_from_dishes
 from app.services.recommendation.v2_debug import log_ranked_recommendations
+from app.services.user_preferences_service import load_recommendation_preferences
 
 TOP_N = 10
 SIMILAR_DEFAULT_LIMIT = 10
@@ -191,6 +194,15 @@ def get_collaborative_recommendations(
         .all()
     )
     dishes = filter_dishes_for_market(dishes)
+    prefs = load_recommendation_preferences(db, user_id)
+    dish_tags_map, restaurant_tags_map = build_tag_maps_from_dishes(dishes)
+    dishes = filter_dishes_for_user_allergies(
+        dishes,
+        prefs.allergies,
+        dish_tags_map=dish_tags_map,
+        restaurant_tags_map=restaurant_tags_map,
+        user_id=user_id,
+    )
     dishes_by_id = {d.id: d for d in dishes}
 
     items: list[V2DishRecommendationItem] = []

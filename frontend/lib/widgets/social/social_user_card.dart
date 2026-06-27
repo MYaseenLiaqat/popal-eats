@@ -46,7 +46,7 @@ class SocialUserCard extends StatelessWidget {
               Text(
                 user.displayHandle,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.gold.withValues(alpha: 0.85),
+                      color: AppColors.accent.withValues(alpha: 0.85),
                     ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -83,14 +83,14 @@ class PendingBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.gold.withValues(alpha: 0.15),
+        color: AppColors.accent.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.gold.withValues(alpha: 0.45)),
+        border: Border.all(color: AppColors.accent.withValues(alpha: 0.45)),
       ),
       child: Text(
         'Pending',
         style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: AppColors.gold,
+              color: AppColors.accent,
               fontWeight: FontWeight.w600,
             ),
       ),

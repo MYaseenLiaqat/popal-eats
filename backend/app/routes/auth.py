@@ -1,15 +1,16 @@
 """Authentication: register, login, refresh, logout, profile."""
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.config import ACCESS_TOKEN_EXPIRE_MINUTES
+from app.core.account_status import blocks_login, normalize_account_status
 from app.core.dependencies import get_current_user
-from app.core.roles import CUSTOMER, normalize_role
+from app.core.roles import normalize_role
 from app.core.security import (
     create_access_token,
     create_refresh_token,
-    hash_password,
     revoke_refresh_token,
     verify_password,
     verify_refresh_token,
@@ -26,23 +27,34 @@ from app.schemas.user import (
     UserResponse,
     UsernameAvailabilityResponse,
 )
+from app.services.auth_registration_service import register_user
 from app.services.google_auth_service import authenticate_google_user
-from app.utils.username import normalize_username, validate_username
+from app.utils.username import validate_username
 
 router = APIRouter(tags=["auth"])
 
 
 def _issue_tokens(db: Session, user: User) -> Token:
     role = normalize_role(user.role)
-    access = create_access_token(user.email, role)
+    access = create_access_token(user.email, role, user_id=user.id)
     refresh = create_refresh_token(db, user.id)
     return Token(
         access_token=access,
         token_type="bearer",
         role=role,
+        account_status=normalize_account_status(user.account_status),
         refresh_token=refresh,
         expires_in_minutes=ACCESS_TOKEN_EXPIRE_MINUTES,
     )
+
+
+def _ensure_can_login(user: User) -> None:
+    if blocks_login(user.account_status):
+        status_label = normalize_account_status(user.account_status)
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Account is {status_label}. Contact support.",
+        )
 
 
 @router.get(
@@ -51,7 +63,7 @@ def _issue_tokens(db: Session, user: User) -> Token:
     summary="Check whether a username is available",
 )
 def check_username_available(
-    username: str = Query(..., min_length=3, max_length=32),
+    username: str = Query(..., min_length=3, max_length=30),
     db: Session = Depends(get_db),
 ) -> UsernameAvailabilityResponse:
     try:
@@ -65,26 +77,12 @@ def check_username_available(
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 def register(body: UserRegister, db: Session = Depends(get_db)):
-    email = body.email.lower()
-    if db.query(User).filter(User.email == email).first():
-        raise HTTPException(status_code=400, detail="Email already registered")
-
-    username = normalize_username(body.username)
-    if db.query(User).filter(User.username == username).first():
-        raise HTTPException(status_code=409, detail="Username is already taken")
-
-    user = User(
-        full_name=body.full_name,
-        username=username,
-        email=email,
-        password_hash=hash_password(body.password),
-        phone=body.phone,
-        city=body.city,
-        role=CUSTOMER,
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
+    try:
+        user = register_user(db, body)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except ValidationError as exc:
+        raise HTTPException(status_code=422, detail=exc.errors()) from exc
     return user
 
 
@@ -93,12 +91,14 @@ def login(body: UserLogin, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == body.email.lower()).first()
     if not user or not user.password_hash or not verify_password(body.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid email or password")
+    _ensure_can_login(user)
     return _issue_tokens(db, user)
 
 
 @router.post("/auth/google", response_model=Token, summary="Sign in with Google ID token")
 def google_auth(body: GoogleAuthRequest, db: Session = Depends(get_db)):
     user = authenticate_google_user(db, body.id_token)
+    _ensure_can_login(user)
     return _issue_tokens(db, user)
 
 
@@ -110,6 +110,7 @@ def refresh_tokens(body: RefreshTokenRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == record.user_id).first()
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
+    _ensure_can_login(user)
     revoke_refresh_token(db, body.refresh_token)
     return _issue_tokens(db, user)
 

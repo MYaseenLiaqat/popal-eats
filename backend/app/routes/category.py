@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_current_user
+from app.core.rbac import require_admin
 from app.database import get_db
 from app.models.category import Category
 from app.models.dish import Dish
@@ -30,7 +31,7 @@ def create_category(
     body: CategoryCreate,
     db: Session = Depends(get_db),
     # TODO(production): replace with Depends(require_admin)
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin),
 ):
     if db.query(Category).filter(Category.name == body.name).first():
         raise HTTPException(
@@ -78,7 +79,7 @@ def update_category(
     body: CategoryUpdate,
     db: Session = Depends(get_db),
     # TODO(production): replace with Depends(require_admin)
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin),
 ):
     category = db.query(Category).filter(Category.id == category_id).first()
     if not category:
@@ -109,7 +110,7 @@ def delete_category(
     category_id: int,
     db: Session = Depends(get_db),
     # TODO(production): replace with Depends(require_admin)
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin),
 ):
     category = db.query(Category).filter(Category.id == category_id).first()
     if not category:

@@ -18,9 +18,9 @@ class GroupSessionCard extends StatelessWidget {
 
   Color _statusColor() {
     return switch (session.status.toLowerCase()) {
-      'active' => AppColors.green,
+      'active' => AppColors.accent,
       'closed' => AppColors.textSecondary,
-      _ => AppColors.gold,
+      _ => AppColors.accent,
     };
   }
 
@@ -31,7 +31,7 @@ class GroupSessionCard extends StatelessWidget {
     return ModernCard(
       onTap: onTap,
       borderColor: session.isActive
-          ? AppColors.green.withValues(alpha: 0.25)
+          ? AppColors.accent.withValues(alpha: 0.25)
           : null,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -44,7 +44,7 @@ class GroupSessionCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(14),
             ),
             alignment: Alignment.center,
-            child: const Icon(Icons.groups, color: AppColors.gold),
+            child: const Icon(Icons.groups, color: AppColors.accent),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -122,7 +122,7 @@ class GroupMemberTile extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: ModernCard(
-        borderColor: isHost ? AppColors.gold.withValues(alpha: 0.35) : null,
+        borderColor: isHost ? AppColors.accent.withValues(alpha: 0.35) : null,
         child: Row(
           children: [
             CommunityAvatar(name: name, imageUrl: imageUrl, size: 44),
@@ -141,13 +141,13 @@ class GroupMemberTile extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppColors.gold.withValues(alpha: 0.15),
+                  color: AppColors.accent.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(99),
                 ),
                 child: Text(
                   'HOST',
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: AppColors.gold,
+                        color: AppColors.accent,
                         fontWeight: FontWeight.w700,
                       ),
                 ),

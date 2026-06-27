@@ -1,0 +1,4 @@
+strategy,avg_latency_ms,p95_latency_ms,min_latency_ms,max_latency_ms,throughput_rps
+content,13419.45,15902.6,9483.68,18633.82,0.7172
+collaborative,436.4,577.81,219.06,577.81,14.1466
+hybrid,16423.23,18287.67,12117.69,29427.57,0.5883

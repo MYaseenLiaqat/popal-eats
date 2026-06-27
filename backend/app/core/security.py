@@ -42,12 +42,21 @@ def verify_password(plain_password: str, password_hash: str) -> bool:
         return False
 
 
-def create_access_token(subject: str, role: str) -> str:
+def create_access_token(subject: str, role: str, user_id: int | None = None) -> str:
     if not SECRET_KEY:
         raise ValueError("SECRET_KEY is missing. Set it in backend/.env")
 
-    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    payload = {"sub": subject, "role": normalize_role(role), "exp": expire, "type": "access"}
+    now = datetime.now(timezone.utc)
+    expire = now + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    payload = {
+        "sub": subject,
+        "role": normalize_role(role),
+        "iat": now,
+        "exp": expire,
+        "type": "access",
+    }
+    if user_id is not None:
+        payload["uid"] = user_id
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 

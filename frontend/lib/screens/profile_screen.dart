@@ -7,6 +7,7 @@ import '../providers/friends_provider.dart';
 import '../providers/group_provider.dart';
 import '../providers/onboarding_provider.dart';
 import '../providers/preferences_provider.dart';
+import '../providers/recommendation_provider.dart';
 import '../providers/reels_provider.dart';
 import '../theme/app_colors.dart';
 import '../utils/app_roles.dart';
@@ -22,7 +23,7 @@ import 'orders_screen.dart';
 import 'restaurant_dashboard_screen.dart';
 import 'restaurant_register_screen.dart';
 import 'admin_dashboard_screen.dart';
-import 'admin_restaurant_approvals_screen.dart';
+import 'admin_business_approvals_screen.dart';
 
 /// Profile — FYP dark theme layout.
 class ProfileScreen extends StatefulWidget {
@@ -52,6 +53,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     context.read<PreferencesProvider>().reset();
     context.read<FriendsProvider>().reset();
     context.read<GroupProvider>().reset();
+    context.read<RecommendationProvider>().reset();
     context.read<ReelsProvider>().reset();
   }
 
@@ -81,7 +83,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: SizedBox(
             height: 24,
             width: 24,
-            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.gold),
+            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.accent),
           ),
         ),
       );
@@ -121,7 +123,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: ModernCard(
-        borderColor: AppColors.gold.withValues(alpha: 0.25),
+        borderColor: AppColors.accent.withValues(alpha: 0.25),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -186,7 +188,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         actions: const [NotificationHubButton()],
       ),
       body: RefreshIndicator(
-        color: AppColors.gold,
+        color: AppColors.accent,
         onRefresh: () async {
           await prefs.fetch(force: true);
           await friends.fetchAll(force: true);
@@ -199,7 +201,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           children: [
             ModernCard(
               gradient: AppColors.headerGradient,
-              borderColor: AppColors.gold.withValues(alpha: 0.4),
+              borderColor: AppColors.accent.withValues(alpha: 0.4),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               child: Row(
                 children: [
@@ -207,14 +209,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     width: 52,
                     height: 52,
                     decoration: const BoxDecoration(
-                      gradient: AppColors.goldGradient,
+                      gradient: AppColors.accentGradient,
                       shape: BoxShape.circle,
                     ),
                     alignment: Alignment.center,
                     child: Text(
                       name.isNotEmpty ? name[0].toUpperCase() : '?',
                       style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            color: const Color(0xFF1A1400),
+                            color: AppColors.onAccent,
                           ),
                     ),
                   ),
@@ -228,7 +230,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Text(
                           handle,
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: AppColors.gold,
+                                color: AppColors.accent,
                                 fontWeight: FontWeight.w600,
                               ),
                         ),
@@ -242,7 +244,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ? 'Loading friends…'
                               : '${friends.friendsCount} friends',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: AppColors.green,
+                                color: AppColors.accent,
                                 fontWeight: FontWeight.w600,
                               ),
                         ),
@@ -259,7 +261,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               icon: Icons.receipt_long_outlined,
               title: 'My Orders',
               subtitle: 'View order history and track status',
-              iconColor: AppColors.gold,
+              iconColor: AppColors.accent,
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const OrdersScreen()),
@@ -274,7 +276,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               subtitle: friends.loadingFriends && friends.friendsCount == 0
                   ? 'Loading…'
                   : '${friends.friendsCount} connected',
-              iconColor: AppColors.green,
+              iconColor: AppColors.accent,
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const FriendsListScreen()),
@@ -286,21 +288,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
               subtitle: groups.loadingGroups && groups.groupCount == 0
                   ? 'Loading…'
                   : '${groups.groupCount} active · ${groups.incomingInvitationCount} invites in Activity',
-              iconColor: AppColors.green,
+              iconColor: AppColors.accent,
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const GroupsScreen()),
               ).then((_) => groups.fetchAll(force: true)),
             ),
             const SizedBox(height: 12),
-            if (AppRoles.isRestaurantOwner(user)) ...[
+            if (AppRoles.isRestaurantRoleOnly(user)) ...[
               Text('Business', style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 6),
               ProfileActionCard(
                 icon: Icons.storefront_outlined,
                 title: 'Restaurant Dashboard',
                 subtitle: 'Manage menu, dishes, and view stats',
-                iconColor: AppColors.gold,
+                iconColor: AppColors.accent,
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const RestaurantDashboardScreen()),
@@ -324,7 +326,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 icon: Icons.dashboard_outlined,
                 title: 'Admin Dashboard',
                 subtitle: 'Platform analytics and moderation',
-                iconColor: AppColors.gold,
+                iconColor: AppColors.accent,
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
@@ -334,11 +336,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 icon: Icons.approval_outlined,
                 title: 'Restaurant Approvals',
                 subtitle: 'Review pending restaurant submissions',
-                iconColor: AppColors.green,
+                iconColor: AppColors.accent,
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => const AdminRestaurantApprovalsScreen(),
+                    builder: (_) => const AdminBusinessApprovalsScreen(),
                   ),
                 ),
               ),
@@ -362,7 +364,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               icon: Icons.account_balance_wallet_outlined,
               title: 'Budget Preferences',
               subtitle: _budgetSubtitle(prefs),
-              iconColor: AppColors.green,
+              iconColor: AppColors.accent,
               onTap: () => Navigator.push(
                 context,
                 MaterialPageRoute(

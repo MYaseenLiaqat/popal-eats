@@ -17,6 +17,8 @@ class Restaurant {
     this.approvalStatus = 'approved',
     this.rejectionReason,
     this.tags = const [],
+    this.openingTime,
+    this.closingTime,
     this.createdAt,
   });
 
@@ -34,6 +36,8 @@ class Restaurant {
   final String approvalStatus;
   final String? rejectionReason;
   final List<String> tags;
+  final String? openingTime;
+  final String? closingTime;
   final DateTime? createdAt;
 
   factory Restaurant.fromJson(Map<String, dynamic> json) => Restaurant(
@@ -53,6 +57,8 @@ class Restaurant {
         approvalStatus: json['approval_status']?.toString() ?? 'approved',
         rejectionReason: json['rejection_reason']?.toString(),
         tags: _parseTags(json['tags']),
+        openingTime: json['opening_time']?.toString(),
+        closingTime: json['closing_time']?.toString(),
         createdAt: parseDateTimeOrNull(json['created_at']),
       );
 

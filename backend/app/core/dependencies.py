@@ -4,6 +4,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
+from app.core.account_status import blocks_login, normalize_account_status
 from app.core.security import (
     TokenExpiredError,
     TokenValidationError,
@@ -57,6 +58,12 @@ def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found for this token",
             headers=_UNAUTHORIZED_HEADERS,
+        )
+
+    if blocks_login(user.account_status):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Account is {normalize_account_status(user.account_status)}.",
         )
 
     return user

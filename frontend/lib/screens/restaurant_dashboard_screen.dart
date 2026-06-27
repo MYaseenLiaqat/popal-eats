@@ -72,11 +72,11 @@ class _RestaurantDashboardScreenState extends State<RestaurantDashboardScreen> {
   Color _statusColor(String status) {
     switch (status) {
       case 'approved':
-        return AppColors.green;
+        return AppColors.accent;
       case 'rejected':
         return AppColors.error;
       default:
-        return AppColors.gold;
+        return AppColors.accent;
     }
   }
 
@@ -103,12 +103,12 @@ class _RestaurantDashboardScreenState extends State<RestaurantDashboardScreen> {
             )
           : null,
       body: _loading && _dashboard == null
-          ? const Center(child: CircularProgressIndicator(color: AppColors.gold))
+          ? const Center(child: CircularProgressIndicator(color: AppColors.accent))
           : _error != null && _restaurants.isEmpty
               ? Center(child: Text(_error!))
               : RefreshIndicator(
                   onRefresh: _load,
-                  color: AppColors.gold,
+                  color: AppColors.accent,
                   child: ListView(
                     padding: const EdgeInsets.all(AppColors.screenPadding),
                     children: [
@@ -284,7 +284,7 @@ class _StatCard extends StatelessWidget {
           Text(
             value,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: AppColors.gold,
+                  color: AppColors.accent,
                   fontWeight: FontWeight.w700,
                 ),
           ),

@@ -2,18 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../models/dish.dart';
+import '../models/recommendation.dart';
 import '../models/review.dart';
 import '../providers/cart_provider.dart';
 import '../services/api_client.dart';
 import '../services/dish_service.dart';
+import '../services/feed_image_loader.dart';
+import '../services/recommendation_service.dart';
 import '../services/restaurant_service.dart';
 import '../services/review_service.dart';
 import '../theme/app_colors.dart';
-import '../utils/price_formatter.dart';
 import '../utils/recommendation_copy.dart';
-import '../widgets/cart_icon_button.dart';
+import '../widgets/dish/dish_hero_header.dart';
+import '../widgets/dish/dish_info_section.dart';
+import '../widgets/dish/dish_loading_skeleton.dart';
+import '../widgets/dish/dish_nutrition_section.dart';
+import '../widgets/dish/dish_reviews_recommended.dart';
+import '../widgets/dish/dish_sticky_cta.dart';
 import '../widgets/reviews/review_widgets.dart';
 import '../widgets/ui/app_ui_widgets.dart';
+import 'main_shell.dart';
+import 'restaurant_detail_screen.dart';
 
 /// Dish profile from `GET /dishes/{id}` with add-to-cart.
 class DishDetailScreen extends StatefulWidget {
@@ -29,15 +38,22 @@ class _DishDetailScreenState extends State<DishDetailScreen> {
   final _dishes = DishService();
   final _restaurants = RestaurantService();
   final _reviews = ReviewService();
+  final _recommendations = RecommendationService();
+  final _imageLoader = FeedImageLoader();
 
   Dish? dish;
   String? restaurantName;
+  int? restaurantId;
   double restaurantRating = 0;
   int restaurantReviewCount = 0;
   List<Review> recentReviews = [];
+  List<Recommendation> relatedRecommendations = [];
+  Map<int, String?> recommendationImages = {};
   bool loading = true;
   bool reviewsLoading = false;
   bool adding = false;
+  bool _favorite = false;
+  int _quantity = 1;
   String? error;
 
   @override
@@ -60,6 +76,7 @@ class _DishDetailScreenState extends State<DishDetailScreen> {
         loading = false;
       });
       await _loadReviews(d.restaurantId);
+      await _loadRecommendations();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -77,6 +94,7 @@ class _DishDetailScreenState extends State<DishDetailScreen> {
       if (!mounted) return;
       setState(() {
         restaurantName = r.name;
+        restaurantId = r.id;
         restaurantRating = r.averageRating;
         restaurantReviewCount = r.totalReviews;
         recentReviews = list;
@@ -86,6 +104,20 @@ class _DishDetailScreenState extends State<DishDetailScreen> {
       if (!mounted) return;
       setState(() => reviewsLoading = false);
     }
+  }
+
+  Future<void> _loadRecommendations() async {
+    try {
+      final list = await _recommendations.list();
+      if (!mounted) return;
+      final related = list.where((r) => r.dishId != widget.dishId).take(8).toList();
+      final images = await _imageLoader.loadImages(related.map((r) => r.dishId));
+      if (!mounted) return;
+      setState(() {
+        relatedRecommendations = related;
+        recommendationImages = images;
+      });
+    } catch (_) {}
   }
 
   Future<void> _writeReview() async {
@@ -125,13 +157,24 @@ class _DishDetailScreenState extends State<DishDetailScreen> {
     if (d == null || adding) return;
 
     setState(() => adding = true);
-    final ok = await context.read<CartProvider>().addItem(dishId: d.id);
+    final ok = await context.read<CartProvider>().addItem(
+          dishId: d.id,
+          quantity: _quantity,
+        );
     if (!mounted) return;
     setState(() => adding = false);
 
     if (ok) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${d.name} added to cart')),
+        SnackBar(
+          content: Text('${d.name} added to cart'),
+          action: SnackBarAction(
+            label: 'Go to Order',
+            onPressed: () {
+              context.findAncestorStateOfType<MainShellState>()?.navigateToTab(MainShellState.orderTab);
+            },
+          ),
+        ),
       );
     } else {
       final msg = context.read<CartProvider>().error ?? 'Could not add to cart';
@@ -141,154 +184,123 @@ class _DishDetailScreenState extends State<DishDetailScreen> {
     }
   }
 
-  bool _hasNutrition(Dish d) =>
-      d.calories != null ||
-      d.protein != null ||
-      d.carbs != null ||
-      d.fats != null;
+  void _openRestaurant() {
+    final id = restaurantId ?? dish?.restaurantId;
+    if (id == null) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => RestaurantDetailScreen(restaurantId: id)),
+    );
+  }
+
+  void _openRelatedDish(int dishId) {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => DishDetailScreen(dishId: dishId)),
+    );
+  }
+
+  void _shareDish() {
+    shareDishLink(widget.dishId);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Dish link copied')),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final d = dish;
-    final restaurantReviews = d?.restaurantId != null
-        ? recentReviews
-        : <Review>[];
+    final bottomPad = MediaQuery.paddingOf(context).bottom;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(d?.name ?? 'Dish'),
-        actions: const [CartIconButton()],
-      ),
+      backgroundColor: AppColors.background,
       body: loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const DishLoadingSkeleton()
           : error != null
               ? Center(
                   child: Padding(
-                    padding: const EdgeInsets.all(AppColors.screenPadding),
-                    child: Text(error!, textAlign: TextAlign.center),
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        EmptyState(
+                          icon: Icons.cloud_off_outlined,
+                          title: 'Could not load dish',
+                          subtitle: RecommendationCopy.friendlyError(error),
+                        ),
+                        const SizedBox(height: 12),
+                        TextButton(onPressed: _load, child: const Text('Retry')),
+                      ],
+                    ),
                   ),
                 )
               : d == null
                   ? const Center(child: Text('Dish not found'))
-                  : Column(
-                      children: [
-                        Expanded(
-                          child: ListView(
-                            padding: const EdgeInsets.all(
-                              AppColors.screenPadding,
+                  : RefreshIndicator(
+                      onRefresh: _load,
+                      color: AppColors.accent,
+                      child: CustomScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(
+                          parent: BouncingScrollPhysics(),
+                        ),
+                        slivers: [
+                          SliverToBoxAdapter(
+                            child: DishHeroHeader(
+                              imageUrl: d.image,
+                              dishId: d.id,
+                              restaurantName: restaurantName,
+                              isFavorite: _favorite,
+                              onFavoriteToggle: () => setState(() => _favorite = !_favorite),
+                              onRestaurantTap: _openRestaurant,
+                              onShare: _shareDish,
                             ),
-                            children: [
-                              DishImageBanner(imageUrl: d.image),
-                              const SizedBox(height: 20),
-                              Text(
-                                d.name,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .headlineSmall
-                                    ?.copyWith(color: AppColors.gold),
-                              ),
-                              if (d.cuisine != null && d.cuisine!.isNotEmpty) ...[
-                                const SizedBox(height: 8),
-                                Text(
-                                  d.cuisine!,
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                        color: AppColors.green,
-                                      ),
-                                ),
-                              ],
-                              const SizedBox(height: 12),
-                              ModernCard(
-                                borderColor:
-                                    AppColors.gold.withValues(alpha: 0.4),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 14,
-                                ),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      'Price',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyLarge,
-                                    ),
-                                    Text(
-                                      PriceFormatter.format(d.price),
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .headlineSmall
-                                          ?.copyWith(color: AppColors.gold),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              if (d.description != null &&
-                                  d.description!.isNotEmpty) ...[
-                                const SizedBox(height: 20),
-                                Text(
-                                  'Description',
-                                  style:
-                                      Theme.of(context).textTheme.titleMedium,
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  d.description!,
-                                  style:
-                                      Theme.of(context).textTheme.bodyLarge,
-                                ),
-                              ],
-                              if (_hasNutrition(d)) ...[
-                                const SizedBox(height: 24),
-                                Text(
-                                  'Nutrition',
-                                  style:
-                                      Theme.of(context).textTheme.titleMedium,
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Per serving',
-                                  style:
-                                      Theme.of(context).textTheme.bodyMedium,
-                                ),
-                                const SizedBox(height: 12),
-                                NutritionGrid(
-                                  calories: d.calories,
-                                  protein: d.protein,
-                                  carbs: d.carbs,
-                                  fats: d.fats,
-                                ),
-                              ],
-                              const SizedBox(height: 24),
-                              RestaurantReviewsSection(
-                                reviews: restaurantReviews,
-                                averageRating: restaurantRating,
-                                totalReviews: restaurantReviewCount,
-                                loading: reviewsLoading,
-                                onWriteReview: _writeReview,
-                              ),
-                              const SizedBox(height: 24),
-                            ],
                           ),
-                        ),
-                        SafeArea(
-                          minimum: const EdgeInsets.all(
-                            AppColors.screenPadding,
+                          SliverToBoxAdapter(
+                            child: DishInfoHeader(
+                              dish: d,
+                              restaurantName: restaurantName,
+                              restaurantRating: restaurantRating,
+                              restaurantReviewCount: restaurantReviewCount,
+                              onRestaurantTap: _openRestaurant,
+                            ),
                           ),
-                          child: GoldActionButton(
-                            label: d.isAvailable
-                                ? 'Add To Cart'
-                                : 'Unavailable',
-                            icon: Icons.add_shopping_cart,
-                            loading: adding,
-                            onPressed: d.isAvailable && !adding
-                                ? _addToCart
-                                : null,
+                          if (d.description != null && d.description!.trim().isNotEmpty)
+                            SliverToBoxAdapter(
+                              child: DishExpandableDescription(text: d.description!.trim()),
+                            ),
+                          SliverToBoxAdapter(child: DishNutritionSection(dish: d)),
+                          SliverToBoxAdapter(child: DishIngredientsSection(ingredients: d.ingredients)),
+                          SliverToBoxAdapter(child: DishAllergensSection(allergens: d.allergens)),
+                          SliverToBoxAdapter(
+                            child: DishReviewsSection(
+                              reviews: recentReviews,
+                              averageRating: restaurantRating,
+                              totalReviews: restaurantReviewCount,
+                              loading: reviewsLoading,
+                              onWriteReview: _writeReview,
+                            ),
                           ),
-                        ),
-                      ],
+                          SliverToBoxAdapter(
+                            child: DishRecommendedSection(
+                              items: relatedRecommendations,
+                              dishImages: recommendationImages,
+                              onDishTap: _openRelatedDish,
+                            ),
+                          ),
+                          SliverToBoxAdapter(child: SizedBox(height: 120 + bottomPad)),
+                        ],
+                      ),
                     ),
+      bottomNavigationBar: d == null || loading || error != null
+          ? null
+          : DishStickyCta(
+              quantity: _quantity,
+              unitPrice: d.price,
+              loading: adding,
+              enabled: d.isAvailable,
+              onQuantityChanged: (q) => setState(() => _quantity = q),
+              onAddToCart: _addToCart,
+            ),
     );
   }
 }

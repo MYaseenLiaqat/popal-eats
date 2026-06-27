@@ -33,6 +33,11 @@ class ContentService {
     return Post.fromJson(_api.decodeJson(r));
   }
 
+  Future<void> deletePost(int postId) async {
+    final r = await _api.delete('/posts/$postId');
+    _api.throwIfError(r);
+  }
+
   Future<Post> uploadPostImage({
     required int postId,
     required List<int> bytes,

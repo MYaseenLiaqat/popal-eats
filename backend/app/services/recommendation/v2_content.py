@@ -20,6 +20,7 @@ from app.services.recommendation.preference_scoring import (
     is_disliked_category,
     score_dietary_preferences,
 )
+from app.services.recommendation.allergy_filter import filter_dishes_for_user_allergies
 from app.services.recommendation.v2_candidates import load_eligible_dishes
 from app.services.recommendation.price_adjustment import apply_price_outlier_penalty
 from app.services.recommendation.v2_catalog import FOODPANDA_SOURCE, build_tag_maps_from_dishes
@@ -404,6 +405,13 @@ def get_content_recommendations(
     prefs = load_recommendation_preferences(db, user_id)
     dishes = load_eligible_dishes(db, user_id=user_id)
     dish_tags_map, restaurant_tags_map = _load_tags_maps(dishes)
+    dishes = filter_dishes_for_user_allergies(
+        dishes,
+        prefs.allergies,
+        dish_tags_map=dish_tags_map,
+        restaurant_tags_map=restaurant_tags_map,
+        user_id=user_id,
+    )
     candidate_ids = [d.id for d in dishes]
     order_counts = _load_order_counts(db, candidate_ids)
     log_pipeline_stage(

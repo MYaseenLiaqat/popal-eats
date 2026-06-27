@@ -27,7 +27,7 @@ class CommunityAvatar extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           border: Border.all(
-            color: AppColors.gold.withValues(alpha: 0.35),
+            color: AppColors.accent.withValues(alpha: 0.35),
             width: 1.5,
           ),
         ),
@@ -52,14 +52,14 @@ class CommunityAvatar extends StatelessWidget {
       width: size,
       height: size,
       decoration: const BoxDecoration(
-        gradient: AppColors.goldGradient,
+        gradient: AppColors.accentGradient,
         shape: BoxShape.circle,
       ),
       alignment: Alignment.center,
       child: Text(
         initial,
         style: TextStyle(
-          color: const Color(0xFF1A1400),
+          color: AppColors.onAccent,
           fontWeight: FontWeight.w700,
           fontSize: size * 0.38,
         ),

@@ -112,7 +112,7 @@ class _CreateRecipeScreenState extends State<CreateRecipeScreen> {
                 ? const SizedBox(
                     width: 18,
                     height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.gold),
+                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.accent),
                   )
                 : const Text('Share'),
           ),

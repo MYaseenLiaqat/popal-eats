@@ -89,7 +89,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                 ? const SizedBox(
                     width: 18,
                     height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.gold),
+                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.accent),
                   )
                 : const Text('Share'),
           ),
@@ -108,7 +108,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.add_photo_alternate_outlined, size: 48, color: AppColors.gold),
+                          Icon(Icons.add_photo_alternate_outlined, size: 48, color: AppColors.accent),
                           SizedBox(height: 8),
                           Text('Tap to add food photo'),
                         ],

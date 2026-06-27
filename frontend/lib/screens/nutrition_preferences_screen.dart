@@ -90,7 +90,7 @@ class _NutritionPreferencesScreenState
     required String label,
     required bool selected,
     required VoidCallback onTap,
-    Color accent = AppColors.gold,
+    Color accent = AppColors.accent,
   }) {
     return GestureDetector(
       onTap: onTap,
@@ -118,7 +118,7 @@ class _NutritionPreferencesScreenState
 
   Widget _buildBody(PreferencesProvider provider) {
     if (!_initialized || (provider.loading && provider.preferences == null)) {
-      return const Center(child: CircularProgressIndicator(color: AppColors.gold));
+      return const Center(child: CircularProgressIndicator(color: AppColors.accent));
     }
 
     if (provider.error != null && provider.preferences == null) {
@@ -143,18 +143,18 @@ class _NutritionPreferencesScreenState
       children: [
         ModernCard(
           gradient: AppColors.headerGradient,
-          borderColor: AppColors.gold.withValues(alpha: 0.35),
+          borderColor: AppColors.accent.withValues(alpha: 0.35),
           child: Row(
             children: [
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: AppColors.gold.withValues(alpha: 0.15),
+                  color: AppColors.accent.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(
                   Icons.restaurant_menu,
-                  color: AppColors.gold,
+                  color: AppColors.accent,
                 ),
               ),
               const SizedBox(width: 12),
@@ -165,7 +165,7 @@ class _NutritionPreferencesScreenState
                     Text(
                       'Nutrition goals',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: AppColors.gold,
+                            color: AppColors.accent,
                           ),
                     ),
                     Text(
@@ -198,12 +198,12 @@ class _NutritionPreferencesScreenState
           subtitle: 'Target intake per day (device display only)',
         ),
         ModernCard(
-          borderColor: AppColors.gold.withValues(alpha: 0.4),
+          borderColor: AppColors.accent.withValues(alpha: 0.4),
           child: TextField(
             controller: _calorieGoalController,
             keyboardType: TextInputType.number,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: AppColors.gold,
+                  color: AppColors.accent,
                 ),
             decoration: const InputDecoration(
               hintText: '2100',
@@ -226,7 +226,7 @@ class _NutritionPreferencesScreenState
               label: diet,
               selected: _dietType == diet,
               onTap: () => setState(() => _dietType = diet),
-              accent: AppColors.green,
+              accent: AppColors.accent,
             );
           }).toList(),
         ),

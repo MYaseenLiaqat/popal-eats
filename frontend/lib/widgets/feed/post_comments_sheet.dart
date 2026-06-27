@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/post.dart';
 import '../../services/content_service.dart';
+import '../../theme/app_colors.dart';
 import '../../utils/recommendation_copy.dart';
 import '../community_avatar.dart';
 
@@ -9,18 +10,33 @@ Future<void> showPostCommentsSheet(BuildContext context, Post post) async {
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: AppColors.surface,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    backgroundColor: Colors.transparent,
+    builder: (ctx) => DraggableScrollableSheet(
+      initialChildSize: 0.55,
+      minChildSize: 0.35,
+      maxChildSize: 0.92,
+      expand: false,
+      builder: (context, scrollController) {
+        return DecoratedBox(
+          decoration: const BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: _CommentsSheet(post: post, scrollController: scrollController),
+        );
+      },
     ),
-    builder: (ctx) => _CommentsSheet(post: post),
   );
 }
 
 class _CommentsSheet extends StatefulWidget {
-  const _CommentsSheet({required this.post});
+  const _CommentsSheet({
+    required this.post,
+    required this.scrollController,
+  });
 
   final Post post;
+  final ScrollController scrollController;
 
   @override
   State<_CommentsSheet> createState() => _CommentsSheetState();
@@ -86,83 +102,92 @@ class _CommentsSheetState extends State<_CommentsSheet> {
 
     return Padding(
       padding: EdgeInsets.only(bottom: bottom),
-      child: SizedBox(
-        height: MediaQuery.sizeOf(context).height * 0.65,
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                'Comments',
-                style: Theme.of(context).textTheme.titleMedium,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 10, bottom: 8),
+            child: Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.borderStrong,
+                borderRadius: BorderRadius.circular(99),
               ),
             ),
-            Expanded(
-              child: _loading
-                  ? const Center(child: CircularProgressIndicator(color: AppColors.gold))
-                  : _comments.isEmpty
-                      ? const Center(child: Text('No comments yet'))
-                      : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: _comments.length,
-                          itemBuilder: (_, i) {
-                            final c = _comments[i];
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 12),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  CommunityAvatar(
-                                    name: c.author?.fullName ?? 'User',
-                                    size: 36,
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          c.author?.fullName ?? 'User',
-                                          style: const TextStyle(fontWeight: FontWeight.w600),
-                                        ),
-                                        Text(c.body),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Text(
+              'Comments',
+              style: Theme.of(context).textTheme.titleMedium,
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _input,
-                      decoration: const InputDecoration(
-                        hintText: 'Add a comment…',
-                        isDense: true,
+          ),
+          Expanded(
+            child: _loading
+                ? const Center(child: CircularProgressIndicator(color: AppColors.accent))
+                : _comments.isEmpty
+                    ? const Center(child: Text('No comments yet'))
+                    : ListView.builder(
+                        controller: widget.scrollController,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: _comments.length,
+                        itemBuilder: (_, i) {
+                          final c = _comments[i];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                CommunityAvatar(
+                                  name: c.author?.fullName ?? 'User',
+                                  size: 36,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        c.author?.fullName ?? 'User',
+                                        style: const TextStyle(fontWeight: FontWeight.w600),
+                                      ),
+                                      Text(c.body),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _input,
+                    decoration: const InputDecoration(
+                      hintText: 'Add a comment…',
+                      isDense: true,
                     ),
                   ),
-                  IconButton(
-                    onPressed: _sending ? null : _send,
-                    icon: _sending
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.send, color: AppColors.gold),
-                  ),
-                ],
-              ),
+                ),
+                IconButton(
+                  onPressed: _sending ? null : _send,
+                  icon: _sending
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.send, color: AppColors.accent),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

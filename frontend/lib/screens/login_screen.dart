@@ -33,15 +33,19 @@ class _LoginScreenState extends State<LoginScreen> {
       _snack('Enter a valid email');
       return;
     }
-    if (password.length < 6) {
-      _snack('Password must be at least 6 characters');
+    if (password.length < 8) {
+      _snack('Password must be at least 8 characters');
       return;
     }
 
     final auth = context.read<AuthProvider>();
     final ok = await auth.login(email, password);
     if (!mounted) return;
-    if (!ok) _snack(auth.error ?? 'Login failed');
+    if (!ok) {
+      _snack(auth.error ?? 'Login failed');
+    } else if (auth.lastLoginMessage != null) {
+      _snack(auth.lastLoginMessage!);
+    }
   }
 
   Future<void> _googleSignIn() async {

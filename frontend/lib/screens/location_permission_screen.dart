@@ -49,7 +49,7 @@ class _LocationPermissionScreenState extends State<LocationPermissionScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 24),
-              const Icon(Icons.location_on_outlined, size: 56, color: AppColors.gold),
+              const Icon(Icons.location_on_outlined, size: 56, color: AppColors.accent),
               const SizedBox(height: 16),
               Text(
                 'Find food near you',
@@ -109,7 +109,7 @@ class _Bullet extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('• ', style: TextStyle(color: AppColors.green, fontSize: 16)),
+        const Text('• ', style: TextStyle(color: AppColors.accent, fontSize: 16)),
         Expanded(child: Text(text, style: Theme.of(context).textTheme.bodyMedium)),
       ],
     );

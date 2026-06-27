@@ -136,6 +136,7 @@ def load_recommendation_preferences(db: Session, user_id: int) -> Recommendation
         favorite_cuisines=_normalize_json_list(row.favorite_cuisines),
         dietary_preferences=dietary,
         disliked_categories=_normalize_json_list(row.disliked_categories),
+        allergies=_normalize_json_list(row.allergies),
         nutrition_goal=row.nutrition_goal,
         budget_min=budget_min,
         budget_max=budget_max,

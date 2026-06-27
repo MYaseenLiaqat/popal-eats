@@ -89,7 +89,7 @@ class _GroupDecisionScreenState extends State<GroupDecisionScreen> {
         title: Text(widget.groupName != null ? '${widget.groupName} decision' : 'Group decision'),
       ),
       body: RefreshIndicator(
-        color: AppColors.gold,
+        color: AppColors.accent,
         onRefresh: () => _load(force: true),
         child: _buildBody(provider, decision, voteSummary),
       ),
@@ -98,7 +98,7 @@ class _GroupDecisionScreenState extends State<GroupDecisionScreen> {
 
   Widget _buildBody(GroupProvider provider, GroupDecision? decision, voteSummary) {
     if (provider.loadingDecision && decision == null) {
-      return const Center(child: CircularProgressIndicator(color: AppColors.gold));
+      return const Center(child: CircularProgressIndicator(color: AppColors.accent));
     }
 
     if (provider.decisionError != null && decision == null) {
@@ -158,7 +158,7 @@ class _GroupDecisionScreenState extends State<GroupDecisionScreen> {
                 const SizedBox(height: 8),
                 Text(
                   decision.dishName!,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(color: AppColors.gold),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(color: AppColors.accent),
                 ),
                 if (decision.restaurantName != null) ...[
                   const SizedBox(height: 4),
@@ -169,7 +169,7 @@ class _GroupDecisionScreenState extends State<GroupDecisionScreen> {
                   Text(
                     PriceFormatter.format(decision.price!),
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: AppColors.green,
+                          color: AppColors.accent,
                           fontWeight: FontWeight.w700,
                         ),
                   ),
@@ -214,7 +214,7 @@ class _GroupDecisionScreenState extends State<GroupDecisionScreen> {
                           context,
                           label: 'Consensus',
                           percent: decision.consensusPercent!,
-                          color: AppColors.green,
+                          color: AppColors.accent,
                         ),
                       ),
                     if (decision.consensusPercent != null && decision.finalPercent != null)
@@ -225,7 +225,7 @@ class _GroupDecisionScreenState extends State<GroupDecisionScreen> {
                           context,
                           label: 'Final score',
                           percent: decision.finalPercent!,
-                          color: AppColors.gold,
+                          color: AppColors.accent,
                         ),
                       ),
                   ],
@@ -258,10 +258,10 @@ class _GroupDecisionScreenState extends State<GroupDecisionScreen> {
         if (decision.isOrdered) ...[
           const SizedBox(height: 16),
           ModernCard(
-            borderColor: AppColors.green.withValues(alpha: 0.4),
+            borderColor: AppColors.accent.withValues(alpha: 0.4),
             child: Row(
               children: [
-                const Icon(Icons.check_circle, color: AppColors.green),
+                const Icon(Icons.check_circle, color: AppColors.accent),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
@@ -280,9 +280,9 @@ class _GroupDecisionScreenState extends State<GroupDecisionScreen> {
 
   Widget _statusChip(String status) {
     final (label, color) = switch (status) {
-      GroupDecisionStatus.considering => ('Considering', AppColors.gold),
-      GroupDecisionStatus.agreed => ('Agreed', AppColors.green),
-      GroupDecisionStatus.ordered => ('Ordered', AppColors.green),
+      GroupDecisionStatus.considering => ('Considering', AppColors.accent),
+      GroupDecisionStatus.agreed => ('Agreed', AppColors.accent),
+      GroupDecisionStatus.ordered => ('Ordered', AppColors.accent),
       _ => ('Pending', AppColors.textSecondary),
     };
 

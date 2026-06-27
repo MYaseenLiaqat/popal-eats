@@ -10,7 +10,9 @@ class GroupDishRecommendation {
     required this.score,
     this.consensusScore = 0,
     this.finalScore,
+    this.groupMatchPercent,
     this.reasons = const [],
+    this.explanationBullets = const [],
     this.dishImageUrl,
   });
 
@@ -22,12 +24,18 @@ class GroupDishRecommendation {
   final double score;
   final double consensusScore;
   final double? finalScore;
+  final int? groupMatchPercent;
   final List<String> reasons;
+  final List<String> explanationBullets;
   final String? dishImageUrl;
 
   double get displayScore => (finalScore ?? score).clamp(0, 100);
 
-  int get scorePercent => displayScore.round().clamp(0, 100);
+  int get scorePercent =>
+      (groupMatchPercent ?? displayScore.round()).clamp(0, 100);
+
+  List<String> get displayReasons =>
+      explanationBullets.isNotEmpty ? explanationBullets : reasons;
 
   GroupDishRecommendation copyWith({String? dishImageUrl}) {
     return GroupDishRecommendation(
@@ -39,7 +47,9 @@ class GroupDishRecommendation {
       score: score,
       consensusScore: consensusScore,
       finalScore: finalScore,
+      groupMatchPercent: groupMatchPercent,
       reasons: reasons,
+      explanationBullets: explanationBullets,
       dishImageUrl: dishImageUrl ?? this.dishImageUrl,
     );
   }
@@ -54,8 +64,12 @@ class GroupDishRecommendation {
       score: parseDoubleOrNull(json['score']) ?? 0,
       consensusScore: parseDoubleOrNull(json['consensus_score']) ?? 0,
       finalScore: parseDoubleOrNull(json['final_score']),
+      groupMatchPercent: parseIntOrNull(json['group_match_percent']),
       reasons: json['reasons'] is List
           ? (json['reasons'] as List).map((e) => e.toString()).where((e) => e.isNotEmpty).toList()
+          : const [],
+      explanationBullets: json['explanation_bullets'] is List
+          ? (json['explanation_bullets'] as List).map((e) => e.toString()).where((e) => e.isNotEmpty).toList()
           : const [],
     );
   }

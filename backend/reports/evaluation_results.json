@@ -1,0 +1,92 @@
+{
+  "meta": {
+    "generated_at": "2026-06-27T19:22:56Z",
+    "random_seed": 42,
+    "warm_users": 5,
+    "cold_users": 44,
+    "catalog_size": 11414
+  },
+  "strategies": [
+    {
+      "strategy": "content",
+      "precision_at_5": 0.0,
+      "precision_at_10": 0.0,
+      "recall_at_5": 0.0,
+      "recall_at_10": 0.0,
+      "hit_rate_at_10": 0.0,
+      "coverage": 0.003504,
+      "diversity": 0.513894,
+      "novelty": 2.321928,
+      "cold_start_hit_rate": 1.0,
+      "cold_start_users": 41,
+      "warm_users": 5,
+      "avg_latency_ms": 13419.45,
+      "p95_latency_ms": 15902.6,
+      "throughput_rps": 0.7172
+    },
+    {
+      "strategy": "collaborative",
+      "precision_at_5": 0.0,
+      "precision_at_10": 0.0,
+      "recall_at_5": 0.0,
+      "recall_at_10": 0.0,
+      "hit_rate_at_10": 0.0,
+      "coverage": 0.0,
+      "diversity": 0.0,
+      "novelty": 0.0,
+      "cold_start_hit_rate": 0.0,
+      "cold_start_users": 41,
+      "warm_users": 5,
+      "avg_latency_ms": 436.4,
+      "p95_latency_ms": 577.81,
+      "throughput_rps": 14.1466
+    },
+    {
+      "strategy": "hybrid",
+      "precision_at_5": 0.0,
+      "precision_at_10": 0.0,
+      "recall_at_5": 0.0,
+      "recall_at_10": 0.0,
+      "hit_rate_at_10": 0.0,
+      "coverage": 0.003504,
+      "diversity": 0.592635,
+      "novelty": 2.321928,
+      "cold_start_hit_rate": 1.0,
+      "cold_start_users": 41,
+      "warm_users": 5,
+      "avg_latency_ms": 16423.23,
+      "p95_latency_ms": 18287.67,
+      "throughput_rps": 0.5883
+    }
+  ],
+  "explainability": {
+    "items_evaluated": 50,
+    "explanation_availability_rate": 1.0,
+    "avg_explanation_bullet_count": 3.4,
+    "min_bullets": 2,
+    "max_bullets": 5,
+    "confidence_mean": 30.32,
+    "confidence_p50": 36.0,
+    "confidence_p95": 53.0
+  },
+  "group": {
+    "sessions_evaluated": 1,
+    "avg_group_compatibility_percent": 77.0,
+    "avg_allergy_filtered_dishes": 0.0,
+    "avg_cuisine_member_match_ratio": 0.02,
+    "avg_latency_ms": 14155.131899999105,
+    "p95_latency_ms": 14155.131899999105,
+    "recommendation_count_mean": 20.0
+  },
+  "events": {
+    "click": 12,
+    "order": 1,
+    "total": 13
+  },
+  "charts": [
+    "chart_precision_comparison.png",
+    "chart_recall_comparison.png",
+    "chart_quality_metrics.png",
+    "chart_latency_comparison.png"
+  ]
+}

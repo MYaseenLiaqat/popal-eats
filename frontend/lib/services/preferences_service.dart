@@ -1,6 +1,6 @@
-import 'api_client.dart';
 import '../models/onboarding_option.dart';
 import '../models/user_preferences.dart';
+import 'api_client.dart';
 
 class PreferencesService {
   PreferencesService({ApiClient? client}) : _client = client ?? ApiClient.instance;

@@ -41,8 +41,8 @@ class NotificationHubButton extends StatelessWidget {
       icon: Badge(
         isLabelVisible: count > 0,
         label: Text(count > 9 ? '9+' : '$count'),
-        backgroundColor: AppColors.gold,
-        textColor: const Color(0xFF1A1400),
+        backgroundColor: AppColors.accent,
+        textColor: AppColors.onAccent,
         child: const Icon(Icons.favorite_outline),
       ),
     );

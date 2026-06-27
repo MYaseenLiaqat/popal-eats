@@ -1,0 +1,4 @@
+strategy,precision_at_5,precision_at_10,recall_at_5,recall_at_10,hit_rate_at_10,coverage,diversity,novelty,cold_start_hit_rate,cold_start_users,warm_users,avg_latency_ms,p95_latency_ms,throughput_rps
+content,0.0,0.0,0.0,0.0,0.0,0.003504,0.513894,2.321928,1.0,41,5,13419.45,15902.6,0.7172
+collaborative,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,41,5,436.4,577.81,14.1466
+hybrid,0.0,0.0,0.0,0.0,0.0,0.003504,0.592635,2.321928,1.0,41,5,16423.23,18287.67,0.5883

@@ -56,10 +56,10 @@ class _AdminRestaurantApprovalsScreenState extends State<AdminRestaurantApproval
     return Scaffold(
       appBar: AppBar(title: const Text('Restaurant approvals')),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.gold))
+          ? const Center(child: CircularProgressIndicator(color: AppColors.accent))
           : RefreshIndicator(
               onRefresh: _load,
-              color: AppColors.gold,
+              color: AppColors.accent,
               child: _pending.isEmpty
                   ? ListView(
                       children: const [

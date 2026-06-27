@@ -181,6 +181,7 @@ class RecommendationPreferences(BaseModel):
     favorite_cuisines: list[str] = Field(default_factory=list)
     dietary_preferences: list[str] = Field(default_factory=list)
     disliked_categories: list[str] = Field(default_factory=list)
+    allergies: list[str] = Field(default_factory=list)
     nutrition_goal: str | None = None
     budget_min: Decimal | None = None
     budget_max: Decimal | None = None

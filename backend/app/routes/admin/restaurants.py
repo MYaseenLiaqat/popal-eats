@@ -9,6 +9,10 @@ from app.core.restaurant_constants import ALL_STATUSES, APPROVED, PENDING, REJEC
 from app.database import get_db
 from app.models.restaurant import Restaurant
 from app.models.user import User
+from app.services.account_approval_service import (
+    approve_business_account,
+    reject_business_account,
+)
 from app.schemas.pagination import PaginatedResponse
 from app.schemas.restaurant import RestaurantApprovalUpdate, RestaurantResponse
 from app.utils.pagination import build_paginated_response, paginate_query
@@ -51,13 +55,21 @@ def update_restaurant_approval(
     _: User = Depends(require_admin),
 ):
     restaurant = get_restaurant_or_404(db, restaurant_id)
-    restaurant.approval_status = body.approval_status
-    if body.approval_status == REJECTED:
-        restaurant.rejection_reason = body.rejection_reason or "Rejected by admin"
+    owner = db.query(User).filter(User.id == restaurant.owner_id).first()
+    if body.approval_status == APPROVED and owner:
+        approve_business_account(db, owner)
+        db.refresh(restaurant)
+    elif body.approval_status == REJECTED and owner:
+        reject_business_account(db, owner, body.rejection_reason)
+        db.refresh(restaurant)
     else:
-        restaurant.rejection_reason = None
-    db.commit()
-    db.refresh(restaurant)
+        restaurant.approval_status = body.approval_status
+        if body.approval_status == REJECTED:
+            restaurant.rejection_reason = body.rejection_reason or "Rejected by admin"
+        else:
+            restaurant.rejection_reason = None
+        db.commit()
+        db.refresh(restaurant)
     return restaurant
 
 

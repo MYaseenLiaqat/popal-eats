@@ -169,8 +169,8 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen>
                       ? null
                       : () => _acceptFriend(request.id, user.fullName),
                   style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.green,
-                    foregroundColor: const Color(0xFF0A1F12),
+                    backgroundColor: AppColors.accent,
+                    foregroundColor: AppColors.onAccent,
                   ),
                   child: const Text('Confirm'),
                 ),
@@ -187,7 +187,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen>
     final groupName = invitation.sessionName ?? 'Group #${invitation.sessionId}';
 
     return ModernCard(
-      borderColor: AppColors.gold.withValues(alpha: 0.35),
+      borderColor: AppColors.accent.withValues(alpha: 0.35),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -196,10 +196,10 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen>
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: AppColors.gold.withValues(alpha: 0.15),
+                  color: AppColors.accent.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.groups, color: AppColors.gold),
+                child: const Icon(Icons.groups, color: AppColors.accent),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -253,8 +253,8 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen>
                       ? null
                       : () => _acceptGroup(invitation),
                   style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.green,
-                    foregroundColor: const Color(0xFF0A1F12),
+                    backgroundColor: AppColors.accent,
+                    foregroundColor: AppColors.onAccent,
                   ),
                   child: const Text('Join group'),
                 ),
@@ -274,7 +274,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen>
         groups.incomingInvitations.isEmpty;
 
     if (loading) {
-      return const Center(child: CircularProgressIndicator(color: AppColors.gold));
+      return const Center(child: CircularProgressIndicator(color: AppColors.accent));
     }
 
     final hasFriendRequests = friends.incomingRequests.isNotEmpty;
@@ -282,7 +282,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen>
 
     if (!hasFriendRequests && !hasGroupInvites) {
       return RefreshIndicator(
-        color: AppColors.gold,
+        color: AppColors.accent,
         onRefresh: _refresh,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -290,14 +290,14 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen>
           children: [
             ModernCard(
               gradient: AppColors.headerGradient,
-              borderColor: AppColors.green.withValues(alpha: 0.35),
+              borderColor: AppColors.accent.withValues(alpha: 0.35),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'You\'re all caught up',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: AppColors.gold,
+                          color: AppColors.accent,
                         ),
                   ),
                   const SizedBox(height: 6),
@@ -320,7 +320,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen>
     }
 
     return RefreshIndicator(
-      color: AppColors.gold,
+      color: AppColors.accent,
       onRefresh: _refresh,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -383,8 +383,8 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen>
         ],
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: AppColors.gold,
-          labelColor: AppColors.gold,
+          indicatorColor: AppColors.accent,
+          labelColor: AppColors.accent,
           unselectedLabelColor: AppColors.textSecondary,
           tabs: [
             Tab(

@@ -391,7 +391,9 @@ class GroupProvider extends ChangeNotifier {
         score: item.score,
         consensusScore: summary.consensusScore,
         finalScore: summary.finalScore,
+        groupMatchPercent: item.groupMatchPercent,
         reasons: item.reasons,
+        explanationBullets: item.explanationBullets,
         dishImageUrl: item.dishImageUrl,
       );
     }).toList()

@@ -67,8 +67,9 @@ class ModernCard extends StatelessWidget {
         gradient: gradient ?? AppColors.surfaceGradient,
         borderRadius: BorderRadius.circular(AppColors.cardRadius),
         border: Border.all(
-          color: borderColor ?? AppColors.surfaceLight.withValues(alpha: 0.6),
+          color: borderColor ?? AppColors.border,
         ),
+        boxShadow: AppColors.cardShadow(),
       ),
       child: child,
     );
@@ -91,7 +92,7 @@ class StatChip extends StatelessWidget {
     super.key,
     required this.label,
     required this.value,
-    this.accent = AppColors.gold,
+    this.accent = AppColors.accent,
   });
 
   final String label;
@@ -136,12 +137,12 @@ class AiMatchBadge extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppColors.green.withValues(alpha: 0.25),
-            AppColors.gold.withValues(alpha: 0.25),
+            AppColors.accent.withValues(alpha: 0.25),
+            AppColors.accent.withValues(alpha: 0.25),
           ],
         ),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.green.withValues(alpha: 0.5)),
+        border: Border.all(color: AppColors.accent.withValues(alpha: 0.5)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -149,13 +150,13 @@ class AiMatchBadge extends StatelessWidget {
           Icon(
             Icons.auto_awesome,
             size: compact ? 12 : 14,
-            color: AppColors.green,
+            color: AppColors.accent,
           ),
           const SizedBox(width: 4),
           Text(
             'Great match',
             style: TextStyle(
-              color: AppColors.green,
+              color: AppColors.accent,
               fontSize: compact ? 11 : 12,
               fontWeight: FontWeight.w600,
             ),
@@ -181,18 +182,18 @@ class RatingBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: AppColors.gold.withValues(alpha: 0.15),
+        color: AppColors.accent.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.star, size: 14, color: AppColors.gold),
+          const Icon(Icons.star, size: 14, color: AppColors.accent),
           const SizedBox(width: 4),
           Text(
             rating.toStringAsFixed(1),
             style: const TextStyle(
-              color: AppColors.gold,
+              color: AppColors.accent,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -245,14 +246,14 @@ class DishImageBanner extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF2A2418), Color(0xFF1A1A22)],
+          colors: [AppColors.accentSubtle, AppColors.surface],
         ),
       ),
       alignment: Alignment.center,
       child: Icon(
         Icons.restaurant_menu,
         size: 64,
-        color: AppColors.gold.withValues(alpha: 0.6),
+        color: AppColors.accent.withValues(alpha: 0.6),
       ),
     );
   }
@@ -276,24 +277,24 @@ class NutritionGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final items = <({String label, String value, Color accent})>[
       if (calories != null)
-        (label: 'Calories', value: '$calories kcal', accent: AppColors.gold),
+        (label: 'Calories', value: '$calories kcal', accent: AppColors.accent),
       if (protein != null)
         (
           label: 'Protein',
           value: '${protein!.toStringAsFixed(1)} g',
-          accent: AppColors.green,
+          accent: AppColors.accent,
         ),
       if (carbs != null)
         (
           label: 'Carbs',
           value: '${carbs!.toStringAsFixed(1)} g',
-          accent: AppColors.gold,
+          accent: AppColors.accent,
         ),
       if (fats != null)
         (
           label: 'Fats',
           value: '${fats!.toStringAsFixed(1)} g',
-          accent: AppColors.green,
+          accent: AppColors.accent,
         ),
     ];
 
@@ -354,51 +355,57 @@ class GoldActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: 52,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: onPressed != null ? AppColors.goldGradient : null,
-          color: onPressed == null ? AppColors.surfaceLight : null,
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: loading ? null : onPressed,
-            borderRadius: BorderRadius.circular(14),
-            child: Center(
-              child: loading
-                  ? const SizedBox(
-                      height: 22,
-                      width: 22,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Color(0xFF1A1400),
-                      ),
-                    )
-                  : Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (icon != null) ...[
-                          Icon(icon, color: const Color(0xFF1A1400)),
-                          const SizedBox(width: 8),
-                        ],
-                        Text(
-                          label,
-                          style: const TextStyle(
-                            color: Color(0xFF1A1400),
-                            fontWeight: FontWeight.w700,
-                            fontSize: 16,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.hasBoundedWidth ? constraints.maxWidth : null;
+        return SizedBox(
+          width: width,
+          height: AppColors.buttonHeight,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: onPressed != null ? AppColors.accentGradient : null,
+              color: onPressed == null ? AppColors.surfaceLight : null,
+              borderRadius: BorderRadius.circular(AppColors.buttonRadius),
+              boxShadow: onPressed != null ? AppColors.accentGlow(alpha: 0.28) : null,
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: loading ? null : onPressed,
+                borderRadius: BorderRadius.circular(AppColors.buttonRadius),
+                child: Center(
+                  child: loading
+                      ? const SizedBox(
+                          height: 22,
+                          width: 22,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.onAccent,
                           ),
+                        )
+                      : Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (icon != null) ...[
+                              Icon(icon, color: AppColors.onAccent),
+                              const SizedBox(width: 8),
+                            ],
+                            Text(
+                              label,
+                              style: const TextStyle(
+                                color: AppColors.onAccent,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                ),
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -435,7 +442,7 @@ class RecommendationCard extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 12),
       child: ModernCard(
         onTap: onTap,
-        borderColor: AppColors.green.withValues(alpha: 0.35),
+        borderColor: AppColors.accent.withValues(alpha: 0.35),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -447,15 +454,15 @@ class RecommendationCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        AppColors.green.withValues(alpha: 0.2),
-                        AppColors.gold.withValues(alpha: 0.2),
+                        AppColors.accent.withValues(alpha: 0.2),
+                        AppColors.accent.withValues(alpha: 0.2),
                       ],
                     ),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(
                     Icons.restaurant_outlined,
-                    color: AppColors.green,
+                    color: AppColors.accent,
                     size: 22,
                   ),
                 ),
@@ -497,13 +504,13 @@ class RecommendationCard extends StatelessWidget {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: AppColors.green.withValues(alpha: 0.12),
+                      color: AppColors.accent.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       '$calories kcal',
                       style: const TextStyle(
-                        color: AppColors.green,
+                        color: AppColors.accent,
                         fontWeight: FontWeight.w500,
                         fontSize: 13,
                       ),
@@ -520,7 +527,7 @@ class RecommendationCard extends StatelessWidget {
                   color: AppColors.surfaceLight.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: AppColors.green.withValues(alpha: 0.25),
+                    color: AppColors.accent.withValues(alpha: 0.25),
                   ),
                 ),
                 child: Column(
@@ -532,7 +539,7 @@ class RecommendationCard extends StatelessWidget {
                           const Icon(
                             Icons.auto_awesome,
                             size: 16,
-                            color: AppColors.green,
+                            color: AppColors.accent,
                           ),
                           const SizedBox(width: 6),
                           Text(
@@ -540,7 +547,7 @@ class RecommendationCard extends StatelessWidget {
                                 ? RecommendationCopy.matchLabel(matchPercent!)
                                 : 'Great match',
                             style: const TextStyle(
-                              color: AppColors.green,
+                              color: AppColors.accent,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -549,7 +556,7 @@ class RecommendationCard extends StatelessWidget {
                     if (whyReasons.isNotEmpty) ...[
                       if (matchPercent != null) const SizedBox(height: 10),
                       Text(
-                        'Why you\'ll like it:',
+                        'Recommended because',
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
                               fontSize: 14,
                             ),
@@ -562,8 +569,11 @@ class RecommendationCard extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const Text(
-                                '• ',
-                                style: TextStyle(color: AppColors.gold),
+                                '✓ ',
+                                style: TextStyle(
+                                  color: AppColors.accent,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                               Expanded(
                                 child: Text(
@@ -588,7 +598,7 @@ class RecommendationCard extends StatelessWidget {
                 Text(
                   PriceFormatter.format(price),
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: AppColors.gold,
+                        color: AppColors.accent,
                       ),
                 ),
                 const Icon(
@@ -613,9 +623,9 @@ class StatusBadge extends StatelessWidget {
   Color _colorForStatus(String s) {
     final lower = s.toLowerCase();
     if (lower.contains('cancel')) return AppColors.error;
-    if (lower.contains('deliver')) return AppColors.green;
-    if (lower.contains('pending')) return AppColors.gold;
-    return AppColors.green;
+    if (lower.contains('deliver')) return AppColors.accent;
+    if (lower.contains('pending')) return AppColors.accent;
+    return AppColors.accent;
   }
 
   @override
@@ -660,7 +670,7 @@ class QuantityControl extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surfaceLight,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.gold.withValues(alpha: 0.25)),
+        border: Border.all(color: AppColors.accent.withValues(alpha: 0.25)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -674,7 +684,7 @@ class QuantityControl extends StatelessWidget {
             child: Text(
               '$quantity',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppColors.gold,
+                    color: AppColors.accent,
                   ),
             ),
           ),
@@ -706,7 +716,7 @@ class _QtyButton extends StatelessWidget {
           child: Icon(
             icon,
             size: 18,
-            color: onPressed != null ? AppColors.gold : AppColors.textSecondary,
+            color: onPressed != null ? AppColors.accent : AppColors.textSecondary,
           ),
         ),
       ),
@@ -732,7 +742,7 @@ class SummaryLine extends StatelessWidget {
         ? Theme.of(context).textTheme.titleMedium
         : Theme.of(context).textTheme.bodyLarge;
     final valueStyle = emphasize
-        ? Theme.of(context).textTheme.titleLarge?.copyWith(color: AppColors.gold)
+        ? Theme.of(context).textTheme.titleLarge?.copyWith(color: AppColors.accent)
         : Theme.of(context).textTheme.titleMedium;
 
     return Padding(
@@ -761,7 +771,7 @@ class TotalAmountCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ModernCard(
-      borderColor: AppColors.gold.withValues(alpha: 0.4),
+      borderColor: AppColors.accent.withValues(alpha: 0.4),
       gradient: AppColors.headerGradient,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -770,7 +780,7 @@ class TotalAmountCard extends StatelessWidget {
           Text(
             amount,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: AppColors.gold,
+                  color: AppColors.accent,
                 ),
           ),
         ],
@@ -803,10 +813,10 @@ class EmptyState extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppColors.gold.withValues(alpha: 0.12),
+                  color: AppColors.accent.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, size: 48, color: AppColors.gold),
+                child: Icon(icon, size: 48, color: AppColors.accent),
               ),
               const SizedBox(height: 16),
               Text(
@@ -837,7 +847,7 @@ class ProfileActionCard extends StatelessWidget {
     required this.title,
     this.subtitle,
     this.onTap,
-    this.iconColor = AppColors.gold,
+    this.iconColor = AppColors.accent,
     this.destructive = false,
   });
 

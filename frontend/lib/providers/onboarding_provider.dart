@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/onboarding_option.dart';
+import '../models/user_preferences.dart';
 import '../services/api_client.dart';
 import '../services/preferences_service.dart';
 import '../utils/recommendation_copy.dart';
@@ -83,9 +84,17 @@ class OnboardingProvider extends ChangeNotifier {
     error = null;
     notifyListeners();
     try {
+      // Onboarding POST validates legacy food_interest keys only; persist cuisine
+      // slugs via PUT /preferences immediately after marking onboarding complete.
       final status = await _service.completeOnboarding(
-        favoriteCuisines: favoriteCuisines,
+        favoriteCuisines: const [],
         allergies: allergies,
+      );
+      await _service.updatePreferences(
+        UserPreferencesUpdate(
+          favoriteCuisines: favoriteCuisines,
+          allergies: allergies,
+        ),
       );
       completed = status.completed;
       await _cacheStatus(status.completed);

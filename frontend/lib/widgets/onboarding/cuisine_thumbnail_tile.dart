@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../theme/app_colors.dart';
 
-/// Small circular cuisine thumbnail for dense onboarding grids.
+/// Rounded-square onboarding grid tile for cuisines and allergens.
 class CuisineThumbnailTile extends StatelessWidget {
   const CuisineThumbnailTile({
     super.key,
@@ -10,7 +10,7 @@ class CuisineThumbnailTile extends StatelessWidget {
     required this.icon,
     required this.selected,
     required this.onTap,
-    this.accent = AppColors.gold,
+    this.accent = AppColors.accent,
   });
 
   final String label;
@@ -26,31 +26,33 @@ class CuisineThumbnailTile extends StatelessWidget {
       borderRadius: BorderRadius.circular(12),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: selected
-                      ? [accent.withValues(alpha: 0.55), accent.withValues(alpha: 0.2)]
-                      : [AppColors.surfaceLight, AppColors.surface],
+            Expanded(
+              child: AspectRatio(
+                aspectRatio: 1,
+                child: Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? accent.withValues(alpha: 0.12)
+                        : AppColors.surfaceLight,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: selected
+                          ? accent
+                          : AppColors.surfaceLight.withValues(alpha: 0.9),
+                      width: selected ? 2 : 1,
+                    ),
+                  ),
+                  child: Icon(
+                    icon,
+                    size: 28,
+                    color: selected ? accent : AppColors.textSecondary,
+                  ),
                 ),
-                border: Border.all(
-                  color: selected ? accent : AppColors.surfaceLight.withValues(alpha: 0.7),
-                  width: selected ? 2 : 1,
-                ),
-              ),
-              child: Icon(
-                icon,
-                size: 24,
-                color: selected ? Colors.white : AppColors.textSecondary,
               ),
             ),
             const SizedBox(height: 6),
@@ -62,7 +64,8 @@ class CuisineThumbnailTile extends StatelessWidget {
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                     fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                     color: selected ? AppColors.textPrimary : AppColors.textSecondary,
-                    height: 1.1,
+                    height: 1.15,
+                    fontSize: 11,
                   ),
             ),
           ],

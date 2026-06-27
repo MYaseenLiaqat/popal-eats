@@ -31,10 +31,10 @@ class HealthDashboardScreen extends StatelessWidget {
         padding: const EdgeInsets.all(AppColors.screenPadding),
         children: [
           ModernCard(
-            borderColor: AppColors.gold.withValues(alpha: 0.35),
+            borderColor: AppColors.accent.withValues(alpha: 0.35),
             child: Row(
               children: [
-                const Icon(Icons.info_outline, color: AppColors.gold, size: 20),
+                const Icon(Icons.info_outline, color: AppColors.accent, size: 20),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -48,7 +48,7 @@ class HealthDashboardScreen extends StatelessWidget {
           const SizedBox(height: 12),
           ModernCard(
             gradient: AppColors.headerGradient,
-            borderColor: AppColors.green.withValues(alpha: 0.4),
+            borderColor: AppColors.accent.withValues(alpha: 0.4),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -57,12 +57,12 @@ class HealthDashboardScreen extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: AppColors.green.withValues(alpha: 0.15),
+                        color: AppColors.accent.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(
                         Icons.monitor_heart_outlined,
-                        color: AppColors.green,
+                        color: AppColors.accent,
                         size: 28,
                       ),
                     ),
@@ -76,7 +76,7 @@ class HealthDashboardScreen extends StatelessWidget {
                             style: Theme.of(context)
                                 .textTheme
                                 .titleLarge
-                                ?.copyWith(color: AppColors.gold),
+                                ?.copyWith(color: AppColors.accent),
                           ),
                           const SizedBox(height: 4),
                           Text(
@@ -119,9 +119,9 @@ class HealthDashboardScreen extends StatelessWidget {
                                         begin: Alignment.bottomCenter,
                                         end: Alignment.topCenter,
                                         colors: [
-                                          AppColors.green
+                                          AppColors.accent
                                               .withValues(alpha: 0.5),
-                                          AppColors.gold.withValues(alpha: 0.9),
+                                          AppColors.accent.withValues(alpha: 0.9),
                                         ],
                                       ),
                                       borderRadius: BorderRadius.circular(6),
@@ -155,7 +155,7 @@ class HealthDashboardScreen extends StatelessWidget {
               StatChip(
                 label: 'Goal',
                 value: '$_goal kcal',
-                accent: AppColors.green,
+                accent: AppColors.accent,
               ),
             ],
           ),
@@ -174,7 +174,7 @@ class HealthDashboardScreen extends StatelessWidget {
                     Text(
                       '$progressPct%',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: AppColors.green,
+                            color: AppColors.accent,
                           ),
                     ),
                   ],
@@ -192,7 +192,7 @@ class HealthDashboardScreen extends StatelessWidget {
                       widthFactor: _progress,
                       child: DecoratedBox(
                         decoration: BoxDecoration(
-                          gradient: AppColors.goldGradient,
+                          gradient: AppColors.accentGradient,
                           borderRadius: BorderRadius.circular(6),
                         ),
                       ),
@@ -220,7 +220,7 @@ class HealthDashboardScreen extends StatelessWidget {
                 Text(
                   '2.3L',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: AppColors.green,
+                        color: AppColors.accent,
                       ),
                 ),
               ],
@@ -234,19 +234,19 @@ class HealthDashboardScreen extends StatelessWidget {
             (tip) => Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: ModernCard(
-                borderColor: AppColors.gold.withValues(alpha: 0.3),
+                borderColor: AppColors.accent.withValues(alpha: 0.3),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: AppColors.gold.withValues(alpha: 0.15),
+                        color: AppColors.accent.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: const Icon(
                         Icons.lightbulb_outline,
-                        color: AppColors.gold,
+                        color: AppColors.accent,
                         size: 20,
                       ),
                     ),

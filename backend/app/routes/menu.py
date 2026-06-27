@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.config import MAX_UPLOAD_MB, UPLOAD_DIR
 from app.core.dependencies import get_current_user
+from app.core.rbac import require_restaurant
 from app.core.permissions import assert_restaurant_owner, get_restaurant_or_404
 from app.database import get_db
 from app.models.menu_upload import MenuUpload
@@ -61,7 +62,7 @@ async def upload_menu(
     restaurant_id: int,
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_restaurant),
 ):
     restaurant = get_restaurant_or_404(db, restaurant_id)
     assert_restaurant_owner(restaurant, current_user)
@@ -74,7 +75,7 @@ async def import_menu(
     file: UploadFile = File(...),
     default_category_id: int = Query(..., description="Category for imported dishes"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_restaurant),
 ):
     """
     Full pipeline: upload → OCR → normalize → validate → import dishes.
@@ -118,7 +119,7 @@ def process_menu_upload(
     default_category_id: int | None = Query(None),
     import_to_db: bool = Query(False),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_restaurant),
 ):
     record = db.query(MenuUpload).filter(MenuUpload.id == upload_id).first()
     if not record:
@@ -156,11 +157,12 @@ def process_menu_upload(
 def list_uploads(
     restaurant_id: int | None = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_restaurant),
 ):
     query = db.query(MenuUpload)
-    if restaurant_id:
-        restaurant = get_restaurant_or_404(db, restaurant_id)
-        assert_restaurant_owner(restaurant, current_user)
-        query = query.filter(MenuUpload.restaurant_id == restaurant_id)
+    if not restaurant_id:
+        raise HTTPException(status_code=400, detail="restaurant_id is required")
+    restaurant = get_restaurant_or_404(db, restaurant_id)
+    assert_restaurant_owner(restaurant, current_user)
+    query = query.filter(MenuUpload.restaurant_id == restaurant_id)
     return query.order_by(MenuUpload.created_at.desc()).limit(50).all()

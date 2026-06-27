@@ -67,13 +67,13 @@ class _GroupsScreenState extends State<GroupsScreen> {
         ).then((created) {
           if (created == true) groups.fetchGroups(force: true);
         }),
-        backgroundColor: AppColors.gold,
-        foregroundColor: const Color(0xFF1A1400),
+        backgroundColor: AppColors.accent,
+        foregroundColor: AppColors.onAccent,
         icon: const Icon(Icons.add),
         label: const Text('New Group'),
       ),
       body: RefreshIndicator(
-        color: AppColors.gold,
+        color: AppColors.accent,
         onRefresh: () => groups.fetchAll(force: true),
         child: _buildBody(groups),
       ),
@@ -82,7 +82,7 @@ class _GroupsScreenState extends State<GroupsScreen> {
 
   Widget _buildBody(GroupProvider provider) {
     if (provider.loadingGroups && provider.groups.isEmpty) {
-      return const Center(child: CircularProgressIndicator(color: AppColors.gold));
+      return const Center(child: CircularProgressIndicator(color: AppColors.accent));
     }
 
     if (provider.groupsError != null && provider.groups.isEmpty) {

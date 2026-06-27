@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_current_user
+from app.core.rbac import require_customer
 from app.database import get_db
 from app.models.cart import Cart
 from app.models.cart_item import CartItem
@@ -67,7 +68,7 @@ def _get_cart_item_for_user(db: Session, user: User, item_id: int) -> CartItem:
 def cart_add(
     body: CartItemAdd,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_customer),
 ):
     item = add_dish_to_cart(db, current_user, body.dish_id, body.quantity)
     db.refresh(item)
@@ -77,7 +78,7 @@ def cart_add(
 @router.get("", response_model=CartResponse, summary="View current user's cart")
 def cart_get(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_customer),
 ):
     cart = get_user_cart_with_items(db, current_user)
     return _build_cart_response(cart)
@@ -88,7 +89,7 @@ def cart_update_item(
     item_id: int,
     body: CartItemUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_customer),
 ):
     item = _get_cart_item_for_user(db, current_user, item_id)
     item.quantity = body.quantity
@@ -101,7 +102,7 @@ def cart_update_item(
 def cart_delete_item(
     item_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_customer),
 ):
     item = _get_cart_item_for_user(db, current_user, item_id)
     db.delete(item)
@@ -112,7 +113,7 @@ def cart_delete_item(
 @router.delete("/clear", status_code=status.HTTP_204_NO_CONTENT, summary="Clear all cart items")
 def cart_clear(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_customer),
 ):
     clear_cart(db, current_user)
     return None

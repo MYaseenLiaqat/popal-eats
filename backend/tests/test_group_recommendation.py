@@ -32,10 +32,12 @@ class _Dish:
         name: str,
         description: str = "",
         category_name: str | None = None,
+        allergens: list[str] | None = None,
     ):
         self.id = 1
         self.name = name
         self.description = description
+        self.allergens = allergens
         self.price = Decimal("500")
         self.category = _Category(category_name) if category_name else None
         self.restaurant = _Restaurant()
@@ -96,8 +98,18 @@ def test_compute_group_score_weighted():
         distance_score=80.0,
         budget_score=90.0,
         popularity_score=60.0,
+        nutrition_score=70.0,
+        order_similarity_score=40.0,
     )
-    expected = 100 * 0.40 + 75 * 0.20 + 80 * 0.15 + 90 * 0.15 + 60 * 0.10
+    expected = (
+        100 * 0.36
+        + 75 * 0.20
+        + 80 * 0.14
+        + 90 * 0.14
+        + 60 * 0.08
+        + 70 * 0.04
+        + 40 * 0.04
+    )
     assert score == round(expected, 2)
 
 

@@ -16,7 +16,7 @@ router = APIRouter(prefix="/users", tags=["admin-users"])
 
 
 class UserRoleUpdate(BaseModel):
-    role: str = Field(..., description="admin | restaurant_owner | customer")
+    role: str = Field(..., description="admin | customer | restaurant | home_chef | restaurant_owner")
 
 
 @router.get("", response_model=PaginatedResponse[UserResponse])

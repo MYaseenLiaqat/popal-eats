@@ -23,6 +23,7 @@ from app.models.dish import Dish
 from app.models.order import Order
 from app.models.order_item import OrderItem
 from app.schemas.recommendation_v2 import V2DishRecommendationItem, V2ScoreBreakdown
+from app.services.recommendation.allergy_filter import filter_dishes_for_user_allergies
 from app.services.recommendation.price_adjustment import apply_price_outlier_penalty
 from app.services.recommendation.v2_collaborative import (
     build_cooccurrence_matrix,
@@ -36,7 +37,7 @@ from app.services.recommendation.v2_feedback import (
     load_dish_category_names,
 )
 from app.services.recommendation.v2_candidates import is_eligible_dish
-from app.services.recommendation.v2_catalog import FOODPANDA_SOURCE
+from app.services.recommendation.v2_catalog import FOODPANDA_SOURCE, build_tag_maps_from_dishes
 from app.services.recommendation.v2_debug import log_pipeline_stage, log_ranked_recommendations
 from app.services.recommendation.v2_fusion import (
     build_fusion_explanation,
@@ -44,6 +45,8 @@ from app.services.recommendation.v2_fusion import (
     normalize_feedback_for_fusion,
     normalize_popularity_for_fusion,
 )
+from app.services.recommendation.v2_explainability import enrich_recommendation_items
+from app.services.user_preferences_service import load_recommendation_preferences
 
 Strategy = Literal["content", "collaborative", "hybrid"]
 
@@ -187,6 +190,7 @@ def get_hybrid_recommendations(
     Weighted hybrid fusion across content, collaborative, feedback, and popularity.
     """
     profile = get_user_feedback_profile(db, user_id)
+    prefs = load_recommendation_preferences(db, user_id)
     dish_to_category = load_dish_category_names(db)
 
     log_pipeline_stage("hybrid_start", user_id=user_id)
@@ -216,6 +220,30 @@ def get_hybrid_recommendations(
         )
 
     all_dish_ids = set(content_by_id) | set(cf_map.keys()) | set(cf_by_id.keys())
+
+    if prefs.allergies and all_dish_ids:
+        pool_dishes = (
+            db.query(Dish)
+            .options(joinedload(Dish.restaurant), joinedload(Dish.category))
+            .filter(Dish.id.in_(all_dish_ids), Dish.is_available.is_(True))
+            .all()
+        )
+        dish_tags_map, restaurant_tags_map = build_tag_maps_from_dishes(pool_dishes)
+        safe_ids = {
+            d.id
+            for d in filter_dishes_for_user_allergies(
+                pool_dishes,
+                prefs.allergies,
+                dish_tags_map=dish_tags_map,
+                restaurant_tags_map=restaurant_tags_map,
+                user_id=user_id,
+            )
+        }
+        all_dish_ids = all_dish_ids & safe_ids
+        content_by_id = {k: v for k, v in content_by_id.items() if k in safe_ids}
+        cf_by_id = {k: v for k, v in cf_by_id.items() if k in safe_ids}
+        cf_map = {k: v for k, v in cf_map.items() if k in safe_ids}
+
     log_pipeline_stage(
         "hybrid_fusion_union",
         user_id=user_id,
@@ -307,10 +335,15 @@ def get_v2_recommendations(
     strategy: Strategy = "content",
     limit: int = TOP_N,
 ) -> list[V2DishRecommendationItem]:
+    prefs = load_recommendation_preferences(db, user_id)
+
     if strategy == "collaborative":
-        return get_collaborative_recommendations(db, user_id, limit=limit)
-    if strategy == "hybrid":
-        return get_hybrid_recommendations(db, user_id, limit=limit)
-    if strategy == "content":
-        return get_content_recommendations(db, user_id, limit=limit)
-    return []
+        items = get_collaborative_recommendations(db, user_id, limit=limit)
+    elif strategy == "hybrid":
+        items = get_hybrid_recommendations(db, user_id, limit=limit)
+    elif strategy == "content":
+        items = get_content_recommendations(db, user_id, limit=limit)
+    else:
+        items = []
+
+    return enrich_recommendation_items(items, prefs, strategy=strategy)
