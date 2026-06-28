@@ -14,6 +14,14 @@
         },
         "oauth_client": [
           {
+            "client_id": "427158581376-m43m9vaig12iaj1j4e98euvmhd22ubo3.apps.googleusercontent.com",
+            "client_type": 1,
+            "android_info": {
+              "package_name": "com.example.popal_eats",
+              "certificate_hash": "5cd366eb4b4010815d528f2feced1c36afeadd6d"
+            }
+          },
+          {
             "client_id": "427158581376-o1jd1m4bem383gkoj7ji22sdnta6o98t.apps.googleusercontent.com",
             "client_type": 3
           }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/post.dart';
 import '../../services/content_service.dart';
+import '../../theme/app_colors.dart';
 import '../../utils/recommendation_copy.dart';
 import '../community_avatar.dart';
 
