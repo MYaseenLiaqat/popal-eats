@@ -9,7 +9,7 @@ class OnboardingSelectionCard extends StatelessWidget {
     required this.icon,
     required this.selected,
     required this.onTap,
-    this.accent = AppColors.gold,
+    this.accent = AppColors.accent,
   });
 
   final String label;
@@ -40,8 +40,8 @@ class OnboardingSelectionCard extends StatelessWidget {
               : AppColors.surfaceGradient,
           borderRadius: BorderRadius.circular(AppColors.cardRadius),
           border: Border.all(
-            color: selected ? accent : AppColors.surfaceLight.withValues(alpha: 0.6),
-            width: selected ? 1.8 : 1,
+            color: selected ? accent : AppColors.border,
+            width: selected ? 2 : 1,
           ),
           boxShadow: selected
               ? [

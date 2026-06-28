@@ -1,53 +1,37 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
-import '../models/food_feed_item.dart';
-import '../models/group_decision.dart';
-import '../models/group_session.dart';
 import '../models/post.dart';
-import '../models/recommendation.dart';
 import '../models/story.dart';
 import '../providers/auth_provider.dart';
-import '../providers/cart_provider.dart';
-import '../providers/group_provider.dart';
 import '../services/content_service.dart';
-import '../services/feed_image_loader.dart';
-import '../services/food_feed_builder.dart';
-import '../services/group_service.dart';
-import '../services/recommendation_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/recommendation_copy.dart';
+import '../widgets/feed/feed_loading_skeleton.dart';
 import '../widgets/feed/feed_stories_row.dart';
-import '../widgets/feed/food_feed_card.dart';
+import '../widgets/feed/home_reels_entry.dart';
 import '../widgets/feed/post_comments_sheet.dart';
 import '../widgets/feed/social_post_card.dart';
-import '../widgets/ui/app_ui_widgets.dart';
-import '../widgets/cart_icon_button.dart';
 import '../widgets/social/notification_hub_button.dart';
-import 'create_post_screen.dart';
-import 'create_recipe_screen.dart';
 import 'dish_detail_screen.dart';
-import 'group_decision_screen.dart';
-import 'group_recommendations_screen.dart';
+import 'main_shell.dart';
+import 'reels_screen.dart';
+import 'restaurant_detail_screen.dart';
 import 'story_viewer_screen.dart';
 
+/// Social content discovery — reels, stories, and restaurant posts only.
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key, this.onRecommendationsTap});
-
-  final VoidCallback? onRecommendationsTap;
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final _recommendations = RecommendationService();
-  final _groups = GroupService();
   final _content = ContentService();
-  final _imageLoader = FeedImageLoader();
 
-  List<FoodFeedItem> feedItems = [];
-  List<Post> socialPosts = [];
+  List<Post> posts = [];
   List<StoryGroup> storyGroups = [];
   bool loading = true;
   String? error;
@@ -56,9 +40,6 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _load();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.read<CartProvider>().load();
-    });
   }
 
   Future<void> _load() async {
@@ -68,45 +49,14 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      final recResults = await Future.wait([
-        _recommendations.list(),
-        _recommendations.trending(limit: 10),
-        _content.fetchHomeFeed(limit: 15).catchError((_) => <Post>[]),
+      final results = await Future.wait([
+        _content.fetchHomeFeed(limit: 20),
         _content.fetchStories().catchError((_) => <StoryGroup>[]),
       ]);
-      final personalized = recResults[0] as List<Recommendation>;
-      final trending = recResults[1] as List<Recommendation>;
-      final posts = recResults[2] as List<Post>;
-      final stories = recResults[3] as List<StoryGroup>;
-
-      if (!mounted) return;
-      final groupProvider = context.read<GroupProvider>();
-      await groupProvider.fetchGroups(force: true);
-      final sessions = groupProvider.groups;
-
-      final groupDecisions =
-          await _loadGroupDecisions(sessions.where((s) => s.isActive).take(3));
-
-      final dishIds = <int>{
-        ...personalized.map((r) => r.dishId),
-        ...trending.map((r) => r.dishId),
-        ...groupDecisions
-            .map((e) => e.decision.dishId)
-            .whereType<int>(),
-      };
-
-      final images = await _imageLoader.loadImages(dishIds);
-
       if (!mounted) return;
       setState(() {
-        socialPosts = posts;
-        storyGroups = stories;
-        feedItems = FoodFeedBuilder.build(
-          personalized: personalized,
-          trending: trending,
-          groupDecisions: groupDecisions,
-          dishImages: images,
-        );
+        posts = results[0] as List<Post>;
+        storyGroups = results[1] as List<StoryGroup>;
         loading = false;
       });
     } catch (e) {
@@ -118,208 +68,24 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<List<({GroupSession session, GroupDecision decision})>> _loadGroupDecisions(
-    Iterable<GroupSession> sessions,
-  ) async {
-    final results = <({GroupSession session, GroupDecision decision})>[];
-
-    await Future.wait(sessions.map((session) async {
-      try {
-        final decision = await _groups.getDecision(session.id);
-        if (_isInterestingDecision(decision)) {
-          results.add((session: session, decision: decision));
-        }
-      } catch (_) {}
-    }));
-
-    results.sort((a, b) {
-      int rank(GroupDecision d) {
-        if (d.isAgreed) return 0;
-        if (d.isConsidering) return 1;
-        if (d.isPending) return 2;
-        return 3;
-      }
-
-      return rank(a.decision).compareTo(rank(b.decision));
+  void _updatePost(Post updated) {
+    setState(() {
+      posts = posts.map((p) => p.id == updated.id ? updated : p).toList();
     });
-
-    return results;
-  }
-
-  bool _isInterestingDecision(GroupDecision decision) {
-    return decision.isPending ||
-        decision.isConsidering ||
-        decision.isAgreed ||
-        decision.dishId != null;
-  }
-
-  void _openDiscover() {
-    widget.onRecommendationsTap?.call();
-  }
-
-  void _onFeedTap(FoodFeedItem item) {
-    switch (item.kind) {
-      case FoodFeedKind.recommended:
-      case FoodFeedKind.trending:
-        if (item.dishId != null) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => DishDetailScreen(dishId: item.dishId!),
-            ),
-          );
-        }
-        break;
-      case FoodFeedKind.groupDecision:
-        if (item.groupSessionId == null) return;
-        if (item.groupAgreed) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => GroupDecisionScreen(
-                sessionId: item.groupSessionId!,
-                groupName: item.groupName,
-              ),
-            ),
-          );
-        } else {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => GroupRecommendationsScreen(
-                sessionId: item.groupSessionId!,
-                groupName: item.groupName,
-              ),
-            ),
-          );
-        }
-        break;
-      case FoodFeedKind.discover:
-        _openDiscover();
-        break;
-      case FoodFeedKind.friendPlaceholder:
-        break;
-    }
-  }
-
-  void _showCreateMenu() {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.restaurant, color: AppColors.gold),
-              title: const Text('Food post'),
-              onTap: () async {
-                Navigator.pop(ctx);
-                final result = await Navigator.push<Post>(
-                  context,
-                  MaterialPageRoute(builder: (_) => const CreatePostScreen()),
-                );
-                if (result != null) _load();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.menu_book_outlined, color: AppColors.green),
-              title: const Text('Recipe'),
-              onTap: () async {
-                Navigator.pop(ctx);
-                final result = await Navigator.push<Post>(
-                  context,
-                  MaterialPageRoute(builder: (_) => const CreateRecipeScreen()),
-                );
-                if (result != null) _load();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.auto_stories_outlined, color: AppColors.gold),
-              title: const Text('Story'),
-              subtitle: const Text('Visible for 24 hours'),
-              onTap: () async {
-                Navigator.pop(ctx);
-                final ok = await showCreateStorySheet(context);
-                if (ok == true) _load();
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _onStoryCreate() async {
-    final auth = context.read<AuthProvider>();
-    final userId = auth.user?['id'] as int?;
-    final ownGroup = userId == null
-        ? null
-        : storyGroups.where((g) => g.user.id == userId).firstOrNull;
-
-    if (ownGroup != null && ownGroup.stories.isNotEmpty) {
-      final choice = await showModalBottomSheet<String>(
-        context: context,
-        backgroundColor: AppColors.surface,
-        builder: (ctx) => SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.visibility_outlined),
-                title: const Text('View your story'),
-                onTap: () => Navigator.pop(ctx, 'view'),
-              ),
-              ListTile(
-                leading: const Icon(Icons.add),
-                title: const Text('Add to story'),
-                onTap: () => Navigator.pop(ctx, 'add'),
-              ),
-            ],
-          ),
-        ),
-      );
-      if (choice == 'view' && mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => StoryViewerScreen(group: ownGroup),
-          ),
-        );
-        return;
-      }
-    }
-
-    final ok = await showCreateStorySheet(context);
-    if (ok == true) _load();
-  }
-
-  void _openStoryGroup(StoryGroup group) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => StoryViewerScreen(group: group)),
-    ).then((_) => _load());
   }
 
   Future<void> _toggleLike(Post post) async {
     try {
       if (post.likedByMe) {
         await _content.unlikePost(post.id);
+        _updatePost(post.copyWith(
+          likedByMe: false,
+          likeCount: (post.likeCount - 1).clamp(0, 999999),
+        ));
       } else {
         await _content.likePost(post.id);
+        _updatePost(post.copyWith(likedByMe: true, likeCount: post.likeCount + 1));
       }
-      setState(() {
-        socialPosts = socialPosts.map((p) {
-          if (p.id != post.id) return p;
-          return p.copyWith(
-            likedByMe: !p.likedByMe,
-            likeCount: p.likedByMe ? p.likeCount - 1 : p.likeCount + 1,
-          );
-        }).toList();
-      });
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -332,18 +98,14 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       if (post.savedByMe) {
         await _content.unsavePost(post.id);
+        _updatePost(post.copyWith(
+          savedByMe: false,
+          saveCount: (post.saveCount - 1).clamp(0, 999999),
+        ));
       } else {
         await _content.savePost(post.id);
+        _updatePost(post.copyWith(savedByMe: true, saveCount: post.saveCount + 1));
       }
-      setState(() {
-        socialPosts = socialPosts.map((p) {
-          if (p.id != post.id) return p;
-          return p.copyWith(
-            savedByMe: !p.savedByMe,
-            saveCount: p.savedByMe ? p.saveCount - 1 : p.saveCount + 1,
-          );
-        }).toList();
-      });
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -352,61 +114,95 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  List<Widget> _buildMergedFeed() {
-    final widgets = <Widget>[];
-    var postIdx = 0;
-    var feedIdx = 0;
-
-    while (postIdx < socialPosts.length || feedIdx < feedItems.length) {
-      if (postIdx < socialPosts.length) {
-        final post = socialPosts[postIdx++];
-        widgets.add(
-          SocialPostCard(
-            post: post,
-            onLike: _toggleLike,
-            onSave: _toggleSave,
-            onComment: (p) => showPostCommentsSheet(context, p),
-          ),
-        );
-      }
-      for (var i = 0; i < 2 && feedIdx < feedItems.length; i++) {
-        final item = feedItems[feedIdx++];
-        final tappable = item.kind == FoodFeedKind.discover ||
-            item.kind == FoodFeedKind.recommended ||
-            item.kind == FoodFeedKind.trending ||
-            item.kind == FoodFeedKind.groupDecision;
-        widgets.add(
-          FoodFeedCard(
-            item: item,
-            onTap: tappable ? () => _onFeedTap(item) : null,
-          ),
-        );
-      }
-    }
-    return widgets;
+  void _sharePost(Post post) {
+    final text = '${post.authorName}: ${post.caption ?? post.displayTitle}';
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Link copied to clipboard')),
+    );
   }
+
+  void _followRestaurant(Post post) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Following ${post.restaurantName ?? 'restaurant'}')),
+    );
+  }
+
+  void _viewRestaurant(Post post) {
+    final id = post.restaurantId;
+    if (id == null) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => RestaurantDetailScreen(restaurantId: id)),
+    );
+  }
+
+  void _viewDish(Post post) {
+    final id = post.dishId;
+    if (id == null) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => DishDetailScreen(dishId: id)),
+    );
+  }
+
+  void _openComments(Post post) {
+    showPostCommentsSheet(context, post);
+  }
+
+  void _openReels() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ReelsScreen()),
+    );
+  }
+
+  void _openStoryGroup(StoryGroup group) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => StoryViewerScreen(group: group)),
+    );
+  }
+
+  void _openProfile() {
+    context.findAncestorStateOfType<MainShellState>()?.navigateToTab(MainShellState.profileTab);
+  }
+
+  PostInteraction _postHandlers(Post post) => PostInteraction(
+        onLike: _toggleLike,
+        onSave: _toggleSave,
+        onComment: _openComments,
+        onShare: _sharePost,
+        onFollow: _followRestaurant,
+        onViewRestaurant: post.restaurantId != null ? _viewRestaurant : null,
+        onViewDish: post.dishId != null ? _viewDish : null,
+      );
 
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
-    final name = auth.user?['full_name']?.toString() ?? 'Guest';
     final userId = auth.user?['id'] as int?;
 
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Popal Eats'),
+        centerTitle: false,
         actions: [
           IconButton(
-            tooltip: 'Create post',
-            icon: const Icon(Icons.add_box_outlined),
-            onPressed: _showCreateMenu,
+            icon: const Icon(Icons.slow_motion_video_outlined),
+            tooltip: 'Reels',
+            onPressed: _openReels,
+          ),
+          IconButton(
+            icon: const Icon(Icons.person_outline),
+            onPressed: _openProfile,
           ),
           const NotificationHubButton(),
-          const CartIconButton(),
         ],
       ),
       body: loading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.gold))
+          ? const FeedLoadingSkeleton()
           : error != null
               ? Center(
                   child: Padding(
@@ -414,11 +210,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        EmptyState(
-                          icon: Icons.cloud_off_outlined,
-                          title: 'Could not load your feed',
-                          subtitle: RecommendationCopy.friendlyError(error),
-                        ),
+                        Text(error!, textAlign: TextAlign.center),
                         const SizedBox(height: 12),
                         TextButton(onPressed: _load, child: const Text('Retry')),
                       ],
@@ -427,48 +219,49 @@ class _HomeScreenState extends State<HomeScreen> {
                 )
               : RefreshIndicator(
                   onRefresh: _load,
-                  color: AppColors.gold,
-                  child: ListView(
-                    padding: const EdgeInsets.all(AppColors.screenPadding),
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8, top: 4),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Hello, $name',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .headlineSmall
-                                  ?.copyWith(color: AppColors.gold),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Your food feed',
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
-                          ],
+                  color: AppColors.accent,
+                  child: CustomScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(
+                      parent: BouncingScrollPhysics(),
+                    ),
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+                          child: FeedStoriesRow(
+                            groups: storyGroups,
+                            currentUserId: userId,
+                            onGroupTap: _openStoryGroup,
+                          ),
                         ),
                       ),
-                      FeedStoriesRow(
-                        groups: storyGroups,
-                        currentUserId: userId,
-                        onCreateTap: _onStoryCreate,
-                        onGroupTap: _openStoryGroup,
-                      ),
-                      const SizedBox(height: 12),
-                      if (socialPosts.isEmpty && feedItems.isEmpty)
-                        const ModernCard(
-                          child: EmptyState(
-                            icon: Icons.restaurant_outlined,
-                            title: 'Nothing in your feed yet',
-                            subtitle: 'Create a post or pull to refresh for picks.',
-                          ),
+                      SliverToBoxAdapter(child: HomeReelsEntry(onTap: _openReels)),
+                      if (posts.isEmpty)
+                        const SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: Center(child: Text('No posts yet — check back soon')),
                         )
                       else
-                        ..._buildMergedFeed(),
-                      const SizedBox(height: 8),
+                        SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              final post = posts[index];
+                              final handlers = _postHandlers(post);
+                              return SocialPostCard(
+                                post: post,
+                                onLike: handlers.onLike,
+                                onSave: handlers.onSave,
+                                onComment: handlers.onComment,
+                                onShare: handlers.onShare,
+                                onFollow: handlers.onFollow,
+                                onViewRestaurant: handlers.onViewRestaurant,
+                                onViewDish: handlers.onViewDish,
+                              );
+                            },
+                            childCount: posts.length,
+                          ),
+                        ),
+                      const SliverToBoxAdapter(child: SizedBox(height: 24)),
                     ],
                   ),
                 ),
@@ -476,3 +269,23 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
+/// Bundled interaction callbacks for a feed post.
+class PostInteraction {
+  const PostInteraction({
+    this.onLike,
+    this.onSave,
+    this.onComment,
+    this.onShare,
+    this.onFollow,
+    this.onViewRestaurant,
+    this.onViewDish,
+  });
+
+  final void Function(Post post)? onLike;
+  final void Function(Post post)? onSave;
+  final void Function(Post post)? onComment;
+  final void Function(Post post)? onShare;
+  final void Function(Post post)? onFollow;
+  final void Function(Post post)? onViewRestaurant;
+  final void Function(Post post)? onViewDish;
+}

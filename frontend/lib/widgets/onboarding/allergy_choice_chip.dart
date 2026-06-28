@@ -22,12 +22,10 @@ class AllergyChoiceChip extends StatelessWidget {
       selected: selected,
       onSelected: onSelected,
       showCheckmark: true,
-      selectedColor: AppColors.green.withValues(alpha: 0.22),
-      checkmarkColor: AppColors.green,
+      selectedColor: AppColors.accent.withValues(alpha: 0.22),
+      checkmarkColor: AppColors.accent,
       side: BorderSide(
-        color: selected
-            ? AppColors.green.withValues(alpha: 0.65)
-            : AppColors.surfaceLight.withValues(alpha: 0.8),
+        color: selected ? AppColors.accent : AppColors.border,
       ),
       labelStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
             color: selected ? AppColors.textPrimary : AppColors.textSecondary,

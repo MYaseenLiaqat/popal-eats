@@ -5,7 +5,8 @@ Reusable ownership checks for restaurants, dishes, and reviews.
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.core.rbac import assert_restaurant_owner_or_admin
+from app.core.rbac import assert_active_business_account
+from app.core.roles import ADMIN, is_home_chef_role, is_restaurant_role, normalize_role
 from app.models.dish import Dish
 from app.models.restaurant import Restaurant
 from app.models.review import Review
@@ -23,7 +24,23 @@ def get_restaurant_or_404(db: Session, restaurant_id: int) -> Restaurant:
 
 
 def assert_restaurant_owner(restaurant: Restaurant, current_user: User) -> None:
-    assert_restaurant_owner_or_admin(restaurant, current_user)
+    role = normalize_role(current_user.role)
+    if role == ADMIN:
+        return
+    assert_active_business_account(current_user)
+    if restaurant.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to modify this restaurant",
+        )
+    if is_restaurant_role(current_user.role):
+        return
+    if is_home_chef_role(current_user.role) and restaurant.source == "home_chef":
+        return
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="You do not have permission to modify this restaurant",
+    )
 
 
 def get_dish_or_404(db: Session, dish_id: int) -> Dish:

@@ -54,7 +54,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
         actions: const [NotificationHubButton()],
       ),
       body: RefreshIndicator(
-        color: AppColors.gold,
+        color: AppColors.accent,
         onRefresh: () async {
           await friends.fetchAll(force: true);
           await groups.fetchAll(force: true);
@@ -65,16 +65,16 @@ class _CommunityScreenState extends State<CommunityScreen> {
           children: [
             ModernCard(
               gradient: AppColors.headerGradient,
-              borderColor: AppColors.green.withValues(alpha: 0.35),
+              borderColor: AppColors.accent.withValues(alpha: 0.35),
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppColors.green.withValues(alpha: 0.15),
+                      color: AppColors.accent.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.groups, color: AppColors.green, size: 28),
+                    child: const Icon(Icons.groups, color: AppColors.accent, size: 28),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -84,7 +84,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                         Text(
                           'Your community',
                           style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                color: AppColors.gold,
+                                color: AppColors.accent,
                               ),
                         ),
                         const SizedBox(height: 4),
@@ -102,10 +102,10 @@ class _CommunityScreenState extends State<CommunityScreen> {
               const SizedBox(height: 12),
               ModernCard(
                 onTap: _openActivityHub,
-                borderColor: AppColors.gold.withValues(alpha: 0.35),
+                borderColor: AppColors.accent.withValues(alpha: 0.35),
                 child: Row(
                   children: [
-                    const Icon(Icons.favorite, color: AppColors.gold),
+                    const Icon(Icons.favorite, color: AppColors.accent),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
@@ -141,7 +141,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.group_add_outlined, color: AppColors.green),
+                      const Icon(Icons.group_add_outlined, color: AppColors.accent),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
@@ -166,7 +166,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                     ),
                     child: Row(
                       children: [
-                        const Icon(Icons.groups, color: AppColors.gold),
+                        const Icon(Icons.groups, color: AppColors.accent),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
@@ -200,7 +200,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 24),
                 child: Center(
-                  child: CircularProgressIndicator(color: AppColors.gold),
+                  child: CircularProgressIndicator(color: AppColors.accent),
                 ),
               )
             else if (previewFriends.isEmpty)
@@ -208,7 +208,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                 onTap: _openActivityHub,
                 child: Row(
                   children: [
-                    const Icon(Icons.person_add_alt_1_outlined, color: AppColors.gold),
+                    const Icon(Icons.person_add_alt_1_outlined, color: AppColors.accent),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(

@@ -22,7 +22,7 @@ class PrivacyConsentScreen extends StatelessWidget {
               Text(
                 'Your privacy matters',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: AppColors.gold,
+                      color: AppColors.accent,
                       fontWeight: FontWeight.w700,
                     ),
               ),
@@ -99,10 +99,10 @@ class _ConsentPoint extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppColors.gold.withValues(alpha: 0.12),
+                color: AppColors.accent.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, color: AppColors.gold, size: 22),
+              child: Icon(icon, color: AppColors.accent, size: 22),
             ),
             const SizedBox(width: 12),
             Expanded(

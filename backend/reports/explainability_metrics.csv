@@ -1,0 +1,2 @@
+items_evaluated,explanation_availability_rate,avg_explanation_bullet_count,min_bullets,max_bullets,confidence_mean,confidence_p50,confidence_p95
+50,1.0,3.4,2,5,30.32,36.0,53.0

@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.core.dependencies import get_current_user
 from app.core.permissions import assert_review_owner, get_restaurant_or_404, get_review_or_404
-from app.core.rbac import require_reviewer
+from app.core.rbac import require_customer
 from app.database import get_db
 from app.models.review import Review
 from app.models.user import User
@@ -49,7 +49,7 @@ def _review_to_response(review: Review) -> ReviewResponse:
 def create_review(
     body: ReviewCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_reviewer),
+    current_user: User = Depends(require_customer),
 ):
     get_restaurant_or_404(db, body.restaurant_id)
 

@@ -27,6 +27,7 @@ class RestaurantUpdate(BaseModel):
     opening_time: time | None = None
     closing_time: time | None = None
     is_open: bool | None = None
+    tags: list[str] | None = None
 
 
 class RestaurantResponse(BaseModel):
@@ -47,6 +48,7 @@ class RestaurantResponse(BaseModel):
     total_reviews: int = 0
     approval_status: str = "approved"
     rejection_reason: str | None = None
+    tags: list[str] | None = None
     created_at: datetime | None = None
 
     @computed_field
@@ -67,6 +69,14 @@ class PopularDishStat(BaseModel):
     order_count: int
 
 
+class ReviewBrief(BaseModel):
+    id: int
+    rating: int
+    comment: str | None = None
+    author_name: str | None = None
+    created_at: datetime | None = None
+
+
 class RestaurantDashboardResponse(BaseModel):
     restaurant_id: int
     restaurant_name: str
@@ -77,3 +87,11 @@ class RestaurantDashboardResponse(BaseModel):
     total_reviews: int
     total_orders: int
     popular_dishes: list[PopularDishStat]
+    orders_today: int = 0
+    pending_orders: int = 0
+    completed_orders_today: int = 0
+    revenue_today: float = 0.0
+    popular_dish: PopularDishStat | None = None
+    recent_reviews: list[ReviewBrief] = Field(default_factory=list)
+    total_posts: int = 0
+    post_engagement: int = 0

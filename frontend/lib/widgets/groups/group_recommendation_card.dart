@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../models/group_recommendation.dart';
 import '../../models/group_vote.dart';
 import '../../utils/price_formatter.dart';
-import '../../utils/recommendation_copy.dart';
 import '../../theme/app_colors.dart';
 import '../ui/app_ui_widgets.dart';
 import 'group_vote_widgets.dart';
@@ -25,12 +24,12 @@ class GroupScoreBadge extends StatelessWidget {
             value: percent / 100,
             strokeWidth: 4,
             backgroundColor: AppColors.surfaceLight,
-            color: AppColors.gold,
+            color: AppColors.accent,
           ),
           Text(
             '$percent%',
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: AppColors.gold,
+                  color: AppColors.accent,
                   fontWeight: FontWeight.w700,
                 ),
           ),
@@ -84,7 +83,7 @@ class GroupRecommendationCard extends StatelessWidget {
         child: ModernCard(
           onTap: onTap,
           padding: EdgeInsets.zero,
-          borderColor: AppColors.green.withValues(alpha: 0.3),
+          borderColor: AppColors.accent.withValues(alpha: 0.3),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -140,7 +139,7 @@ class GroupRecommendationCard extends StatelessWidget {
                         Text(
                           PriceFormatter.format(recommendation.price),
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                color: AppColors.gold,
+                                color: AppColors.accent,
                                 fontWeight: FontWeight.w700,
                               ),
                         ),
@@ -148,30 +147,30 @@ class GroupRecommendationCard extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: AppColors.green.withValues(alpha: 0.12),
+                            color: AppColors.accent.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(99),
                           ),
                           child: Text(
                             'Group match',
                             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                  color: AppColors.green,
+                                  color: AppColors.accent,
                                   fontWeight: FontWeight.w600,
                                 ),
                           ),
                         ),
                       ],
                     ),
-                    if (recommendation.reasons.isNotEmpty) ...[
+                    if (recommendation.displayReasons.isNotEmpty) ...[
                       const SizedBox(height: 14),
                       Text(
-                        'Why this pick',
+                        'Recommended because',
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 14),
                       ),
                       const SizedBox(height: 8),
                       Wrap(
                         spacing: 8,
                         runSpacing: 8,
-                        children: RecommendationCopy.humanGroupReasons(recommendation.reasons)
+                        children: recommendation.displayReasons
                             .map(_reasonChip)
                             .toList(),
                       ),
@@ -210,12 +209,12 @@ class GroupRecommendationCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surfaceLight.withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.gold.withValues(alpha: 0.35)),
+        border: Border.all(color: AppColors.accent.withValues(alpha: 0.35)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.check_circle_outline, size: 14, color: AppColors.green),
+          const Icon(Icons.check_circle_outline, size: 14, color: AppColors.accent),
           const SizedBox(width: 4),
           Text(
             reason,

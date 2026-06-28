@@ -18,14 +18,20 @@ from app.services.group_recommendation.filters import (
     is_dish_dietary_compatible,
     is_dish_safe_for_group,
 )
+from app.services.group_recommendation.explainability import (
+    GroupScoreSignals,
+    build_group_explanation_bullets,
+    group_match_percent,
+)
 from app.services.group_recommendation.scoring import (
-    build_reasons,
     compute_group_centroid,
     compute_group_score,
     score_budget_compatibility,
     score_cuisine_match,
     score_distance,
     score_group_agreement,
+    score_nutrition_compatibility,
+    score_order_similarity,
     score_popularity,
 )
 from app.services.group_session_service import _get_session_or_404, _is_session_active, _require_member
@@ -99,7 +105,7 @@ def _score_dishes(
         restaurant = dish.restaurant
         rest_coords = restaurant_coords.get(restaurant.id) if restaurant else None
 
-        cuisine_score = score_cuisine_match(
+        cuisine_score, cuisine_member_matches, cuisine_label = score_cuisine_match(
             dish,
             members,
             dish_tags=dish_tags,
@@ -114,6 +120,8 @@ def _score_dishes(
         distance_score = score_distance(centroid=centroid, restaurant_coords=rest_coords)
         budget_score = score_budget_compatibility(dish, members)
         popularity_score = score_popularity(dish, order_counts.get(dish.id, 0), max_orders)
+        nutrition_score = score_nutrition_compatibility(dish, members)
+        order_similarity_score = score_order_similarity(dish, members)
 
         final_score = compute_group_score(
             cuisine_score=cuisine_score,
@@ -121,15 +129,27 @@ def _score_dishes(
             distance_score=distance_score,
             budget_score=budget_score,
             popularity_score=popularity_score,
+            nutrition_score=nutrition_score,
+            order_similarity_score=order_similarity_score,
         )
         final_score = apply_price_outlier_penalty(final_score, dish.price)
-        reasons = build_reasons(
+
+        signals = GroupScoreSignals(
+            cuisine_score=cuisine_score,
+            agreement_score=agreement_score,
+            distance_score=distance_score,
+            budget_score=budget_score,
+            popularity_score=popularity_score,
+            nutrition_score=nutrition_score,
+            order_similarity_score=order_similarity_score,
             matching_members=matching,
             total_members=total,
-            budget_score=budget_score,
-            distance_score=distance_score,
-            cuisine_score=cuisine_score,
+            cuisine_member_matches=cuisine_member_matches,
+            cuisine_label=cuisine_label,
         )
+        bullets = build_group_explanation_bullets(signals, context)
+        reasons = bullets if bullets else ["A solid pick for the group"]
+
         scored.append(
             GroupDishRecommendation(
                 dish_id=dish.id,
@@ -137,7 +157,9 @@ def _score_dishes(
                 restaurant_name=restaurant.name if restaurant else "",
                 price=dish.price,
                 score=final_score,
+                group_match_percent=group_match_percent(final_score),
                 reasons=reasons,
+                explanation_bullets=bullets,
             )
         )
 

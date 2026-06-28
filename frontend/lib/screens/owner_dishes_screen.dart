@@ -13,10 +13,12 @@ class OwnerDishesScreen extends StatefulWidget {
     super.key,
     required this.restaurantId,
     required this.restaurantName,
+    this.embedded = false,
   });
 
   final int restaurantId;
   final String restaurantName;
+  final bool embedded;
 
   @override
   State<OwnerDishesScreen> createState() => _OwnerDishesScreenState();
@@ -67,6 +69,104 @@ class _OwnerDishesScreenState extends State<OwnerDishesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final body = _loading
+        ? const Center(child: CircularProgressIndicator(color: AppColors.accent))
+        : _error != null
+            ? Center(child: Text(_error!))
+            : RefreshIndicator(
+                onRefresh: _load,
+                color: AppColors.accent,
+                child: _dishes.isEmpty
+                    ? ListView(
+                        children: const [
+                          SizedBox(height: 80),
+                          EmptyState(
+                            icon: Icons.restaurant_outlined,
+                            title: 'No dishes yet',
+                            subtitle: 'Tap + to add your first dish.',
+                          ),
+                        ],
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(AppColors.screenPadding),
+                        itemCount: _dishes.length,
+                        itemBuilder: (context, index) {
+                          final dish = _dishes[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: ModernCard(
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => OwnerDishFormScreen(
+                                    restaurantId: widget.restaurantId,
+                                    dish: dish,
+                                  ),
+                                ),
+                              ).then((_) => _load()),
+                              child: Row(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: SizedBox(
+                                      width: 52,
+                                      height: 52,
+                                      child: dish.image != null && dish.image!.isNotEmpty
+                                          ? Image.network(
+                                              dish.image!,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (_, __, ___) =>
+                                                  _thumbFallback(),
+                                            )
+                                          : _thumbFallback(),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          dish.name,
+                                          style: Theme.of(context).textTheme.titleMedium,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(PriceFormatter.format(dish.price)),
+                                        if (!dish.isAvailable)
+                                          const Text(
+                                            'Unavailable',
+                                            style: TextStyle(color: AppColors.error),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete_outline),
+                                    onPressed: () => _deleteDish(dish),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+              );
+
+    if (widget.embedded) {
+      return Scaffold(
+        floatingActionButton: FloatingActionButton(
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => OwnerDishFormScreen(restaurantId: widget.restaurantId),
+            ),
+          ).then((_) => _load()),
+          child: const Icon(Icons.add),
+        ),
+        body: body,
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(title: Text('${widget.restaurantName} · Menu')),
       floatingActionButton: FloatingActionButton(
@@ -78,96 +178,15 @@ class _OwnerDishesScreenState extends State<OwnerDishesScreen> {
         ).then((_) => _load()),
         child: const Icon(Icons.add),
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.gold))
-          : _error != null
-              ? Center(child: Text(_error!))
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  color: AppColors.gold,
-                  child: _dishes.isEmpty
-                      ? ListView(
-                          children: const [
-                            SizedBox(height: 80),
-                            EmptyState(
-                              icon: Icons.restaurant_outlined,
-                              title: 'No dishes yet',
-                              subtitle: 'Tap + to add your first dish.',
-                            ),
-                          ],
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.all(AppColors.screenPadding),
-                          itemCount: _dishes.length,
-                          itemBuilder: (context, index) {
-                            final dish = _dishes[index];
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: ModernCard(
-                                onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => OwnerDishFormScreen(
-                                      restaurantId: widget.restaurantId,
-                                      dish: dish,
-                                    ),
-                                  ),
-                                ).then((_) => _load()),
-                                child: Row(
-                                  children: [
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(10),
-                                      child: SizedBox(
-                                        width: 52,
-                                        height: 52,
-                                        child: dish.image != null && dish.image!.isNotEmpty
-                                            ? Image.network(
-                                                dish.image!,
-                                                fit: BoxFit.cover,
-                                                errorBuilder: (_, __, ___) =>
-                                                    _thumbFallback(),
-                                              )
-                                            : _thumbFallback(),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            dish.name,
-                                            style: Theme.of(context).textTheme.titleMedium,
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(PriceFormatter.format(dish.price)),
-                                          if (!dish.isAvailable)
-                                            const Text(
-                                              'Unavailable',
-                                              style: TextStyle(color: AppColors.error),
-                                            ),
-                                        ],
-                                      ),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.delete_outline),
-                                      onPressed: () => _deleteDish(dish),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                ),
+      body: body,
     );
   }
 
   Widget _thumbFallback() {
     return Container(
-      color: AppColors.green.withValues(alpha: 0.12),
+      color: AppColors.accent.withValues(alpha: 0.12),
       alignment: Alignment.center,
-      child: const Icon(Icons.restaurant, color: AppColors.green, size: 22),
+      child: const Icon(Icons.restaurant, color: AppColors.accent, size: 22),
     );
   }
 }

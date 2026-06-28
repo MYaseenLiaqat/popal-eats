@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_current_user
+from app.core.rbac import require_customer
 from app.database import get_db
 from app.models.user import User
 from app.schemas.group_recommendation import GroupRecommendationsResponse
@@ -60,7 +61,7 @@ router = APIRouter(tags=["groups"])
 def create_group(
     body: GroupSessionCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_customer),
 ) -> GroupSessionResponse:
     return create_group_session(db, current_user.id, body)
 
@@ -68,7 +69,7 @@ def create_group(
 @router.get("/groups", response_model=GroupSessionListResponse, summary="List my group sessions")
 def list_groups(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_customer),
 ) -> GroupSessionListResponse:
     return list_group_sessions(db, current_user.id)
 
@@ -80,7 +81,7 @@ def list_groups(
 )
 def list_invitations(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_customer),
 ) -> GroupInvitationsListResponse:
     return list_group_invitations(db, current_user.id)
 
@@ -89,7 +90,7 @@ def list_invitations(
 def read_group(
     session_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_customer),
 ) -> GroupSessionResponse:
     return get_group_session(db, current_user.id, session_id)
 
@@ -104,7 +105,7 @@ def invite_to_group(
     session_id: int,
     body: GroupInviteCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_customer),
 ) -> GroupInvitationResponse:
     return invite_to_group_session(db, current_user.id, session_id, body.receiver_id)
 
@@ -117,7 +118,7 @@ def invite_to_group(
 def accept_invitation(
     invitation_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_customer),
 ) -> GroupInvitationResponse:
     return accept_group_invitation(db, current_user.id, invitation_id)
 
@@ -130,7 +131,7 @@ def accept_invitation(
 def reject_invitation(
     invitation_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_customer),
 ) -> GroupInvitationResponse:
     return reject_group_invitation(db, current_user.id, invitation_id)
 
@@ -143,7 +144,7 @@ def reject_invitation(
 def leave_group(
     session_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_customer),
 ) -> None:
     leave_group_session(db, current_user.id, session_id)
 
@@ -157,7 +158,7 @@ def update_group_location(
     session_id: int,
     body: GroupMemberLocationUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_customer),
 ) -> GroupMemberLocationResponse:
     return upsert_group_member_location(db, current_user.id, session_id, body)
 
@@ -170,7 +171,7 @@ def update_group_location(
 def get_group_locations(
     session_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_customer),
 ) -> GroupMemberLocationListResponse:
     return list_group_member_locations(db, current_user.id, session_id)
 
@@ -184,7 +185,7 @@ def read_group_recommendations(
     session_id: int,
     refresh: bool = Query(False, description="Regenerate rankings and replace snapshots"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_customer),
 ) -> GroupRecommendationsResponse:
     return get_group_recommendations_with_snapshots(
         db, current_user.id, session_id, refresh=refresh
@@ -200,7 +201,7 @@ def vote_on_recommendation(
     recommendation_id: int,
     body: GroupVoteCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_customer),
 ) -> GroupVoteResponse:
     return cast_group_vote(db, current_user.id, recommendation_id, body.vote_type)
 
@@ -213,7 +214,7 @@ def vote_on_recommendation(
 def read_recommendation_votes(
     recommendation_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_customer),
 ) -> GroupVoteSummaryResponse:
     return get_vote_summary(db, current_user.id, recommendation_id)
 
@@ -226,7 +227,7 @@ def read_recommendation_votes(
 def read_group_decision(
     session_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_customer),
 ) -> GroupDecisionResponse:
     return get_group_decision(db, current_user.id, session_id)
 
@@ -239,6 +240,6 @@ def read_group_decision(
 def mark_decision_ordered(
     session_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_customer),
 ) -> GroupDecisionResponse:
     return mark_group_decision_ordered(db, current_user.id, session_id)

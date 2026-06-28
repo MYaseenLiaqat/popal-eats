@@ -72,6 +72,9 @@ class RecommendationService {
         calories: rec.calories,
         scoreBreakdown: rec.scoreBreakdown,
         signalsUsed: rec.signalsUsed,
+        confidencePercent: rec.confidencePercent,
+        explanationBullets: rec.explanationBullets,
+        contributions: rec.contributions,
         strategy: responseStrategy,
         engineVersion: engineVersion,
       );

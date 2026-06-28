@@ -5,11 +5,12 @@ import '../providers/friends_provider.dart';
 import '../providers/group_provider.dart';
 import '../theme/app_colors.dart';
 import 'community_screen.dart';
+import 'delivery_screen.dart';
 import 'home_screen.dart';
+import 'order_screen.dart';
 import 'profile_screen.dart';
-import 'recommendations_screen.dart';
 
-/// Primary app shell: Home · Discover · Community · Profile.
+/// Primary app shell: Home · Order · Delivery · Community · Profile.
 class MainShell extends StatefulWidget {
   const MainShell({super.key, this.initialIndex = 0});
 
@@ -20,7 +21,12 @@ class MainShell extends StatefulWidget {
 }
 
 class MainShellState extends State<MainShell> {
-  static const tabCount = 4;
+  static const tabCount = 5;
+  static const homeTab = 0;
+  static const orderTab = 1;
+  static const deliveryTab = 2;
+  static const communityTab = 3;
+  static const profileTab = 4;
 
   late int _index;
 
@@ -46,38 +52,46 @@ class MainShellState extends State<MainShell> {
       body: IndexedStack(
         index: _index,
         children: [
-          HomeScreen(onRecommendationsTap: () => navigateToTab(1)),
-          const RecommendationsScreen(),
+          const HomeScreen(),
+          OrderScreen(isTabActive: _index == orderTab),
+          DeliveryScreen(isTabActive: _index == deliveryTab),
           const CommunityScreen(),
           const ProfileScreen(),
         ],
       ),
       bottomNavigationBar: NavigationBar(
-        backgroundColor: AppColors.surface,
-        indicatorColor: AppColors.gold.withValues(alpha: 0.2),
+        backgroundColor: AppColors.navBg,
+        indicatorColor: AppColors.accent.withValues(alpha: 0.18),
         surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        shadowColor: Colors.transparent,
         selectedIndex: _index,
         onDestinationSelected: navigateToTab,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home, color: AppColors.gold),
+            selectedIcon: Icon(Icons.home),
             label: 'Home',
           ),
           NavigationDestination(
-            icon: Icon(Icons.explore_outlined),
-            selectedIcon: Icon(Icons.explore, color: AppColors.gold),
-            label: 'Discover',
+            icon: Icon(Icons.restaurant_outlined),
+            selectedIcon: Icon(Icons.restaurant),
+            label: 'Order',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.delivery_dining_outlined),
+            selectedIcon: Icon(Icons.delivery_dining),
+            label: 'Delivery',
           ),
           NavigationDestination(
             icon: Icon(Icons.groups_outlined),
-            selectedIcon: Icon(Icons.groups, color: AppColors.gold),
+            selectedIcon: Icon(Icons.groups),
             label: 'Community',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person, color: AppColors.gold),
+            selectedIcon: Icon(Icons.person),
             label: 'Profile',
           ),
         ],

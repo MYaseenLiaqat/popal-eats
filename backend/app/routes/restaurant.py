@@ -1,16 +1,23 @@
 """Restaurant CRUD with RBAC, approval workflow, and owner dashboard."""
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+import uuid
+from pathlib import Path
+
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy.orm import Session
 
+from app.config import MAX_UPLOAD_MB, UPLOAD_DIR
+from app.core.content_constants import CONTENT_IMAGE_EXTENSIONS
 from app.core.dependencies import get_current_user, get_optional_current_user
-from app.core.rbac import promote_to_restaurant_owner
-from app.core.roles import ADMIN, CUSTOMER, RESTAURANT_OWNER, normalize_role
+from app.core.rbac import promote_to_restaurant_owner, require_restaurant
+from app.core.roles import ADMIN, CUSTOMER, RESTAURANT, is_restaurant_role, normalize_role
 from app.core.permissions import assert_restaurant_owner, get_restaurant_or_404
 from app.core.restaurant_constants import APPROVED, PENDING
 from app.database import get_db
+from app.models.post import Post
 from app.models.restaurant import Restaurant
 from app.models.user import User
+from app.schemas.content import PostListResponse, PostResponse
 from app.schemas.pagination import PaginatedResponse
 from app.schemas.restaurant import (
     RestaurantCreate,
@@ -22,6 +29,10 @@ from app.services.restaurant_dashboard_service import build_restaurant_dashboard
 from app.utils.pagination import apply_sort, build_paginated_response, paginate_query
 
 router = APIRouter(prefix="/restaurants", tags=["restaurants"])
+
+
+def _public_restaurant_url(relative_path: str) -> str:
+    return f"/uploads/{relative_path.replace(chr(92), '/')}"
 
 
 def _can_view_restaurant(restaurant: Restaurant, user: User | None) -> bool:
@@ -47,7 +58,7 @@ def create_restaurant(
     current_user: User = Depends(get_current_user),
 ):
     role = normalize_role(current_user.role)
-    if role not in (ADMIN, RESTAURANT_OWNER, CUSTOMER):
+    if role not in (ADMIN, CUSTOMER) and not is_restaurant_role(current_user.role):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only customers, restaurant owners, or admins can create restaurants",
@@ -73,7 +84,7 @@ def list_my_restaurants(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_restaurant),
 ):
     query = (
         db.query(Restaurant)
@@ -95,7 +106,10 @@ def list_restaurants(
     sort: str | None = Query(None, description="asc or desc by average_rating"),
     db: Session = Depends(get_db),
 ):
-    query = db.query(Restaurant).filter(Restaurant.approval_status == APPROVED)
+    query = db.query(Restaurant).filter(
+        Restaurant.approval_status == APPROVED,
+        (Restaurant.source.is_(None)) | (Restaurant.source != "home_chef"),
+    )
     if search:
         pattern = f"%{search}%"
         query = query.filter(
@@ -135,11 +149,91 @@ def get_restaurant(
 def get_restaurant_dashboard(
     restaurant_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_restaurant),
 ):
     restaurant = get_restaurant_or_404(db, restaurant_id)
     assert_restaurant_owner(restaurant, current_user)
     return build_restaurant_dashboard(db, restaurant)
+
+
+@router.get(
+    "/{restaurant_id}/analytics",
+    response_model=RestaurantDashboardResponse,
+    summary="Owner analytics (same metrics as dashboard)",
+)
+def get_restaurant_analytics(
+    restaurant_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_restaurant),
+):
+    restaurant = get_restaurant_or_404(db, restaurant_id)
+    assert_restaurant_owner(restaurant, current_user)
+    return build_restaurant_dashboard(db, restaurant)
+
+
+@router.get(
+    "/{restaurant_id}/posts",
+    response_model=PostListResponse,
+    summary="List restaurant content posts (owner only)",
+)
+def list_restaurant_posts(
+    restaurant_id: int,
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_restaurant),
+):
+    restaurant = get_restaurant_or_404(db, restaurant_id)
+    assert_restaurant_owner(restaurant, current_user)
+    query = (
+        db.query(Post)
+        .filter(Post.restaurant_id == restaurant_id)
+        .order_by(Post.created_at.desc())
+    )
+    items, total = paginate_query(query, page=page, limit=limit)
+    return PostListResponse(
+        items=[PostResponse.model_validate(p) for p in items],
+        page=page,
+        limit=limit,
+        total_count=total,
+    )
+
+
+@router.post(
+    "/{restaurant_id}/image",
+    response_model=RestaurantResponse,
+    summary="Upload restaurant logo or cover image",
+)
+async def upload_restaurant_image(
+    restaurant_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_restaurant),
+):
+    restaurant = get_restaurant_or_404(db, restaurant_id)
+    assert_restaurant_owner(restaurant, current_user)
+
+    suffix = Path(file.filename or "").suffix.lower()
+    if suffix not in CONTENT_IMAGE_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Allowed types: {', '.join(sorted(CONTENT_IMAGE_EXTENSIONS))}",
+        )
+
+    content = await file.read()
+    if len(content) > MAX_UPLOAD_MB * 1024 * 1024:
+        raise HTTPException(status_code=400, detail=f"Max {MAX_UPLOAD_MB}MB")
+
+    image_dir = UPLOAD_DIR / "restaurants"
+    image_dir.mkdir(parents=True, exist_ok=True)
+    filename = f"{restaurant_id}_{uuid.uuid4().hex}{suffix}"
+    dest = image_dir / filename
+    dest.write_bytes(content)
+
+    restaurant.image = _public_restaurant_url(f"restaurants/{filename}")
+    db.commit()
+    db.refresh(restaurant)
+    return restaurant
 
 
 @router.put("/{restaurant_id}", response_model=RestaurantResponse, summary="Update (owner/admin)")
@@ -147,7 +241,7 @@ def update_restaurant(
     restaurant_id: int,
     body: RestaurantUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_restaurant),
 ):
     restaurant = get_restaurant_or_404(db, restaurant_id)
     assert_restaurant_owner(restaurant, current_user)
@@ -164,7 +258,7 @@ def update_restaurant(
 def delete_restaurant(
     restaurant_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_restaurant),
 ):
     restaurant = get_restaurant_or_404(db, restaurant_id)
     assert_restaurant_owner(restaurant, current_user)

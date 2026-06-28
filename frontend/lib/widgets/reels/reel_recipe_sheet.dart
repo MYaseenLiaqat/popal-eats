@@ -23,7 +23,7 @@ void showReelRecipeSheet(BuildContext context, Reel reel) {
         children: [
           Text(
             reel.title,
-            style: Theme.of(ctx).textTheme.titleLarge?.copyWith(color: AppColors.gold),
+            style: Theme.of(ctx).textTheme.titleLarge?.copyWith(color: AppColors.accent),
           ),
           const SizedBox(height: 4),
           Text(reel.creatorName, style: Theme.of(ctx).textTheme.bodyMedium),
@@ -55,7 +55,7 @@ void showReelRecipeSheet(BuildContext context, Reel reel) {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('• ', style: TextStyle(color: AppColors.green)),
+                    const Text('• ', style: TextStyle(color: AppColors.accent)),
                     Expanded(child: Text(item)),
                   ],
                 ),

@@ -114,7 +114,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
         title: Text(session?.name ?? 'Group'),
       ),
       body: RefreshIndicator(
-        color: AppColors.gold,
+        color: AppColors.accent,
         onRefresh: () => _loadAll(force: true),
         child: _buildBody(provider, session),
       ),
@@ -123,7 +123,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
 
   Widget _buildBody(GroupProvider provider, GroupSession? session) {
     if (provider.loadingDetail && session == null) {
-      return const Center(child: CircularProgressIndicator(color: AppColors.gold));
+      return const Center(child: CircularProgressIndicator(color: AppColors.accent));
     }
 
     if (provider.detailError != null && session == null) {
@@ -179,7 +179,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
               Text(
                 DateDisplay.formatRelativeExpiry(session.expiresAt),
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.green,
+                      color: AppColors.accent,
                       fontWeight: FontWeight.w600,
                     ),
               ),
@@ -217,7 +217,7 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
           icon: Icons.person_add_alt_1_outlined,
           title: 'Invite Friends',
           subtitle: 'Send invitations to your friends list',
-          iconColor: AppColors.green,
+          iconColor: AppColors.accent,
           onTap: () => Navigator.push(
             context,
             MaterialPageRoute(
@@ -229,14 +229,14 @@ class _GroupDetailScreenState extends State<GroupDetailScreen> {
           icon: Icons.restaurant_menu,
           title: 'View Recommendations',
           subtitle: 'See dishes ranked for your group',
-          iconColor: AppColors.gold,
+          iconColor: AppColors.accent,
           onTap: () => _openRecommendations(session),
         ),
         ProfileActionCard(
           icon: Icons.how_to_vote_outlined,
           title: 'Group Decision',
           subtitle: 'Consensus status and agreed pick',
-          iconColor: AppColors.green,
+          iconColor: AppColors.accent,
           onTap: () => Navigator.push(
             context,
             MaterialPageRoute(

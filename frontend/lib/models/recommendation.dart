@@ -1,5 +1,25 @@
 import 'json_parse.dart';
 
+/// Per-signal contribution from `V2SignalContribution`.
+class RecommendationContribution {
+  const RecommendationContribution({
+    required this.signal,
+    required this.label,
+    required this.points,
+  });
+
+  final String signal;
+  final String label;
+  final double points;
+
+  factory RecommendationContribution.fromJson(Map<String, dynamic> json) =>
+      RecommendationContribution(
+        signal: parseString(json['signal']),
+        label: parseString(json['label']),
+        points: parseDoubleOrNull(json['points']) ?? 0,
+      );
+}
+
 /// Component scores from `V2ScoreBreakdown`.
 class RecommendationScoreBreakdown {
   const RecommendationScoreBreakdown({
@@ -52,6 +72,9 @@ class Recommendation {
     this.signalsUsed = const [],
     this.strategy,
     this.engineVersion,
+    this.confidencePercent,
+    this.explanationBullets = const [],
+    this.contributions = const [],
   });
 
   final int dishId;
@@ -65,6 +88,9 @@ class Recommendation {
   final List<String> signalsUsed;
   final String? strategy;
   final String? engineVersion;
+  final int? confidencePercent;
+  final List<String> explanationBullets;
+  final List<RecommendationContribution> contributions;
 
   factory Recommendation.fromJson(Map<String, dynamic> json) => Recommendation(
         dishId: parseInt(json['dish_id'], field: 'dish_id'),
@@ -81,6 +107,16 @@ class Recommendation {
             : null,
         signalsUsed: json['signals_used'] is List
             ? (json['signals_used'] as List).map((e) => e.toString()).toList()
+            : const [],
+        confidencePercent: parseIntOrNull(json['confidence_percent']),
+        explanationBullets: json['explanation_bullets'] is List
+            ? (json['explanation_bullets'] as List).map((e) => e.toString()).toList()
+            : const [],
+        contributions: json['contributions'] is List
+            ? (json['contributions'] as List)
+                .whereType<Map<String, dynamic>>()
+                .map(RecommendationContribution.fromJson)
+                .toList()
             : const [],
         strategy: json['strategy']?.toString(),
         engineVersion: json['engine_version']?.toString(),

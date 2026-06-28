@@ -11,6 +11,18 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 logger = logging.getLogger(__name__)
 
 
+def _sanitize_validation_errors(errors: list) -> list:
+    """Make Pydantic error payloads JSON-serializable."""
+    sanitized = []
+    for err in errors:
+        item = dict(err)
+        ctx = item.get("ctx")
+        if isinstance(ctx, dict):
+            item["ctx"] = {key: str(value) for key, value in ctx.items()}
+        sanitized.append(item)
+    return sanitized
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(StarletteHTTPException)
     async def http_exception_handler(request: Request, exc: StarletteHTTPException):
@@ -30,7 +42,7 @@ def register_exception_handlers(app: FastAPI) -> None:
             content={
                 "success": False,
                 "error": "Validation error",
-                "details": exc.errors(),
+                "details": _sanitize_validation_errors(exc.errors()),
                 "path": str(request.url.path),
             },
         )

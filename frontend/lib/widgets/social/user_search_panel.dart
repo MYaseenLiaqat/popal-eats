@@ -118,7 +118,7 @@ class _UserSearchPanelState extends State<UserSearchPanel> {
       return Text(
         'Friends',
         style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: AppColors.green,
+              color: AppColors.accent,
               fontWeight: FontWeight.w600,
             ),
       );
@@ -130,8 +130,8 @@ class _UserSearchPanelState extends State<UserSearchPanel> {
     return FilledButton(
       onPressed: friends.actionLoading ? null : () => _sendRequest(user),
       style: FilledButton.styleFrom(
-        backgroundColor: AppColors.gold,
-        foregroundColor: const Color(0xFF1A1400),
+        backgroundColor: AppColors.accent,
+        foregroundColor: AppColors.onAccent,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       ),
       child: const Text('Add'),
@@ -149,7 +149,7 @@ class _UserSearchPanelState extends State<UserSearchPanel> {
 
     if (_loading) {
       return const Center(
-        child: CircularProgressIndicator(color: AppColors.gold),
+        child: CircularProgressIndicator(color: AppColors.accent),
       );
     }
 
@@ -215,7 +215,7 @@ class _UserSearchPanelState extends State<UserSearchPanel> {
               autofocus: widget.autofocus,
               decoration: InputDecoration(
                 hintText: 'Search by name or username',
-                prefixIcon: const Icon(Icons.search, color: AppColors.gold),
+                prefixIcon: const Icon(Icons.search, color: AppColors.accent),
                 suffixIcon: _query.isNotEmpty
                     ? IconButton(
                         icon: const Icon(Icons.close, size: 20),

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../data/allergy_assets.dart';
+import '../data/allergy_catalog.dart';
+import '../data/cuisine_catalog.dart';
 import '../models/onboarding_option.dart';
 import '../providers/onboarding_provider.dart';
 import '../theme/app_colors.dart';
-import '../widgets/onboarding/allergy_choice_chip.dart';
-import '../widgets/onboarding/cuisine_thumbnail_tile.dart';
+import '../widgets/onboarding/cuisine_preference_card.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 
 class PreferenceOnboardingScreen extends StatefulWidget {
@@ -18,10 +20,8 @@ class PreferenceOnboardingScreen extends StatefulWidget {
 class _PreferenceOnboardingScreenState extends State<PreferenceOnboardingScreen> {
   final PageController _pageController = PageController();
   int _step = 0;
-  final Set<String> _selectedInterests = {};
+  final Set<String> _selectedCuisines = {};
   final Set<String> _selectedAllergies = {};
-
-  static const _maxInterests = 10;
 
   @override
   void initState() {
@@ -37,41 +37,48 @@ class _PreferenceOnboardingScreenState extends State<PreferenceOnboardingScreen>
     super.dispose();
   }
 
-  IconData _iconForInterest(String key) {
-    const icons = {
-      'burger': Icons.lunch_dining,
-      'pizza': Icons.local_pizza,
-      'biryani': Icons.rice_bowl,
-      'bbq': Icons.outdoor_grill,
-      'chinese': Icons.ramen_dining,
-      'italian': Icons.dinner_dining,
-      'shawarma': Icons.kebab_dining,
-      'desserts': Icons.cake_outlined,
-      'healthy': Icons.eco_outlined,
-      'cafe': Icons.local_cafe,
-      'sushi': Icons.set_meal,
-      'pakistani': Icons.restaurant,
-      'fast_food': Icons.fastfood,
-      'seafood': Icons.set_meal_outlined,
-      'sandwiches': Icons.breakfast_dining,
-    };
-    return icons[key] ?? Icons.restaurant_menu;
+  List<OnboardingOption> _allergyOptions(List<OnboardingOption> options) {
+    return AllergyCatalog.optionsFromApi(options);
   }
 
-  IconData _iconForAllergy(String key) {
-    const icons = {
-      'peanuts': Icons.warning_amber_rounded,
-      'tree_nuts': Icons.park_outlined,
-      'shellfish': Icons.water,
-      'fish': Icons.phishing,
-      'eggs': Icons.egg_alt_outlined,
-      'milk': Icons.local_drink_outlined,
-      'dairy': Icons.icecream_outlined,
-      'gluten': Icons.grain,
-      'wheat': Icons.grass,
-      'nuts': Icons.circle_outlined,
-    };
-    return icons[key] ?? Icons.health_and_safety_outlined;
+  Widget _buildAllergyGrid(List<OnboardingOption> options) {
+    final columns = _gridColumns(context);
+    return GridView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: columns,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: columns >= 4 ? 0.82 : 0.88,
+      ),
+      itemCount: options.length,
+      itemBuilder: (context, index) {
+        final option = options[index];
+        final selected = _selectedAllergies.contains(option.key);
+        return CuisinePreferenceCard(
+          label: option.displayName,
+          imageAsset: AllergyAssets.pathFor(option.key),
+          imageAlignment: AllergyAssets.alignmentFor(option.key),
+          selected: selected,
+          onTap: () {
+            setState(() {
+              if (_selectedAllergies.contains(option.key)) {
+                _selectedAllergies.remove(option.key);
+              } else {
+                _selectedAllergies.add(option.key);
+              }
+            });
+          },
+        );
+      },
+    );
+  }
+
+  int _gridColumns(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+    if (width >= 900) return 4;
+    if (width >= 600) return 3;
+    return 2;
   }
 
   Future<void> _skip() async {
@@ -86,7 +93,7 @@ class _PreferenceOnboardingScreenState extends State<PreferenceOnboardingScreen>
   Future<void> _finish() async {
     final provider = context.read<OnboardingProvider>();
     final ok = await provider.complete(
-      favoriteCuisines: _selectedInterests.toList(),
+      favoriteCuisines: _selectedCuisines.toList(),
       allergies: _selectedAllergies.toList(),
     );
     if (!mounted) return;
@@ -101,9 +108,21 @@ class _PreferenceOnboardingScreenState extends State<PreferenceOnboardingScreen>
     );
   }
 
+  void _goBack() {
+    if (_step <= 0) return;
+    setState(() => _step = 0);
+    _pageController.animateToPage(
+      0,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
   void _nextStep() {
     if (_step == 0) {
-      _pageController.nextPage(
+      setState(() => _step = 1);
+      _pageController.animateToPage(
+        1,
         duration: const Duration(milliseconds: 350),
         curve: Curves.easeOutCubic,
       );
@@ -123,7 +142,7 @@ class _PreferenceOnboardingScreenState extends State<PreferenceOnboardingScreen>
             height: 5,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(99),
-              gradient: active ? AppColors.goldGradient : null,
+              gradient: active ? AppColors.accentGradient : null,
               color: active ? null : AppColors.surfaceLight,
             ),
           ),
@@ -132,55 +151,61 @@ class _PreferenceOnboardingScreenState extends State<PreferenceOnboardingScreen>
     );
   }
 
-  Widget _buildInterestsGrid({
-    required List<OnboardingOption> options,
-    required Set<String> selected,
-    required void Function(String key) onToggle,
-    required IconData Function(String key) iconFor,
-  }) {
-    return GridView.builder(
-      padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 4,
-        crossAxisSpacing: 4,
-        mainAxisSpacing: 2,
-        childAspectRatio: 0.72,
-      ),
-      itemCount: options.length,
-      itemBuilder: (context, index) {
-        final option = options[index];
-        return CuisineThumbnailTile(
-          label: option.displayName,
-          icon: iconFor(option.key),
-          selected: selected.contains(option.key),
-          accent: AppColors.gold,
-          onTap: () => onToggle(option.key),
-        );
-      },
+  Widget _buildSelectionProgress(int selected, int max, String noun) {
+    final fraction = max == 0 ? 0.0 : selected / max;
+    return Column(
+      children: [
+        Text(
+          '$selected / $max $noun selected',
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppColors.textSecondary,
+              ),
+        ),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(99),
+          child: LinearProgressIndicator(
+            value: fraction,
+            minHeight: 4,
+            backgroundColor: AppColors.surfaceLight,
+            color: AppColors.accent,
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _buildAllergyChips({
-    required List<OnboardingOption> options,
-    required Set<String> selected,
-    required void Function(String key) onToggle,
-  }) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-      children: [
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: options.map((option) {
-            final isSelected = selected.contains(option.key);
-            return AllergyChoiceChip(
-              label: option.displayName,
-              selected: isSelected,
-              onSelected: (_) => onToggle(option.key),
-            );
-          }).toList(),
-        ),
-      ],
+  Widget _buildCuisineGrid() {
+    final columns = _gridColumns(context);
+    return GridView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: columns,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: columns >= 4 ? 0.82 : 0.88,
+      ),
+      itemCount: CuisineCatalog.cuisines.length,
+      itemBuilder: (context, index) {
+        final cuisine = CuisineCatalog.cuisines[index];
+        final selected = _selectedCuisines.contains(cuisine.key);
+        return CuisinePreferenceCard(
+          label: cuisine.name,
+          imageAsset: cuisine.imageAsset,
+          description: cuisine.description,
+          selected: selected,
+          onTap: () {
+            setState(() {
+              if (_selectedCuisines.contains(cuisine.key)) {
+                _selectedCuisines.remove(cuisine.key);
+              } else if (_selectedCuisines.length < CuisineCatalog.maxSelections) {
+                _selectedCuisines.add(cuisine.key);
+              }
+            });
+          },
+        );
+      },
     );
   }
 
@@ -194,7 +219,7 @@ class _PreferenceOnboardingScreenState extends State<PreferenceOnboardingScreen>
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFF15151C), AppColors.background],
+            colors: [AppColors.surface, AppColors.background],
           ),
         ),
         child: SafeArea(
@@ -202,18 +227,13 @@ class _PreferenceOnboardingScreenState extends State<PreferenceOnboardingScreen>
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(8, 8, 16, 0),
+                padding: const EdgeInsets.fromLTRB(4, 8, 8, 0),
                 child: Row(
                   children: [
                     if (_step > 0)
                       IconButton(
-                        onPressed: () {
-                          _pageController.previousPage(
-                            duration: const Duration(milliseconds: 300),
-                            curve: Curves.easeOutCubic,
-                          );
-                        },
-                        icon: const Icon(Icons.arrow_back),
+                        onPressed: _goBack,
+                        icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
                       )
                     else
                       const SizedBox(width: 48),
@@ -221,7 +241,9 @@ class _PreferenceOnboardingScreenState extends State<PreferenceOnboardingScreen>
                       child: Text(
                         'Personalize your feed',
                         textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.titleMedium,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
                       ),
                     ),
                     TextButton(
@@ -236,7 +258,7 @@ class _PreferenceOnboardingScreenState extends State<PreferenceOnboardingScreen>
                 child: _buildProgress(),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
                 child: AnimatedSwitcher(
                   duration: const Duration(milliseconds: 250),
                   child: Text(
@@ -256,17 +278,19 @@ class _PreferenceOnboardingScreenState extends State<PreferenceOnboardingScreen>
                   duration: const Duration(milliseconds: 250),
                   child: Text(
                     _step == 0
-                        ? 'Pick up to $_maxInterests cuisines. We\'ll tailor recommendations for you.'
+                        ? 'Pick up to ${CuisineCatalog.maxSelections} cuisines. We\'ll tailor recommendations for you.'
                         : 'Optional — tap any allergens to exclude risky dishes.',
                     key: ValueKey('sub_$_step'),
-                    style: Theme.of(context).textTheme.bodyMedium,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
                   ),
                 ),
               ),
               Expanded(
                 child: provider.optionsLoading && provider.options == null
                     ? const Center(
-                        child: CircularProgressIndicator(color: AppColors.gold),
+                        child: CircularProgressIndicator(color: AppColors.accent),
                       )
                     : provider.options == null
                         ? Column(
@@ -288,32 +312,9 @@ class _PreferenceOnboardingScreenState extends State<PreferenceOnboardingScreen>
                             physics: const NeverScrollableScrollPhysics(),
                             onPageChanged: (index) => setState(() => _step = index),
                             children: [
-                              _buildInterestsGrid(
-                                options: provider.options!.foodInterests,
-                                selected: _selectedInterests,
-                                iconFor: _iconForInterest,
-                                onToggle: (key) {
-                                  setState(() {
-                                    if (_selectedInterests.contains(key)) {
-                                      _selectedInterests.remove(key);
-                                    } else if (_selectedInterests.length < _maxInterests) {
-                                      _selectedInterests.add(key);
-                                    }
-                                  });
-                                },
-                              ),
-                              _buildAllergyChips(
-                                options: provider.options!.allergies,
-                                selected: _selectedAllergies,
-                                onToggle: (key) {
-                                  setState(() {
-                                    if (_selectedAllergies.contains(key)) {
-                                      _selectedAllergies.remove(key);
-                                    } else {
-                                      _selectedAllergies.add(key);
-                                    }
-                                  });
-                                },
+                              _buildCuisineGrid(),
+                              _buildAllergyGrid(
+                                _allergyOptions(provider.options!.allergies),
                               ),
                             ],
                           ),
@@ -324,16 +325,24 @@ class _PreferenceOnboardingScreenState extends State<PreferenceOnboardingScreen>
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     if (_step == 0)
-                      Text(
-                        '${_selectedInterests.length} / $_maxInterests selected',
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    if (_step == 1)
+                      _buildSelectionProgress(
+                        _selectedCuisines.length,
+                        CuisineCatalog.maxSelections,
+                        'cuisines',
+                      )
+                    else if (provider.options != null)
+                      _buildSelectionProgress(
+                        _selectedAllergies.length,
+                        AllergyCatalog.count,
+                        'allergies',
+                      )
+                    else
                       Text(
                         '${_selectedAllergies.length} allerg${_selectedAllergies.length == 1 ? 'y' : 'ies'} selected',
                         textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodySmall,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppColors.textSecondary,
+                            ),
                       ),
                     const SizedBox(height: 10),
                     GoldActionButton(

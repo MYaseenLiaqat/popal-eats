@@ -70,7 +70,7 @@ class _InviteFriendsToGroupScreenState extends State<InviteFriendsToGroupScreen>
     return Scaffold(
       appBar: AppBar(title: const Text('Invite Friends')),
       body: RefreshIndicator(
-        color: AppColors.gold,
+        color: AppColors.accent,
         onRefresh: () async {
           await friends.fetchFriends(force: true);
           await groups.fetchInvitations(force: true);
@@ -82,7 +82,7 @@ class _InviteFriendsToGroupScreenState extends State<InviteFriendsToGroupScreen>
 
   Widget _buildBody(FriendsProvider friends, GroupProvider groups) {
     if (friends.loadingFriends && friends.friends.isEmpty) {
-      return const Center(child: CircularProgressIndicator(color: AppColors.gold));
+      return const Center(child: CircularProgressIndicator(color: AppColors.accent));
     }
 
     if (friends.friendsError != null && friends.friends.isEmpty) {
@@ -138,7 +138,7 @@ class _InviteFriendsToGroupScreenState extends State<InviteFriendsToGroupScreen>
         if (isMember) {
           trailing = Text(
             'Member',
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(color: AppColors.green),
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(color: AppColors.accent),
           );
         } else if (pending) {
           trailing = const PendingBadge();
@@ -146,8 +146,8 @@ class _InviteFriendsToGroupScreenState extends State<InviteFriendsToGroupScreen>
           trailing = FilledButton(
             onPressed: groups.actionLoading ? null : () => _invite(friend.id, friend.fullName),
             style: FilledButton.styleFrom(
-              backgroundColor: AppColors.gold,
-              foregroundColor: const Color(0xFF1A1400),
+              backgroundColor: AppColors.accent,
+              foregroundColor: AppColors.onAccent,
             ),
             child: const Text('Invite'),
           );

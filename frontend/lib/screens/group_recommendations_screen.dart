@@ -103,7 +103,7 @@ class _GroupRecommendationsScreenState extends State<GroupRecommendationsScreen>
         ],
       ),
       body: RefreshIndicator(
-        color: AppColors.gold,
+        color: AppColors.accent,
         onRefresh: () => _refresh(regenerate: true),
         child: _buildBody(provider, result, decision),
       ),
@@ -112,7 +112,7 @@ class _GroupRecommendationsScreenState extends State<GroupRecommendationsScreen>
 
   Widget _buildBody(GroupProvider provider, result, decision) {
     if (provider.loadingRecommendations && result == null) {
-      return const Center(child: CircularProgressIndicator(color: AppColors.gold));
+      return const Center(child: CircularProgressIndicator(color: AppColors.accent));
     }
 
     if (provider.recommendationsError != null && result == null) {
@@ -177,16 +177,16 @@ class _GroupRecommendationsScreenState extends State<GroupRecommendationsScreen>
         const SizedBox(height: 16),
         ModernCard(
           gradient: AppColors.headerGradient,
-          borderColor: AppColors.gold.withValues(alpha: 0.35),
+          borderColor: AppColors.accent.withValues(alpha: 0.35),
           child: Row(
             children: [
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: AppColors.gold.withValues(alpha: 0.15),
+                  color: AppColors.accent.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.groups, color: AppColors.gold),
+                child: const Icon(Icons.groups, color: AppColors.accent),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -196,7 +196,7 @@ class _GroupRecommendationsScreenState extends State<GroupRecommendationsScreen>
                     Text(
                       'Picks for your group',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: AppColors.gold,
+                            color: AppColors.accent,
                           ),
                     ),
                     Text(
@@ -207,7 +207,7 @@ class _GroupRecommendationsScreenState extends State<GroupRecommendationsScreen>
                       Text(
                         'Based on shared group location',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: AppColors.green,
+                              color: AppColors.accent,
                             ),
                       ),
                   ],

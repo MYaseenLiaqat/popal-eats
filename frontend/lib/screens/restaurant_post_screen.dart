@@ -11,9 +11,16 @@ import '../widgets/ui/app_ui_widgets.dart';
 
 /// Restaurant owner: promotions, new dishes, announcements.
 class RestaurantPostScreen extends StatefulWidget {
-  const RestaurantPostScreen({super.key, this.restaurantId});
+  const RestaurantPostScreen({
+    super.key,
+    this.restaurantId,
+    this.initialSubtype,
+    this.reelMode = false,
+  });
 
   final int? restaurantId;
+  final String? initialSubtype;
+  final bool reelMode;
 
   @override
   State<RestaurantPostScreen> createState() => _RestaurantPostScreenState();
@@ -24,10 +31,11 @@ class _RestaurantPostScreenState extends State<RestaurantPostScreen> {
   final _owner = RestaurantOwnerService();
   final _caption = TextEditingController();
   final _title = TextEditingController();
+  final _videoUrl = TextEditingController();
 
   List<Restaurant> _restaurants = [];
   Restaurant? _selected;
-  RestaurantContentSubtype _subtype = RestaurantContentSubtype.promotion;
+  late RestaurantContentSubtype _subtype;
   PlatformFile? _image;
   bool _loading = true;
   bool _submitting = false;
@@ -35,7 +43,19 @@ class _RestaurantPostScreenState extends State<RestaurantPostScreen> {
   @override
   void initState() {
     super.initState();
+    _subtype = _parseSubtype(widget.initialSubtype);
     _loadRestaurants();
+  }
+
+  RestaurantContentSubtype _parseSubtype(String? value) {
+    switch (value) {
+      case 'new_dish':
+        return RestaurantContentSubtype.newDish;
+      case 'announcement':
+        return RestaurantContentSubtype.announcement;
+      default:
+        return RestaurantContentSubtype.promotion;
+    }
   }
 
   Future<void> _loadRestaurants() async {
@@ -59,6 +79,7 @@ class _RestaurantPostScreenState extends State<RestaurantPostScreen> {
   void dispose() {
     _caption.dispose();
     _title.dispose();
+    _videoUrl.dispose();
     super.dispose();
   }
 
@@ -90,6 +111,9 @@ class _RestaurantPostScreenState extends State<RestaurantPostScreen> {
         caption: _caption.text.trim().isEmpty ? null : _caption.text.trim(),
         restaurantId: _selected!.id,
         restaurantContentSubtype: _subtype,
+        videoUrl: widget.reelMode && _videoUrl.text.trim().isNotEmpty
+            ? _videoUrl.text.trim()
+            : null,
       ).toWriteJson();
 
       var post = await _content.createPost(body);
@@ -118,13 +142,13 @@ class _RestaurantPostScreenState extends State<RestaurantPostScreen> {
   Widget build(BuildContext context) {
     if (_loading) {
       return const Scaffold(
-        body: Center(child: CircularProgressIndicator(color: AppColors.gold)),
+        body: Center(child: CircularProgressIndicator(color: AppColors.accent)),
       );
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Restaurant post'),
+        title: Text(widget.reelMode ? 'Restaurant reel' : 'Restaurant post'),
         actions: [
           TextButton(
             onPressed: _submitting ? null : _submit,
@@ -132,7 +156,7 @@ class _RestaurantPostScreenState extends State<RestaurantPostScreen> {
                 ? const SizedBox(
                     width: 18,
                     height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.gold),
+                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.accent),
                   )
                 : const Text('Post'),
           ),
@@ -181,6 +205,16 @@ class _RestaurantPostScreenState extends State<RestaurantPostScreen> {
               },
             ),
             const SizedBox(height: 12),
+            if (widget.reelMode) ...[
+              TextField(
+                controller: _videoUrl,
+                decoration: const InputDecoration(
+                  labelText: 'Video URL (reel)',
+                  hintText: 'https://…',
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
             TextField(
               controller: _title,
               decoration: const InputDecoration(labelText: 'Headline'),

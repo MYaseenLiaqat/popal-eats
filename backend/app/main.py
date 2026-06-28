@@ -31,6 +31,7 @@ from app.routes.order import checkout_router, restaurant_orders_router, router a
 from app.routes.friends import router as friends_router
 from app.routes.groups import router as groups_router
 from app.routes.preferences import router as preferences_router
+from app.routes.home_chef import router as home_chef_router
 from app.routes.restaurant import router as restaurant_router
 from app.routes.review import router as review_router
 from app.routes.content import router as content_router
@@ -85,19 +86,21 @@ def create_app() -> FastAPI:
 
     application.add_middleware(SlowAPIMiddleware)
     application.add_middleware(RequestLoggingMiddleware)
-    application.add_middleware(
-        CORSMiddleware,
-        allow_origins=settings.cors_origins_list,
-        # Flutter web dev server uses random localhost ports (e.g. :56565).
-        allow_origin_regex=r"http://(localhost|127\.0\.0\.1)(:\d+)?",
-        allow_credentials=True,
-        allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-        allow_headers=["Authorization", "Content-Type"],
-    )
+    cors_kwargs: dict = {
+        "allow_origins": settings.cors_origins_list,
+        "allow_credentials": True,
+        "allow_methods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+        "allow_headers": ["Authorization", "Content-Type"],
+    }
+    if settings.debug:
+        # Flutter web dev server uses random localhost ports (e.g. :53558).
+        cors_kwargs["allow_origin_regex"] = r"https?://(localhost|127\.0\.0\.1)(:\d+)?"
+    application.add_middleware(CORSMiddleware, **cors_kwargs)
 
     application.include_router(auth_router)
     application.include_router(category_router)
     application.include_router(restaurant_router)
+    application.include_router(home_chef_router)
     application.include_router(dish_router)
     application.include_router(review_router)
     application.include_router(recommendations_v2_router)

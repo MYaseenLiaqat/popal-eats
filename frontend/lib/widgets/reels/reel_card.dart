@@ -61,13 +61,13 @@ class ReelCard extends StatelessWidget {
                       color: Colors.black.withValues(alpha: 0.45),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: AppColors.gold.withValues(alpha: 0.5),
+                        color: AppColors.accent.withValues(alpha: 0.5),
                       ),
                     ),
                     child: Text(
                       reel.kindLabel,
                       style: const TextStyle(
-                        color: AppColors.gold,
+                        color: AppColors.accent,
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
@@ -148,9 +148,9 @@ class _PreviewBackdrop extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = switch (kind) {
-      ReelKind.chef => [const Color(0xFF2A2418), const Color(0xFF1A2830)],
-      ReelKind.restaurant => [const Color(0xFF1A2028), const Color(0xFF283018)],
-      ReelKind.recipe => [const Color(0xFF1A2830), const Color(0xFF2A2418)],
+      ReelKind.chef => [AppColors.accentSubtle, AppColors.surface],
+      ReelKind.restaurant => [AppColors.surface, AppColors.accentSubtle],
+      ReelKind.recipe => [AppColors.surface, AppColors.accentSubtle],
     };
 
     final icon = switch (kind) {
@@ -171,7 +171,7 @@ class _PreviewBackdrop extends StatelessWidget {
         child: Icon(
           icon,
           size: 88,
-          color: AppColors.gold.withValues(alpha: 0.35),
+          color: AppColors.accent.withValues(alpha: 0.35),
         ),
       ),
     );

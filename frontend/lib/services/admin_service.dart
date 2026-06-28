@@ -67,4 +67,48 @@ class AdminService {
     _api.throwIfError(r);
     return _api.decodeJson(r);
   }
+
+  Future<List<dynamic>> listPendingBusinessAccounts({String? role}) async {
+    final r = await _api.get('/admin/business-accounts/pending', query: {
+      if (role != null) 'role': role,
+    });
+    _api.throwIfError(r);
+    return _api.decodeJson(r) as List<dynamic>;
+  }
+
+  Future<Map<String, dynamic>> approveBusinessAccount(int userId) async {
+    final r = await _api.post('/admin/business-accounts/$userId/approve');
+    _api.throwIfError(r);
+    return _api.decodeJson(r);
+  }
+
+  Future<Map<String, dynamic>> rejectBusinessAccount(
+    int userId, {
+    String? reason,
+  }) async {
+    final r = await _api.post(
+      '/admin/business-accounts/$userId/reject',
+      body: {if (reason != null) 'reason': reason},
+    );
+    _api.throwIfError(r);
+    return _api.decodeJson(r);
+  }
+
+  Future<Map<String, dynamic>> suspendBusinessAccount(
+    int userId, {
+    String? reason,
+  }) async {
+    final r = await _api.post(
+      '/admin/business-accounts/$userId/suspend',
+      body: {if (reason != null) 'reason': reason},
+    );
+    _api.throwIfError(r);
+    return _api.decodeJson(r);
+  }
+
+  Future<Map<String, dynamic>> reactivateBusinessAccount(int userId) async {
+    final r = await _api.post('/admin/business-accounts/$userId/reactivate');
+    _api.throwIfError(r);
+    return _api.decodeJson(r);
+  }
 }

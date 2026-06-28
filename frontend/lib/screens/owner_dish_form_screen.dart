@@ -189,7 +189,7 @@ class _OwnerDishFormScreenState extends State<OwnerDishFormScreen> {
         title: Text(widget.isEditing ? 'Edit dish' : 'New dish'),
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.gold))
+          ? const Center(child: CircularProgressIndicator(color: AppColors.accent))
           : ListView(
               padding: const EdgeInsets.all(AppColors.screenPadding),
               children: [

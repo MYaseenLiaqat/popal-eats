@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../models/recommendation.dart';
-import '../services/recommendation_service.dart';
+import '../providers/recommendation_provider.dart';
 import '../theme/app_colors.dart';
 import '../utils/recommendation_copy.dart';
 import '../widgets/social/notification_hub_button.dart';
@@ -11,53 +12,40 @@ import 'reels_screen.dart';
 
 /// Personalized, trending, and popular dishes.
 class RecommendationsScreen extends StatefulWidget {
-  const RecommendationsScreen({super.key});
+  const RecommendationsScreen({super.key, this.isTabActive = false});
+
+  /// When true, triggers the first recommendation load (lazy — not at app startup).
+  final bool isTabActive;
 
   @override
   State<RecommendationsScreen> createState() => _RecommendationsScreenState();
 }
 
 class _RecommendationsScreenState extends State<RecommendationsScreen> {
-  final _recommendations = RecommendationService();
-
-  List<Recommendation> personalized = [];
-  List<Recommendation> trending = [];
-  List<Recommendation> popular = [];
-  bool loading = true;
-  String? error;
+  bool _activated = false;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    _activateIfNeeded();
   }
 
-  Future<void> _load() async {
-    setState(() {
-      loading = true;
-      error = null;
-    });
-
-    try {
-      final results = await Future.wait([
-        _recommendations.list(),
-        _recommendations.trending(),
-        _recommendations.popular(),
-      ]);
-      if (!mounted) return;
-      setState(() {
-        personalized = results[0];
-        trending = results[1];
-        popular = results[2];
-        loading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        error = RecommendationCopy.friendlyError(e);
-        loading = false;
-      });
+  @override
+  void didUpdateWidget(covariant RecommendationsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.isTabActive && widget.isTabActive) {
+      _activateIfNeeded();
     }
+  }
+
+  void _activateIfNeeded() {
+    if (!widget.isTabActive || _activated) return;
+    _activated = true;
+    context.read<RecommendationProvider>().fetchAll();
+  }
+
+  Future<void> _refresh() async {
+    await context.read<RecommendationProvider>().fetchAll(force: true);
   }
 
   void _openDish(Recommendation rec) {
@@ -70,10 +58,20 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
   }
 
   int _matchPercent(Recommendation rec) {
+    if (rec.confidencePercent != null) {
+      return rec.confidencePercent!.clamp(0, 100);
+    }
     if (rec.score <= 10) {
       return (rec.score * 10).round().clamp(0, 100);
     }
     return rec.score.round().clamp(0, 100);
+  }
+
+  List<String> _whyReasons(Recommendation rec) {
+    if (rec.explanationBullets.isNotEmpty) {
+      return rec.explanationBullets.take(5).toList();
+    }
+    return RecommendationCopy.humanReasons(rec);
   }
 
   Widget _buildSection({
@@ -82,13 +80,18 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
     required IconData icon,
     required Color accent,
     required List<Recommendation> items,
+    required bool loading,
+    String? error,
+    VoidCallback? onRetry,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SectionHeader(
           title: title,
-          subtitle: items.isEmpty ? 'No results yet' : subtitle,
+          subtitle: loading
+              ? 'Loading…'
+              : (items.isEmpty ? 'No results yet' : subtitle),
           trailing: items.isNotEmpty
               ? Container(
                   padding: const EdgeInsets.all(8),
@@ -100,7 +103,27 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                 )
               : null,
         ),
-        if (items.isEmpty)
+        if (loading)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Center(
+              child: CircularProgressIndicator(color: AppColors.accent),
+            ),
+          )
+        else if (error != null && items.isEmpty)
+          ModernCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(error, style: Theme.of(context).textTheme.bodyMedium),
+                if (onRetry != null) ...[
+                  const SizedBox(height: 8),
+                  TextButton(onPressed: onRetry, child: const Text('Retry')),
+                ],
+              ],
+            ),
+          )
+        else if (items.isEmpty)
           ModernCard(
             child: Text(
               'Check back later for new picks',
@@ -117,7 +140,7 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
               explanation: rec.explanation,
               calories: rec.calories,
               matchPercent: _matchPercent(rec),
-              whyReasons: RecommendationCopy.humanReasons(rec),
+              whyReasons: _whyReasons(rec),
               onTap: () => _openDish(rec),
             ),
           ),
@@ -128,14 +151,30 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final rec = context.watch<RecommendationProvider>();
+
+    if (!_activated) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Discover'),
+          actions: const [NotificationHubButton()],
+        ),
+        body: const Center(
+          child: CircularProgressIndicator(color: AppColors.accent),
+        ),
+      );
+    }
+
+    final showInitialLoader = rec.isLoading && !rec.hasCache;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Discover'),
         actions: const [NotificationHubButton()],
       ),
-      body: loading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.gold))
-          : error != null
+      body: showInitialLoader
+          ? const Center(child: CircularProgressIndicator(color: AppColors.accent))
+          : rec.allFailed
               ? ListView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   children: [
@@ -147,23 +186,25 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                           EmptyState(
                             icon: Icons.cloud_off_outlined,
                             title: 'Could not load recommendations',
-                            subtitle: RecommendationCopy.friendlyError(error),
+                            subtitle: rec.personalizedError ??
+                                rec.trendingError ??
+                                rec.popularError,
                           ),
-                          TextButton(onPressed: _load, child: const Text('Retry')),
+                          TextButton(onPressed: _refresh, child: const Text('Retry')),
                         ],
                       ),
                     ),
                   ],
                 )
               : RefreshIndicator(
-                  onRefresh: _load,
-                  color: AppColors.gold,
+                  onRefresh: _refresh,
+                  color: AppColors.accent,
                   child: ListView(
                     padding: const EdgeInsets.all(AppColors.screenPadding),
                     children: [
                       ModernCard(
                         gradient: AppColors.headerGradient,
-                        borderColor: AppColors.green.withValues(alpha: 0.4),
+                        borderColor: AppColors.accent.withValues(alpha: 0.4),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -172,13 +213,13 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                                 Container(
                                   padding: const EdgeInsets.all(10),
                                   decoration: BoxDecoration(
-                                    color: AppColors.green
+                                    color: AppColors.accent
                                         .withValues(alpha: 0.15),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: const Icon(
                                     Icons.restaurant_outlined,
-                                    color: AppColors.green,
+                                    color: AppColors.accent,
                                     size: 28,
                                   ),
                                 ),
@@ -193,7 +234,7 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                                         style: Theme.of(context)
                                             .textTheme
                                             .titleLarge
-                                            ?.copyWith(color: AppColors.gold),
+                                            ?.copyWith(color: AppColors.accent),
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
@@ -213,24 +254,33 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                       _buildSection(
                         title: 'For You',
                         subtitle:
-                            '${personalized.length} dishes picked for you',
+                            '${rec.personalized.length} dishes picked for you',
                         icon: Icons.favorite_outline,
-                        accent: AppColors.gold,
-                        items: personalized,
+                        accent: AppColors.accent,
+                        items: rec.personalized,
+                        loading: rec.loadingPersonalized,
+                        error: rec.personalizedError,
+                        onRetry: () => rec.refreshPersonalized(),
                       ),
                       _buildSection(
                         title: 'Trending',
-                        subtitle: '${trending.length} rising picks',
+                        subtitle: '${rec.trending.length} rising picks',
                         icon: Icons.trending_up,
-                        accent: AppColors.green,
-                        items: trending,
+                        accent: AppColors.accent,
+                        items: rec.trending,
+                        loading: rec.loadingTrending,
+                        error: rec.trendingError,
+                        onRetry: () => rec.refreshTrending(),
                       ),
                       _buildSection(
                         title: 'Popular',
-                        subtitle: '${popular.length} crowd favorites',
+                        subtitle: '${rec.popular.length} crowd favorites',
                         icon: Icons.local_fire_department_outlined,
-                        accent: AppColors.gold,
-                        items: popular,
+                        accent: AppColors.accent,
+                        items: rec.popular,
+                        loading: rec.loadingPopular,
+                        error: rec.popularError,
+                        onRetry: () => rec.refreshPopular(),
                       ),
                       const SectionHeader(
                         title: 'Recipe & chef reels',
@@ -241,18 +291,18 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                           context,
                           MaterialPageRoute(builder: (_) => const ReelsScreen()),
                         ),
-                        borderColor: AppColors.gold.withValues(alpha: 0.35),
+                        borderColor: AppColors.accent.withValues(alpha: 0.35),
                         child: Row(
                           children: [
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: AppColors.gold.withValues(alpha: 0.15),
+                                color: AppColors.accent.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: const Icon(
                                 Icons.play_circle_outline,
-                                color: AppColors.gold,
+                                color: AppColors.accent,
                                 size: 28,
                               ),
                             ),

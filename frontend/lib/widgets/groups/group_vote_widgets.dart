@@ -26,7 +26,7 @@ class ConsensusBanner extends StatelessWidget {
             SizedBox(
               width: 20,
               height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.gold),
+              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.accent),
             ),
             SizedBox(width: 12),
             Text('Loading group decision…'),
@@ -77,7 +77,7 @@ class ConsensusBanner extends StatelessWidget {
                         decision!.dishName!,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontWeight: FontWeight.w600,
-                              color: AppColors.gold,
+                              color: AppColors.accent,
                             ),
                       ),
                       if (decision!.restaurantName != null)
@@ -112,10 +112,10 @@ class ConsensusBanner extends StatelessWidget {
       case GroupDecisionStatus.considering:
         return (
           Icons.hourglass_top_outlined,
-          AppColors.gold,
+          AppColors.accent,
           LinearGradient(
             colors: [
-              AppColors.gold.withValues(alpha: 0.12),
+              AppColors.accent.withValues(alpha: 0.12),
               AppColors.surfaceLight.withValues(alpha: 0.4),
             ],
           ),
@@ -123,10 +123,10 @@ class ConsensusBanner extends StatelessWidget {
       case GroupDecisionStatus.agreed:
         return (
           Icons.check_circle_outline,
-          AppColors.green,
+          AppColors.accent,
           LinearGradient(
             colors: [
-              AppColors.green.withValues(alpha: 0.12),
+              AppColors.accent.withValues(alpha: 0.12),
               AppColors.surfaceLight.withValues(alpha: 0.4),
             ],
           ),
@@ -134,10 +134,10 @@ class ConsensusBanner extends StatelessWidget {
       case GroupDecisionStatus.ordered:
         return (
           Icons.shopping_bag_outlined,
-          AppColors.green,
+          AppColors.accent,
           LinearGradient(
             colors: [
-              AppColors.green.withValues(alpha: 0.18),
+              AppColors.accent.withValues(alpha: 0.18),
               AppColors.surfaceLight.withValues(alpha: 0.4),
             ],
           ),
@@ -193,7 +193,7 @@ class VoteControls extends StatelessWidget {
             selected: selectedVote == GroupVoteType.like,
             loading: voting && pendingVote == GroupVoteType.like,
             disabled: !enabled || voting,
-            color: AppColors.green,
+            color: AppColors.accent,
             onTap: () => onVote(GroupVoteType.like),
           ),
         ),
@@ -206,7 +206,7 @@ class VoteControls extends StatelessWidget {
             selected: selectedVote == GroupVoteType.love,
             loading: voting && pendingVote == GroupVoteType.love,
             disabled: !enabled || voting,
-            color: AppColors.gold,
+            color: AppColors.accent,
             onTap: () => onVote(GroupVoteType.love),
           ),
         ),
@@ -314,7 +314,7 @@ class VoteSummarySection extends StatelessWidget {
             SizedBox(
               width: 16,
               height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.gold),
+              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.accent),
             ),
             SizedBox(width: 8),
             Text('Loading votes…', style: TextStyle(fontSize: 13)),
@@ -337,9 +337,9 @@ class VoteSummarySection extends StatelessWidget {
           const SizedBox(height: 10),
           Row(
             children: [
-              _countChip(Icons.thumb_up_outlined, 'Likes', summary!.likes, AppColors.green),
+              _countChip(Icons.thumb_up_outlined, 'Likes', summary!.likes, AppColors.accent),
               const SizedBox(width: 8),
-              _countChip(Icons.favorite_outline, 'Loves', summary!.loves, AppColors.gold),
+              _countChip(Icons.favorite_outline, 'Loves', summary!.loves, AppColors.accent),
               const SizedBox(width: 8),
               _countChip(Icons.thumb_down_outlined, 'Dislikes', summary!.dislikes, Colors.redAccent),
             ],
@@ -352,7 +352,7 @@ class VoteSummarySection extends StatelessWidget {
                   context,
                   label: 'Group agreement',
                   percent: summary!.consensusPercent,
-                  color: AppColors.green,
+                  color: AppColors.accent,
                 ),
               ),
               const SizedBox(width: 12),
@@ -361,7 +361,7 @@ class VoteSummarySection extends StatelessWidget {
                   context,
                   label: 'Overall match',
                   percent: summary!.finalPercent,
-                  color: AppColors.gold,
+                  color: AppColors.accent,
                 ),
               ),
             ],

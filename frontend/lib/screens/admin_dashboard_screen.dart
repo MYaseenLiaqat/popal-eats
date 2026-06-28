@@ -4,7 +4,7 @@ import '../services/admin_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/recommendation_copy.dart';
 import '../widgets/ui/app_ui_widgets.dart';
-import 'admin_restaurant_approvals_screen.dart';
+import 'admin_business_approvals_screen.dart';
 
 /// Admin analytics dashboard (admin role required).
 class AdminDashboardScreen extends StatefulWidget {
@@ -48,12 +48,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Admin Dashboard')),
       body: loading
-          ? const Center(child: CircularProgressIndicator(color: AppColors.gold))
+          ? const Center(child: CircularProgressIndicator(color: AppColors.accent))
           : error != null
               ? Center(child: Text(error!))
               : RefreshIndicator(
                   onRefresh: _load,
-                  color: AppColors.gold,
+                  color: AppColors.accent,
                   child: ListView(
                     padding: const EdgeInsets.all(16),
                     children: [
@@ -64,13 +64,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             onTap: () => Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => const AdminRestaurantApprovalsScreen(),
+                                builder: (_) => const AdminBusinessApprovalsScreen(),
                               ),
                             ).then((_) => _load()),
-                            borderColor: AppColors.gold.withValues(alpha: 0.5),
+                            borderColor: AppColors.accent.withValues(alpha: 0.5),
                             child: Row(
                               children: [
-                                const Icon(Icons.pending_actions, color: AppColors.gold),
+                                const Icon(Icons.pending_actions, color: AppColors.accent),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Text(

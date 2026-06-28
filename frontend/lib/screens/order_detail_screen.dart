@@ -101,14 +101,14 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   ? const Center(child: Text('Order not found'))
                   : RefreshIndicator(
                       onRefresh: _load,
-                      color: AppColors.gold,
+                      color: AppColors.accent,
                       child: ListView(
                         padding: const EdgeInsets.all(AppColors.screenPadding),
                         children: [
                           ModernCard(
                             gradient: AppColors.headerGradient,
                             borderColor:
-                                AppColors.gold.withValues(alpha: 0.35),
+                                AppColors.accent.withValues(alpha: 0.35),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -147,13 +147,13 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                             ),
                             ModernCard(
                               borderColor:
-                                  AppColors.green.withValues(alpha: 0.35),
+                                  AppColors.accent.withValues(alpha: 0.35),
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Icon(
                                     Icons.location_on_outlined,
-                                    color: AppColors.green,
+                                    color: AppColors.accent,
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
@@ -187,14 +187,14 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                                         width: 40,
                                         height: 40,
                                         decoration: BoxDecoration(
-                                          color: AppColors.green
+                                          color: AppColors.accent
                                               .withValues(alpha: 0.12),
                                           borderRadius:
                                               BorderRadius.circular(10),
                                         ),
                                         child: const Icon(
                                           Icons.lunch_dining,
-                                          color: AppColors.green,
+                                          color: AppColors.accent,
                                           size: 20,
                                         ),
                                       ),
@@ -224,7 +224,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                                         style: Theme.of(context)
                                             .textTheme
                                             .titleMedium
-                                            ?.copyWith(color: AppColors.gold),
+                                            ?.copyWith(color: AppColors.accent),
                                       ),
                                     ],
                                   ),

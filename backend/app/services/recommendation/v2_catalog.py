@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.models.category import Category
 from app.models.dish import Dish
 from app.models.restaurant import Restaurant
+from app.services.recommendation.cuisine_classifier import cuisine_tags_for_dish
 
 logger = logging.getLogger("popal.recommendations.v2")
 
@@ -87,6 +88,9 @@ def build_tag_maps_from_dishes(
         tags = _normalize_tags(dish.tags)
         if not tags and dish.category and dish.category.name:
             tags = [dish.category.name.strip().lower()]
+        for cuisine_tag in cuisine_tags_for_dish(dish):
+            if cuisine_tag not in tags:
+                tags.append(cuisine_tag)
         if tags:
             dish_tags[dish.id] = tags
 

@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../models/cart_item.dart';
+import '../models/restaurant.dart';
+import '../providers/auth_provider.dart';
 import '../providers/cart_provider.dart';
 import '../services/api_client.dart';
 import '../services/order_service.dart';
+import '../services/restaurant_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/price_formatter.dart';
 import '../utils/recommendation_copy.dart';
-import '../widgets/ui/app_ui_widgets.dart';
+import '../utils/user_display.dart';
+import '../widgets/checkout/checkout_constants.dart';
+import '../widgets/checkout/checkout_header_sections.dart';
+import '../widgets/checkout/checkout_sections.dart';
 import 'order_success_screen.dart';
 
 /// Checkout with delivery address (`POST /checkout`).
@@ -21,20 +26,73 @@ class CheckoutScreen extends StatefulWidget {
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
   final _orders = OrderService();
+  final _restaurants = RestaurantService();
   final _addressController = TextEditingController();
+  final _instructionsController = TextEditingController();
+  final _addressFocus = FocusNode();
+
+  Restaurant? _restaurant;
+  bool _restaurantLoading = false;
+  bool _bootstrapping = true;
   bool placing = false;
   String? error;
+  CheckoutPaymentMethod _paymentMethod = CheckoutPaymentMethod.cash;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _bootstrap());
+  }
 
   @override
   void dispose() {
     _addressController.dispose();
+    _instructionsController.dispose();
+    _addressFocus.dispose();
     super.dispose();
+  }
+
+  Future<void> _bootstrap() async {
+    setState(() => _bootstrapping = true);
+    final cart = context.read<CartProvider>();
+    await cart.load();
+    if (!mounted) return;
+
+    final auth = context.read<AuthProvider>();
+    final city = UserDisplay.cityLine(auth.user?['city']?.toString());
+    if (city != null && _addressController.text.trim().isEmpty) {
+      _addressController.text = city;
+    }
+
+    await _loadRestaurant(cart.cart?.restaurantId);
+    if (!mounted) return;
+    setState(() => _bootstrapping = false);
+  }
+
+  Future<void> _loadRestaurant(int? restaurantId) async {
+    if (restaurantId == null) {
+      setState(() => _restaurant = null);
+      return;
+    }
+    setState(() => _restaurantLoading = true);
+    try {
+      final r = await _restaurants.getById(restaurantId);
+      if (!mounted) return;
+      setState(() {
+        _restaurant = r;
+        _restaurantLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _restaurantLoading = false);
+    }
   }
 
   Future<void> _placeOrder() async {
     final address = _addressController.text.trim();
     if (address.isEmpty) {
       setState(() => error = 'Enter a delivery address');
+      _addressFocus.requestFocus();
       return;
     }
 
@@ -50,8 +108,21 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       if (!mounted) return;
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (_) => OrderSuccessScreen(order: order),
+        PageRouteBuilder(
+          transitionDuration: CheckoutConstants.animDuration,
+          reverseTransitionDuration: CheckoutConstants.animDuration,
+          pageBuilder: (_, __, ___) => OrderSuccessScreen(order: order),
+          transitionsBuilder: (_, animation, __, child) {
+            return FadeTransition(
+              opacity: CurvedAnimation(parent: animation, curve: CheckoutConstants.animCurve),
+              child: SlideTransition(
+                position: Tween<Offset>(begin: const Offset(0, 0.04), end: Offset.zero).animate(
+                  CurvedAnimation(parent: animation, curve: CheckoutConstants.animCurve),
+                ),
+                child: child,
+              ),
+            );
+          },
         ),
       );
     } on ApiException catch (e) {
@@ -69,255 +140,89 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     }
   }
 
-  bool _hasNutrition(List<CartItem> items) {
-    for (final item in items) {
-      final d = item.dish;
-      if (d == null) continue;
-      if (d.calories != null ||
-          d.protein != null ||
-          d.carbs != null ||
-          d.fats != null) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  ({int? calories, double? protein, double? carbs, double? fats})
-      _aggregateNutrition(List<CartItem> items) {
-    int calories = 0;
-    double protein = 0;
-    double carbs = 0;
-    double fats = 0;
-    var hasCal = false;
-    var hasProt = false;
-    var hasCarb = false;
-    var hasFat = false;
-
-    for (final item in items) {
-      final d = item.dish;
-      if (d == null) continue;
-      final qty = item.quantity;
-      if (d.calories != null) {
-        calories += d.calories! * qty;
-        hasCal = true;
-      }
-      if (d.protein != null) {
-        protein += d.protein! * qty;
-        hasProt = true;
-      }
-      if (d.carbs != null) {
-        carbs += d.carbs! * qty;
-        hasCarb = true;
-      }
-      if (d.fats != null) {
-        fats += d.fats! * qty;
-        hasFat = true;
-      }
-    }
-
-    return (
-      calories: hasCal ? calories : null,
-      protein: hasProt ? protein : null,
-      carbs: hasCarb ? carbs : null,
-      fats: hasFat ? fats : null,
-    );
-  }
+  void _focusAddress() => _addressFocus.requestFocus();
 
   @override
   Widget build(BuildContext context) {
     final cart = context.watch<CartProvider>();
+    final auth = context.watch<AuthProvider>();
     final items = cart.cart?.items ?? [];
-    final nutrition = _aggregateNutrition(items);
+    final recipientName = auth.user?['full_name']?.toString().trim();
+    final phone = auth.user?['phone']?.toString().trim();
+    final restaurantName = _restaurant?.name;
+    final orderPreview = items.isEmpty ? null : '${cart.itemCount} item${cart.itemCount == 1 ? '' : 's'} · ${PriceFormatter.format(cart.subtotal)}';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Checkout')),
-      body: cart.loading && items.isEmpty
-          ? const Center(child: CircularProgressIndicator())
-          : items.isEmpty
-              ? const EmptyState(
-                  icon: Icons.shopping_cart_outlined,
-                  title: 'Your cart is empty',
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        title: const Text('Checkout'),
+        centerTitle: false,
+      ),
+      body: _bootstrapping || (cart.loading && items.isEmpty)
+          ? const CheckoutLoadingSkeleton()
+          : cart.error != null && items.isEmpty
+              ? CheckoutNetworkError(
+                  message: RecommendationCopy.friendlyError(cart.error),
+                  onRetry: _bootstrap,
                 )
-              : Column(
-                  children: [
-                    Expanded(
-                      child: ListView(
-                        padding: const EdgeInsets.all(AppColors.screenPadding),
-                        children: [
-                          ModernCard(
-                            gradient: AppColors.headerGradient,
-                            borderColor:
-                                AppColors.gold.withValues(alpha: 0.35),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+              : items.isEmpty
+                  ? CheckoutEmptyState(onBack: () => Navigator.pop(context))
+                  : Column(
+                      children: [
+                        Expanded(
+                          child: RepaintBoundary(
+                            child: ListView(
+                              padding: const EdgeInsets.only(bottom: 16),
                               children: [
-                                Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.location_on_outlined,
-                                      color: AppColors.green,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'Delivery address',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium,
-                                    ),
-                                  ],
+                                CheckoutHeader(
+                                  restaurantName: _restaurantLoading
+                                      ? 'Loading restaurant…'
+                                      : restaurantName,
+                                  orderPreview: orderPreview,
                                 ),
-                                const SizedBox(height: 12),
-                                TextField(
+                                CheckoutAddressCard(
                                   controller: _addressController,
-                                  decoration: InputDecoration(
-                                    hintText: 'Enter your delivery address',
-                                    filled: true,
-                                    fillColor: AppColors.surfaceLight,
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: BorderSide.none,
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: BorderSide(
-                                        color: AppColors.green
-                                            .withValues(alpha: 0.3),
-                                      ),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: const BorderSide(
-                                        color: AppColors.gold,
-                                      ),
-                                    ),
-                                  ),
-                                  maxLines: 2,
+                                  focusNode: _addressFocus,
+                                  recipientName: recipientName?.isNotEmpty == true
+                                      ? recipientName
+                                      : auth.user?['username']?.toString(),
+                                  phone: phone,
+                                  enabled: !placing,
+                                  error: error,
+                                  onEditFocus: _focusAddress,
+                                ),
+                                const CheckoutDeliveryEta(),
+                                CheckoutPaymentSection(
+                                  selected: _paymentMethod,
+                                  enabled: !placing,
+                                  onSelected: (method) => setState(() => _paymentMethod = method),
+                                ),
+                                const CheckoutPromoSection(),
+                                CheckoutInstructionsField(
+                                  controller: _instructionsController,
                                   enabled: !placing,
                                 ),
-                                if (error != null) ...[
-                                  const SizedBox(height: 10),
-                                  Text(
-                                    error!,
-                                    style: const TextStyle(
-                                      color: AppColors.error,
-                                    ),
-                                  ),
-                                ],
+                                CheckoutOrderReview(
+                                  restaurantName: restaurantName,
+                                  items: items,
+                                ),
+                                CheckoutOrderSummary(
+                                  subtotal: cart.subtotal,
+                                  itemCount: cart.itemCount,
+                                ),
+                                const SizedBox(height: 100),
                               ],
                             ),
-                          ),
-                          const SectionHeader(
-                            title: 'Order summary',
-                            subtitle: 'Review your items',
-                          ),
-                          ModernCard(
-                            child: Column(
-                              children: [
-                                SummaryLine(
-                                  label: 'Items',
-                                  value: '${cart.itemCount}',
-                                ),
-                                ...items.map((item) {
-                                  final dish = item.dish;
-                                  final name =
-                                      dish?.name ?? 'Dish #${item.dishId}';
-                                  final unitPrice = dish?.price ?? 0;
-                                  return Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 6,
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                name,
-                                                style: Theme.of(context)
-                                                    .textTheme
-                                                    .bodyLarge,
-                                              ),
-                                              Text(
-                                                'Qty ${item.quantity}',
-                                                style: Theme.of(context)
-                                                    .textTheme
-                                                    .bodyMedium,
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        Text(
-                                          PriceFormatter.format(unitPrice * item.quantity),
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .titleMedium
-                                              ?.copyWith(
-                                                color: AppColors.gold,
-                                              ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                }),
-                                const Divider(height: 20),
-                                SummaryLine(
-                                  label: 'Subtotal',
-                                  value:
-                                      PriceFormatter.format(cart.subtotal),
-                                ),
-                              ],
-                            ),
-                          ),
-                          if (_hasNutrition(items)) ...[
-                            const SectionHeader(
-                              title: 'Nutrition summary',
-                              subtitle: 'Estimated for this order',
-                            ),
-                            ModernCard(
-                              borderColor:
-                                  AppColors.green.withValues(alpha: 0.35),
-                              child: NutritionGrid(
-                                calories: nutrition.calories,
-                                protein: nutrition.protein,
-                                carbs: nutrition.carbs,
-                                fats: nutrition.fats,
-                              ),
-                            ),
-                          ],
-                          const SizedBox(height: 12),
-                          TotalAmountCard(
-                            label: 'Total amount',
-                            amount: PriceFormatter.format(cart.subtotal),
-                          ),
-                          const SizedBox(height: 100),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        border: Border(
-                          top: BorderSide(
-                            color:
-                                AppColors.surfaceLight.withValues(alpha: 0.8),
                           ),
                         ),
-                      ),
-                      child: SafeArea(
-                        minimum: const EdgeInsets.all(AppColors.screenPadding),
-                        child: GoldActionButton(
-                          label: 'Place Order',
-                          icon: Icons.check_circle_outline,
+                        CheckoutPlaceOrderCta(
+                          totalLabel: PriceFormatter.format(cart.subtotal),
                           loading: placing,
-                          onPressed: placing ? null : _placeOrder,
+                          enabled: !placing,
+                          onPressed: _placeOrder,
                         ),
-                      ),
+                      ],
                     ),
-                  ],
-                ),
     );
   }
 }

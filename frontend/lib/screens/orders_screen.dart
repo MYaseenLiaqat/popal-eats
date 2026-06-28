@@ -83,7 +83,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                     )
                   : RefreshIndicator(
                       onRefresh: _load,
-                      color: AppColors.gold,
+                      color: AppColors.accent,
                       child: ListView.builder(
                         padding: const EdgeInsets.all(AppColors.screenPadding),
                         itemCount: orders.length,
@@ -105,13 +105,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                   Container(
                                     padding: const EdgeInsets.all(10),
                                     decoration: BoxDecoration(
-                                      color: AppColors.gold
+                                      color: AppColors.accent
                                           .withValues(alpha: 0.12),
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: const Icon(
                                       Icons.receipt_long,
-                                      color: AppColors.gold,
+                                      color: AppColors.accent,
                                     ),
                                   ),
                                   const SizedBox(width: 14),
@@ -162,7 +162,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                                         style: Theme.of(context)
                                             .textTheme
                                             .titleMedium
-                                            ?.copyWith(color: AppColors.gold),
+                                            ?.copyWith(color: AppColors.accent),
                                       ),
                                       const SizedBox(height: 4),
                                       const Icon(

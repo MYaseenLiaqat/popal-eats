@@ -89,10 +89,10 @@ class _GroupInvitationsScreenState extends State<GroupInvitationsScreen>
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: AppColors.gold.withValues(alpha: 0.15),
+                  color: AppColors.accent.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.groups, color: AppColors.gold),
+                child: const Icon(Icons.groups, color: AppColors.accent),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -144,8 +144,8 @@ class _GroupInvitationsScreenState extends State<GroupInvitationsScreen>
                   child: FilledButton(
                     onPressed: () => _accept(invitation),
                     style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.green,
-                      foregroundColor: const Color(0xFF0A1F12),
+                      backgroundColor: AppColors.accent,
+                      foregroundColor: AppColors.onAccent,
                     ),
                     child: const Text('Accept'),
                   ),
@@ -162,7 +162,7 @@ class _GroupInvitationsScreenState extends State<GroupInvitationsScreen>
     final provider = context.watch<GroupProvider>();
 
     if (provider.loadingInvitations && items.isEmpty) {
-      return const Center(child: CircularProgressIndicator(color: AppColors.gold));
+      return const Center(child: CircularProgressIndicator(color: AppColors.accent));
     }
 
     if (provider.invitationsError != null && items.isEmpty) {
@@ -210,8 +210,8 @@ class _GroupInvitationsScreenState extends State<GroupInvitationsScreen>
         title: const Text('Group Invitations'),
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: AppColors.gold,
-          labelColor: AppColors.gold,
+          indicatorColor: AppColors.accent,
+          labelColor: AppColors.accent,
           unselectedLabelColor: AppColors.textSecondary,
           tabs: [
             Tab(
@@ -228,7 +228,7 @@ class _GroupInvitationsScreenState extends State<GroupInvitationsScreen>
         ),
       ),
       body: RefreshIndicator(
-        color: AppColors.gold,
+        color: AppColors.accent,
         onRefresh: () => provider.fetchInvitations(force: true),
         child: TabBarView(
           controller: _tabController,

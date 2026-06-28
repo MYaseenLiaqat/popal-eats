@@ -65,7 +65,7 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen>
 
   Widget _buildIncoming(FriendsProvider provider) {
     if (provider.loadingRequests && provider.incomingRequests.isEmpty) {
-      return const Center(child: CircularProgressIndicator(color: AppColors.gold));
+      return const Center(child: CircularProgressIndicator(color: AppColors.accent));
     }
 
     if (provider.requestsError != null && provider.incomingRequests.isEmpty) {
@@ -117,8 +117,8 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen>
                           ? null
                           : () => _accept(request.id, user.fullName),
                       style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.green,
-                        foregroundColor: const Color(0xFF0A1F12),
+                        backgroundColor: AppColors.accent,
+                        foregroundColor: AppColors.onAccent,
                       ),
                       child: const Text('Accept'),
                     ),
@@ -134,7 +134,7 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen>
 
   Widget _buildOutgoing(FriendsProvider provider) {
     if (provider.loadingRequests && provider.outgoingRequests.isEmpty) {
-      return const Center(child: CircularProgressIndicator(color: AppColors.gold));
+      return const Center(child: CircularProgressIndicator(color: AppColors.accent));
     }
 
     if (provider.requestsError != null && provider.outgoingRequests.isEmpty) {
@@ -189,8 +189,8 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen>
         title: const Text('Friend Requests'),
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: AppColors.gold,
-          labelColor: AppColors.gold,
+          indicatorColor: AppColors.accent,
+          labelColor: AppColors.accent,
           unselectedLabelColor: AppColors.textSecondary,
           tabs: [
             Tab(
@@ -207,7 +207,7 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen>
         ),
       ),
       body: RefreshIndicator(
-        color: AppColors.gold,
+        color: AppColors.accent,
         onRefresh: () => provider.fetchRequests(force: true),
         child: TabBarView(
           controller: _tabController,

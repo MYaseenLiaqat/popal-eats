@@ -13,6 +13,7 @@ from app.models.group_recommendation import GroupRecommendation
 from app.models.group_session import GroupSession
 from app.models.group_session_member import GroupSessionMember
 from app.models.group_vote import GroupVote
+from app.models.home_chef_profile import HomeChefProfile
 from app.models.menu_upload import MenuUpload
 from app.models.order import Order
 from app.models.order_item import OrderItem
@@ -38,6 +39,7 @@ __all__ = [
     "GroupRecommendation",
     "GroupVote",
     "GroupDecision",
+    "HomeChefProfile",
     "Category",
     "Restaurant",
     "Dish",

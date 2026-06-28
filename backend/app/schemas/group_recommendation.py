@@ -14,7 +14,17 @@ class GroupDishRecommendation(BaseModel):
     score: float = Field(..., ge=0, le=100, description="Engine recommendation score")
     consensus_score: float = Field(0, ge=0, le=100)
     final_score: float | None = Field(None, ge=0, le=100, description="70% recommendation + 30% consensus")
+    group_match_percent: int | None = Field(
+        None,
+        ge=0,
+        le=100,
+        description="Group compatibility match from engine score",
+    )
     reasons: list[str] = Field(default_factory=list)
+    explanation_bullets: list[str] = Field(
+        default_factory=list,
+        description="Top consumer-facing group recommendation reasons",
+    )
 
 
 class GroupRecommendationsResponse(BaseModel):

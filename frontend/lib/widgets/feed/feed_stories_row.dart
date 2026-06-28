@@ -10,12 +10,14 @@ class FeedStoriesRow extends StatelessWidget {
     super.key,
     required this.groups,
     this.currentUserId,
+    this.showOwnStorySlot = false,
     this.onCreateTap,
     this.onGroupTap,
   });
 
   final List<StoryGroup> groups;
   final int? currentUserId;
+  final bool showOwnStorySlot;
   final VoidCallback? onCreateTap;
   final void Function(StoryGroup group)? onGroupTap;
 
@@ -34,10 +36,10 @@ class FeedStoriesRow extends StatelessWidget {
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 4),
-        itemCount: 1 + others.length,
+        itemCount: (showOwnStorySlot ? 1 : 0) + others.length,
         separatorBuilder: (_, __) => const SizedBox(width: 12),
         itemBuilder: (context, index) {
-          if (index == 0) {
+          if (showOwnStorySlot && index == 0) {
             return _StoryBubble(
               label: 'Your story',
               isOwn: true,
@@ -48,7 +50,7 @@ class FeedStoriesRow extends StatelessWidget {
               onTap: onCreateTap,
             );
           }
-          final group = others[index - 1];
+          final group = others[showOwnStorySlot ? index - 1 : index];
           final thumb = group.stories.isNotEmpty
               ? resolveMediaUrl(group.stories.last.imageUrl)
               : null;
@@ -99,7 +101,7 @@ class _StoryBubble extends StatelessWidget {
                 shape: BoxShape.circle,
                 gradient: showRing
                     ? LinearGradient(
-                        colors: [AppColors.gold, AppColors.green.withValues(alpha: 0.85)],
+                        colors: [AppColors.accent, AppColors.accent.withValues(alpha: 0.85)],
                       )
                     : null,
                 border: isOwn || !showRing
@@ -138,7 +140,7 @@ class _StoryBubble extends StatelessWidget {
       color: AppColors.surfaceLight,
       child: Icon(
         isOwn ? Icons.add : Icons.person_outline,
-        color: isOwn ? AppColors.gold : AppColors.textSecondary,
+        color: isOwn ? AppColors.accent : AppColors.textSecondary,
         size: isOwn ? 26 : 22,
       ),
     );

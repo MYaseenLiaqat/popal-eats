@@ -17,7 +17,7 @@ class GroupLocationTile extends StatelessWidget {
     final handle = location.user?.displayHandle;
 
     return ModernCard(
-      borderColor: AppColors.green.withValues(alpha: 0.25),
+      borderColor: AppColors.accent.withValues(alpha: 0.25),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -37,7 +37,7 @@ class GroupLocationTile extends StatelessWidget {
                 const SizedBox(height: 6),
                 Row(
                   children: [
-                    const Icon(Icons.location_on_outlined, size: 16, color: AppColors.gold),
+                    const Icon(Icons.location_on_outlined, size: 16, color: AppColors.accent),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
@@ -133,7 +133,7 @@ class GroupLocationsSection extends StatelessWidget {
         else if (loading && locations.isEmpty)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 24),
-            child: Center(child: CircularProgressIndicator(color: AppColors.gold)),
+            child: Center(child: CircularProgressIndicator(color: AppColors.accent)),
           )
         else if (locations.isEmpty)
           const EmptyState(

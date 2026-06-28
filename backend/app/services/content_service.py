@@ -6,9 +6,16 @@ from fastapi import HTTPException, status
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session, joinedload
 
-from app.core.content_constants import DISCOVER_POST_TYPES, RECIPE, RESTAURANT_POST
+from app.core.content_constants import (
+    CHEF_POST,
+    DISCOVER_POST_TYPES,
+    FOOD_POST,
+    RECIPE,
+    RESTAURANT_POST,
+)
 from app.core.restaurant_constants import APPROVED
-from app.core.roles import ADMIN, normalize_role
+from app.core.rbac import assert_active_business_account
+from app.core.roles import ADMIN, CUSTOMER, HOME_CHEF, RESTAURANT, normalize_role
 from app.models.dish import Dish
 from app.models.friendship import Friendship
 from app.models.post import Post
@@ -115,8 +122,24 @@ def _serialize_post(
 
 def _assert_can_create_post(body: PostCreate, user: User, db: Session) -> None:
     role = normalize_role(user.role)
+    post_type = body.post_type
 
-    if body.post_type == RESTAURANT_POST:
+    if post_type == FOOD_POST:
+        if role not in (CUSTOMER, ADMIN):
+            raise HTTPException(
+                status_code=403,
+                detail="Only customers can create community food posts",
+            )
+        return
+
+    if post_type == RESTAURANT_POST:
+        if role not in (RESTAURANT, ADMIN):
+            raise HTTPException(
+                status_code=403,
+                detail="Only restaurants can create restaurant posts",
+            )
+        if role != ADMIN:
+            assert_active_business_account(user)
         if body.restaurant_id is None:
             raise HTTPException(status_code=400, detail="restaurant_id required for restaurant_post")
         if body.restaurant_content_subtype is None:
@@ -133,7 +156,21 @@ def _assert_can_create_post(body: PostCreate, user: User, db: Session) -> None:
             raise HTTPException(status_code=400, detail="Restaurant must be approved before posting")
         return
 
-    if body.post_type == RECIPE:
+    if post_type == CHEF_POST:
+        if role not in (HOME_CHEF, ADMIN):
+            raise HTTPException(status_code=403, detail="Only home chefs can create chef posts")
+        if role != ADMIN:
+            assert_active_business_account(user)
+        return
+
+    if post_type == RECIPE:
+        if role not in (RESTAURANT, HOME_CHEF, ADMIN):
+            raise HTTPException(
+                status_code=403,
+                detail="Only restaurants and home chefs can create recipe posts",
+            )
+        if role != ADMIN:
+            assert_active_business_account(user)
         if not body.title or not str(body.title).strip():
             raise HTTPException(status_code=400, detail="title required for recipe posts")
 

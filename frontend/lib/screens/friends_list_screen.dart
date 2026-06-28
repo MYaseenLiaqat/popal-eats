@@ -66,7 +66,7 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Friends')),
       body: RefreshIndicator(
-        color: AppColors.gold,
+        color: AppColors.accent,
         onRefresh: () => provider.fetchFriends(force: true),
         child: _buildBody(provider),
       ),
@@ -75,7 +75,7 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
 
   Widget _buildBody(FriendsProvider provider) {
     if (provider.loadingFriends && provider.friends.isEmpty) {
-      return const Center(child: CircularProgressIndicator(color: AppColors.gold));
+      return const Center(child: CircularProgressIndicator(color: AppColors.accent));
     }
 
     if (provider.friendsError != null && provider.friends.isEmpty) {

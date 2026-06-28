@@ -98,7 +98,7 @@ class _ReelsScreenState extends State<ReelsScreen> with SingleTickerProviderStat
   Widget _buildBody(ReelsProvider provider) {
     if (provider.loading && provider.reels.isEmpty) {
       return const Center(
-        child: CircularProgressIndicator(color: AppColors.gold),
+        child: CircularProgressIndicator(color: AppColors.accent),
       );
     }
 

@@ -1,0 +1,2 @@
+sessions_evaluated,avg_group_compatibility_percent,avg_allergy_filtered_dishes,avg_cuisine_member_match_ratio,avg_latency_ms,p95_latency_ms,recommendation_count_mean
+1,77.0,0.0,0.02,14155.1319,14155.1319,20.0

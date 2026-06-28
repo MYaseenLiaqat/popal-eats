@@ -17,18 +17,18 @@ class AuthBrandedHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return ModernCard(
       gradient: AppColors.headerGradient,
-      borderColor: AppColors.gold.withValues(alpha: 0.4),
+      borderColor: AppColors.accent.withValues(alpha: 0.4),
       child: Column(
         children: [
           Container(
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              gradient: AppColors.goldGradient,
+              gradient: AppColors.accentGradient,
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.gold.withValues(alpha: 0.25),
+                  color: AppColors.accent.withValues(alpha: 0.25),
                   blurRadius: 16,
                   offset: const Offset(0, 4),
                 ),
@@ -37,14 +37,14 @@ class AuthBrandedHeader extends StatelessWidget {
             child: const Icon(
               Icons.restaurant,
               size: 40,
-              color: Color(0xFF1A1400),
+              color: AppColors.onAccent,
             ),
           ),
           const SizedBox(height: 16),
           Text(
             'Popal Eats',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: AppColors.gold,
+                  color: AppColors.accent,
                   fontWeight: FontWeight.w800,
                 ),
           ),
@@ -87,22 +87,20 @@ InputDecoration authInputDecoration({
   return InputDecoration(
     labelText: label,
     hintText: hint,
-    prefixIcon: icon != null ? Icon(icon, color: AppColors.gold) : null,
+    prefixIcon: icon != null ? Icon(icon, color: AppColors.accent) : null,
     filled: true,
-    fillColor: AppColors.surfaceLight,
+    fillColor: AppColors.surface,
     border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: BorderSide.none,
+      borderRadius: BorderRadius.circular(AppColors.inputRadius),
+      borderSide: const BorderSide(color: AppColors.borderStrong),
     ),
     enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: BorderSide(
-        color: AppColors.green.withValues(alpha: 0.25),
-      ),
+      borderRadius: BorderRadius.circular(AppColors.inputRadius),
+      borderSide: const BorderSide(color: AppColors.borderStrong),
     ),
     focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(12),
-      borderSide: const BorderSide(color: AppColors.gold),
+      borderRadius: BorderRadius.circular(AppColors.inputRadius),
+      borderSide: const BorderSide(color: AppColors.accent, width: 1.5),
     ),
   );
 }

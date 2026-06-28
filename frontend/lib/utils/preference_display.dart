@@ -1,13 +1,11 @@
+import '../data/cuisine_catalog.dart';
+
 /// Maps backend preference keys to human-readable labels for UI.
 class PreferenceDisplay {
   PreferenceDisplay._();
 
-  static const nutritionCuisineOptions = <String, String>{
-    'pakistani': 'Pakistani',
-    'italian': 'Italian',
-    'chinese': 'Chinese',
-    'mediterranean': 'Mediterranean',
-    'american': 'American',
+  static final nutritionCuisineOptions = <String, String>{
+    for (final c in CuisineCatalog.cuisines) c.key: c.name,
   };
 
   static const foodInterestLabels = <String, String>{
@@ -79,9 +77,7 @@ class PreferenceDisplay {
   }
 
   static String cuisineLabel(String key) {
-    return nutritionCuisineOptions[key] ??
-        foodInterestLabels[key] ??
-        key.replaceAll('_', ' ').split(' ').map(_titleWord).join(' ');
+    return CuisineCatalog.labelFor(key);
   }
 
   static String allergyLabel(String key) => allergyLabels[key] ?? cuisineLabel(key);
@@ -132,10 +128,5 @@ class PreferenceDisplay {
     final labels = cuisines.map(cuisineLabel).toList();
     if (labels.length <= max) return labels.join(', ');
     return '${labels.take(max).join(', ')} +${labels.length - max}';
-  }
-
-  static String _titleWord(String word) {
-    if (word.isEmpty) return word;
-    return '${word[0].toUpperCase()}${word.substring(1)}';
   }
 }

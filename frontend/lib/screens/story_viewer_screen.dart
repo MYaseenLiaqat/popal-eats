@@ -114,7 +114,7 @@ class _StoryViewerScreenState extends State<StoryViewerScreen> {
                       margin: const EdgeInsets.symmetric(horizontal: 2),
                       decoration: BoxDecoration(
                         color: i <= _index
-                            ? AppColors.gold
+                            ? AppColors.accent
                             : Colors.white.withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(2),
                       ),
@@ -146,7 +146,7 @@ Future<bool?> showCreateStorySheet(BuildContext context) async {
     context: context,
     barrierDismissible: false,
     builder: (_) => const Center(
-      child: CircularProgressIndicator(color: AppColors.gold),
+      child: CircularProgressIndicator(color: AppColors.accent),
     ),
   );
 

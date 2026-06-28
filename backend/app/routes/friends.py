@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_current_user
+from app.core.rbac import require_customer
 from app.database import get_db
 from app.models.user import User
 from app.schemas.friend import (
@@ -29,7 +30,7 @@ router = APIRouter(tags=["friends"])
 @router.get("/friends", response_model=FriendsListResponse, summary="List current user's friends")
 def get_friends(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_customer),
 ) -> FriendsListResponse:
     return list_friends(db, current_user.id)
 
@@ -41,7 +42,7 @@ def get_friends(
 )
 def get_friend_requests(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_customer),
 ) -> FriendRequestsListResponse:
     return list_friend_requests(db, current_user.id)
 
@@ -55,7 +56,7 @@ def get_friend_requests(
 def create_friend_request(
     body: FriendRequestCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_customer),
 ) -> FriendRequestResponse:
     return send_friend_request(db, current_user.id, body.receiver_id)
 
@@ -68,7 +69,7 @@ def create_friend_request(
 def accept_request(
     request_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_customer),
 ) -> FriendRequestResponse:
     return accept_friend_request(db, current_user.id, request_id)
 
@@ -81,7 +82,7 @@ def accept_request(
 def reject_request(
     request_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_customer),
 ) -> FriendRequestResponse:
     return reject_friend_request(db, current_user.id, request_id)
 
@@ -94,7 +95,7 @@ def reject_request(
 def delete_friend(
     friend_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_customer),
 ) -> None:
     remove_friend(db, current_user.id, friend_id)
 
@@ -103,6 +104,6 @@ def delete_friend(
 def search_users_endpoint(
     q: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_customer),
 ) -> UserSearchResponse:
     return search_users(db, current_user_id=current_user.id, query=q)

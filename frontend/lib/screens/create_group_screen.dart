@@ -60,16 +60,16 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
         children: [
           ModernCard(
             gradient: AppColors.headerGradient,
-            borderColor: AppColors.gold.withValues(alpha: 0.35),
+            borderColor: AppColors.accent.withValues(alpha: 0.35),
             child: Row(
               children: [
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppColors.gold.withValues(alpha: 0.15),
+                    color: AppColors.accent.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.group_add, color: AppColors.gold, size: 28),
+                  child: const Icon(Icons.group_add, color: AppColors.accent, size: 28),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -79,7 +79,7 @@ class _CreateGroupScreenState extends State<CreateGroupScreen> {
                       Text(
                         'Start a food group',
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              color: AppColors.gold,
+                              color: AppColors.accent,
                             ),
                       ),
                       Text(
