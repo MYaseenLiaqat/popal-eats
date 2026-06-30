@@ -4,6 +4,7 @@ import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from sqlalchemy import String, cast, or_
 from sqlalchemy.orm import Session
 
 from app.config import MAX_UPLOAD_MB, UPLOAD_DIR
@@ -14,6 +15,7 @@ from app.core.roles import ADMIN, CUSTOMER, RESTAURANT, is_restaurant_role, norm
 from app.core.permissions import assert_restaurant_owner, get_restaurant_or_404
 from app.core.restaurant_constants import APPROVED, PENDING
 from app.database import get_db
+from app.models.dish import Dish
 from app.models.post import Post
 from app.models.restaurant import Restaurant
 from app.models.user import User
@@ -112,10 +114,20 @@ def list_restaurants(
     )
     if search:
         pattern = f"%{search}%"
+        dish_restaurant_ids = (
+            db.query(Dish.restaurant_id)
+            .filter(Dish.name.ilike(pattern))
+            .distinct()
+            .subquery()
+        )
         query = query.filter(
-            (Restaurant.name.ilike(pattern))
-            | (Restaurant.city.ilike(pattern))
-            | (Restaurant.address.ilike(pattern))
+            or_(
+                Restaurant.name.ilike(pattern),
+                Restaurant.city.ilike(pattern),
+                Restaurant.address.ilike(pattern),
+                cast(Restaurant.tags, String).ilike(pattern),
+                Restaurant.id.in_(dish_restaurant_ids),
+            )
         )
     if city:
         query = query.filter(Restaurant.city.ilike(f"%{city}%"))

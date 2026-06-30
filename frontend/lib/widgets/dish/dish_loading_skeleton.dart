@@ -18,19 +18,19 @@ class DishLoadingSkeleton extends StatelessWidget {
             width: double.infinity,
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.all(16),
+        const Padding(
+          padding: EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               FeedSkeletonBlock(height: 28, width: 240, borderRadius: 8),
-              const SizedBox(height: 10),
+              SizedBox(height: 10),
               FeedSkeletonBlock(height: 18, width: 160, borderRadius: 6),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               FeedSkeletonBlock(height: 32, width: 120, borderRadius: 8),
-              const SizedBox(height: 24),
+              SizedBox(height: 24),
               FeedSkeletonBlock(height: 100, borderRadius: DishConstants.cardRadius),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               FeedSkeletonBlock(height: 140, borderRadius: DishConstants.cardRadius),
             ],
           ),

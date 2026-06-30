@@ -49,6 +49,12 @@ def test_is_dish_safe_for_group_rejects_peanut_allergy():
     assert is_dish_safe_for_group(_Dish(name="Vanilla Shake"), {"peanuts"}) is True
 
 
+def test_is_dish_safe_for_group_handles_missing_allergens_column():
+    dish = _Dish(name="Vanilla Shake")
+    dish.allergens = property(lambda self: (_ for _ in ()).throw(RuntimeError("detached")))
+    assert is_dish_safe_for_group(dish, {"peanuts"}, dish_tags=["dessert"]) is True
+
+
 def test_dietary_filter_excludes_meat_for_vegetarian_group():
     dish = _Dish(name="Chicken Biryani", category_name="Biryani")
     assert is_dish_dietary_compatible(dish, {"vegetarian"}) is False

@@ -7,11 +7,15 @@ class AuthValidation {
   static const reservedUsernames = {
     'admin',
     'administrator',
+    'api',
+    'help',
+    'null',
+    'popal',
+    'popaleats',
+    'root',
     'support',
     'system',
-    'api',
-    'null',
-    'root',
+    'user',
   };
 
   static String? validateFirstName(String? value) {
@@ -28,11 +32,12 @@ class AuthValidation {
 
   static String? validateUsername(String? value) {
     final trimmed = value?.trim().toLowerCase() ?? '';
+    if (trimmed.isEmpty) return 'Enter a username';
     if (trimmed.length < 3) return 'Username must be at least 3 characters';
     if (trimmed.length > 30) return 'Username must be at most 30 characters';
     final pattern = RegExp(r'^[a-z][a-z0-9_.]{2,29}$');
     if (!pattern.hasMatch(trimmed)) {
-      return 'Use letters, numbers, underscores, and periods';
+      return 'Start with a letter; use letters, numbers, underscores, and periods';
     }
     if (reservedUsernames.contains(trimmed)) return 'That username is reserved';
     return null;

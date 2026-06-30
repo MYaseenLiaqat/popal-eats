@@ -167,14 +167,14 @@ class DishRecommendedSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (items.isEmpty) {
-      return Column(
+      return const Column(
         children: [
-          const HomeSectionHeader(
+          HomeSectionHeader(
             title: 'Recommended with this',
             subtitle: 'Pairs well with your pick',
             icon: Icons.auto_awesome_outlined,
           ),
-          const Padding(
+          Padding(
             padding: EdgeInsets.symmetric(horizontal: 16),
             child: DishInlineEmpty(
               icon: Icons.restaurant_menu_outlined,
@@ -182,7 +182,7 @@ class DishRecommendedSection extends StatelessWidget {
               subtitle: 'Check back for personalized pairings',
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
         ],
       );
     }

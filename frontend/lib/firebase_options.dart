@@ -71,7 +71,7 @@ class DefaultFirebaseOptions {
         projectId: _resolvedProjectId,
         authDomain: _authDomain.isNotEmpty
             ? _authDomain
-            : '${_resolvedProjectId}.firebaseapp.com',
+            : '$_resolvedProjectId.firebaseapp.com',
         storageBucket: _resolvedStorageBucket,
       );
     }

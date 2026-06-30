@@ -8,7 +8,6 @@ import '../utils/recommendation_copy.dart';
 import '../widgets/social/notification_hub_button.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 import 'dish_detail_screen.dart';
-import 'reels_screen.dart';
 
 /// Personalized, trending, and popular dishes.
 class RecommendationsScreen extends StatefulWidget {
@@ -41,7 +40,10 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
   void _activateIfNeeded() {
     if (!widget.isTabActive || _activated) return;
     _activated = true;
-    context.read<RecommendationProvider>().fetchAll();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<RecommendationProvider>().fetchAll();
+    });
   }
 
   Future<void> _refresh() async {
@@ -281,55 +283,6 @@ class _RecommendationsScreenState extends State<RecommendationsScreen> {
                         loading: rec.loadingPopular,
                         error: rec.popularError,
                         onRetry: () => rec.refreshPopular(),
-                      ),
-                      const SectionHeader(
-                        title: 'Recipe & chef reels',
-                        subtitle: 'Recipes, chefs, and restaurants',
-                      ),
-                      ModernCard(
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const ReelsScreen()),
-                        ),
-                        borderColor: AppColors.accent.withValues(alpha: 0.35),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: AppColors.accent.withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(
-                                Icons.play_circle_outline,
-                                color: AppColors.accent,
-                                size: 28,
-                              ),
-                            ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Watch reels',
-                                    style: Theme.of(context).textTheme.titleMedium,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Swipe through recipes, chefs, and restaurants',
-                                    style: Theme.of(context).textTheme.bodyMedium,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const Icon(
-                              Icons.arrow_forward_ios,
-                              size: 16,
-                              color: AppColors.textSecondary,
-                            ),
-                          ],
-                        ),
                       ),
                       const SizedBox(height: 16),
                     ],

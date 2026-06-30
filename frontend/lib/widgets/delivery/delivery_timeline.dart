@@ -10,12 +10,11 @@ class DeliveryTimeline extends StatelessWidget {
   final DeliveryTimelineStage current;
 
   static const _stages = [
-    (DeliveryTimelineStage.orderPlaced, 'Order Placed', Icons.receipt_long_outlined),
-    (DeliveryTimelineStage.restaurantAccepted, 'Restaurant Accepted', Icons.thumb_up_alt_outlined),
+    (DeliveryTimelineStage.orderPlaced, 'Placed', Icons.receipt_long_outlined),
+    (DeliveryTimelineStage.restaurantAccepted, 'Accepted', Icons.thumb_up_alt_outlined),
     (DeliveryTimelineStage.preparing, 'Preparing', Icons.restaurant_outlined),
-    (DeliveryTimelineStage.riderAssigned, 'Rider Assigned', Icons.person_pin_circle_outlined),
+    (DeliveryTimelineStage.ready, 'Ready', Icons.done_all_outlined),
     (DeliveryTimelineStage.pickedUp, 'Picked Up', Icons.shopping_bag_outlined),
-    (DeliveryTimelineStage.nearYou, 'Near You', Icons.near_me_outlined),
     (DeliveryTimelineStage.delivered, 'Delivered', Icons.check_circle_outline),
   ];
 

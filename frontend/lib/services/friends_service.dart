@@ -44,10 +44,24 @@ class FriendsService {
     _client.throwIfError(response);
   }
 
+  Future<void> cancelFriendRequest(int requestId) async {
+    final response = await _client.delete('/friends/request/$requestId');
+    _client.throwIfError(response);
+  }
+
   Future<UserSearchResults> searchUsers(String query) async {
     final response = await _client.get(
       '/users/search',
       query: {'q': query.trim()},
+    );
+    _client.throwIfError(response);
+    return UserSearchResults.fromJson(_client.decodeJson(response));
+  }
+
+  Future<UserSearchResults> getSuggestions({int limit = 20}) async {
+    final response = await _client.get(
+      '/users/suggestions',
+      query: {'limit': '$limit'},
     );
     _client.throwIfError(response);
     return UserSearchResults.fromJson(_client.decodeJson(response));

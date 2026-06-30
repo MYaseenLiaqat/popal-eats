@@ -10,7 +10,9 @@ import '../widgets/ui/app_ui_widgets.dart';
 import 'friends_list_screen.dart';
 import 'group_detail_screen.dart';
 import 'groups_screen.dart';
+import 'main_shell.dart';
 import 'notification_center_screen.dart';
+import 'search_users_screen.dart';
 
 /// Community hub — friends, groups, and activity feed.
 class CommunityScreen extends StatefulWidget {
@@ -21,15 +23,6 @@ class CommunityScreen extends StatefulWidget {
 }
 
 class _CommunityScreenState extends State<CommunityScreen> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<FriendsProvider>().fetchAll(force: true);
-      context.read<GroupProvider>().fetchAll(force: true);
-    });
-  }
-
   void _openActivityHub() {
     Navigator.push(
       context,
@@ -205,14 +198,17 @@ class _CommunityScreenState extends State<CommunityScreen> {
               )
             else if (previewFriends.isEmpty)
               ModernCard(
-                onTap: _openActivityHub,
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SearchUsersScreen()),
+                ).then((_) => friends.fetchAll(force: true)),
                 child: Row(
                   children: [
                     const Icon(Icons.person_add_alt_1_outlined, color: AppColors.accent),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'Find people in Activity → Search',
+                        'Find friends by name or username',
                         style: Theme.of(context).textTheme.bodyLarge,
                       ),
                     ),
@@ -261,11 +257,32 @@ class _CommunityScreenState extends State<CommunityScreen> {
               title: 'Community Activity',
               subtitle: 'From your network',
             ),
-            const ModernCard(
-              child: EmptyState(
-                icon: Icons.dynamic_feed_outlined,
-                title: 'Friend activity lives on Home',
-                subtitle: 'Posts, stories, and restaurant updates appear in the Home feed.',
+            ModernCard(
+              onTap: () => context
+                  .findAncestorStateOfType<MainShellState>()
+                  ?.navigateToTab(MainShellState.homeTab),
+              child: Row(
+                children: [
+                  const Icon(Icons.home_outlined, color: AppColors.accent),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'See friend activity on Home',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Posts, stories, and restaurant updates are in your Home feed.',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+                ],
               ),
             ),
             const SizedBox(height: 16),

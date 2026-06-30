@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
 
 import '../models/cart.dart';
 import '../services/api_client.dart';
@@ -20,17 +21,29 @@ class CartProvider extends ChangeNotifier {
   double get subtotal => cart?.subtotal ?? 0;
   bool get isEmpty => cart == null || cart!.isEmpty;
 
+  void _notify() {
+    final phase = SchedulerBinding.instance.schedulerPhase;
+    if (phase == SchedulerPhase.idle ||
+        phase == SchedulerPhase.postFrameCallbacks) {
+      notifyListeners();
+      return;
+    }
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (hasListeners) notifyListeners();
+    });
+  }
+
   Future<void> load() async {
     if (!ApiClient.instance.isAuthenticated) {
       cart = null;
       error = null;
-      notifyListeners();
+      _notify();
       return;
     }
 
     loading = true;
     error = null;
-    notifyListeners();
+    _notify();
 
     try {
       cart = await _cartService.getCart();
@@ -42,7 +55,7 @@ class CartProvider extends ChangeNotifier {
       cart = null;
     } finally {
       loading = false;
-      notifyListeners();
+      _notify();
     }
   }
 
@@ -53,11 +66,11 @@ class CartProvider extends ChangeNotifier {
       return true;
     } on ApiException catch (e) {
       error = RecommendationCopy.friendlyError(e);
-      notifyListeners();
+      _notify();
       return false;
     } catch (e) {
       error = RecommendationCopy.friendlyError(e);
-      notifyListeners();
+      _notify();
       return false;
     }
   }
@@ -69,11 +82,11 @@ class CartProvider extends ChangeNotifier {
       return true;
     } on ApiException catch (e) {
       error = RecommendationCopy.friendlyError(e);
-      notifyListeners();
+      _notify();
       return false;
     } catch (e) {
       error = RecommendationCopy.friendlyError(e);
-      notifyListeners();
+      _notify();
       return false;
     }
   }
@@ -85,11 +98,11 @@ class CartProvider extends ChangeNotifier {
       return true;
     } on ApiException catch (e) {
       error = RecommendationCopy.friendlyError(e);
-      notifyListeners();
+      _notify();
       return false;
     } catch (e) {
       error = RecommendationCopy.friendlyError(e);
-      notifyListeners();
+      _notify();
       return false;
     }
   }
@@ -104,13 +117,13 @@ class CartProvider extends ChangeNotifier {
     } catch (e) {
       error = RecommendationCopy.friendlyError(e);
     }
-    notifyListeners();
+    _notify();
   }
 
   void reset() {
     cart = null;
     loading = false;
     error = null;
-    notifyListeners();
+    _notify();
   }
 }

@@ -55,7 +55,7 @@ class FeedMediaFrame extends StatelessWidget {
       filterQuality: FilterQuality.medium,
       loadingBuilder: (context, child, progress) {
         if (progress == null) return child;
-        return FeedShimmer(child: const SizedBox.expand());
+        return const FeedShimmer(child: SizedBox.expand());
       },
       errorBuilder: (_, __, ___) => _placeholder(),
     );

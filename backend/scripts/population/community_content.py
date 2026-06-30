@@ -17,8 +17,9 @@ from app.models.restaurant import Restaurant
 from app.models.review import Review
 from app.models.user import User
 
+from app.services.rating_service import refresh_restaurant_rating
+
 from .progress import log_progress
-from .social_content import FYP_MARKER
 
 FYP_USER_MARKER = "fyp.community"
 _REVIEWS_PER_RESTAURANT = 2
@@ -187,6 +188,9 @@ def populate_community(
             stats.reviews_created += 1
 
     db.commit()
+    for restaurant in restaurants:
+        refresh_restaurant_rating(db, restaurant.id)
+    db.commit()
 
     post_ids = _seed_post_ids(db, target_ids)
     if not post_ids:
@@ -197,6 +201,10 @@ def populate_community(
     }
     existing_saves = {
         (r.post_id, r.user_id) for r in db.query(PostSave.post_id, PostSave.user_id).all()
+    }
+    existing_comments = {
+        (r.post_id, r.user_id)
+        for r in db.query(PostComment.post_id, PostComment.user_id).all()
     }
 
     existing_like_count = int(
@@ -232,6 +240,9 @@ def populate_community(
     for _ in range(comments_needed):
         post_id = random.choice(post_ids)
         user = random.choice(users)
+        key = (post_id, user.id)
+        if key in existing_comments:
+            continue
         db.add(
             PostComment(
                 post_id=post_id,
@@ -239,6 +250,7 @@ def populate_community(
                 body=random.choice(COMMENT_SNIPPETS),
             )
         )
+        existing_comments.add(key)
         stats.comments_created += 1
         comment_deltas[post_id] = comment_deltas.get(post_id, 0) + 1
 

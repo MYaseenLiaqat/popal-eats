@@ -12,7 +12,7 @@ import '../../utils/recommendation_copy.dart';
 import '../social/social_user_card.dart';
 import '../ui/app_ui_widgets.dart';
 
-/// Debounced user search with friend-request actions.
+/// Debounced user search with friend-request actions and suggested users.
 class UserSearchPanel extends StatefulWidget {
   const UserSearchPanel({
     super.key,
@@ -42,13 +42,11 @@ class _UserSearchPanelState extends State<UserSearchPanel> {
   String? _error;
   String _query = '';
   final Set<int> _recentlySent = {};
+  int _searchGeneration = 0;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<FriendsProvider>().fetchAll(force: true);
-    });
   }
 
   @override
@@ -58,16 +56,22 @@ class _UserSearchPanelState extends State<UserSearchPanel> {
     super.dispose();
   }
 
+  String _normalizedQuery(String raw) =>
+      raw.trim().replaceFirst(RegExp(r'^@+'), '');
+
   void _onQueryChanged(String value) {
     setState(() => _query = value);
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 400), () {
+    _debounce = Timer(const Duration(milliseconds: 300), () {
       _runSearch(value.trim());
     });
   }
 
   Future<void> _runSearch(String query) async {
-    if (query.length < 2) {
+    final normalized = _normalizedQuery(query);
+    final generation = ++_searchGeneration;
+
+    if (normalized.isEmpty || normalized.length < 2) {
       setState(() {
         _results = [];
         _error = null;
@@ -82,14 +86,22 @@ class _UserSearchPanelState extends State<UserSearchPanel> {
     });
 
     try {
-      final response = await _service.searchUsers(query);
-      if (!mounted || _searchController.text.trim() != query) return;
+      final response = await _service
+          .searchUsers(normalized)
+          .timeout(const Duration(seconds: 20));
+      if (!mounted || generation != _searchGeneration) return;
       setState(() {
         _results = response.results;
         _loading = false;
       });
     } on ApiException catch (e) {
-      if (!mounted || _searchController.text.trim() != query) return;
+      if (!mounted || generation != _searchGeneration) return;
+      setState(() {
+        _error = RecommendationCopy.friendlyError(e);
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted || generation != _searchGeneration) return;
       setState(() {
         _error = RecommendationCopy.friendlyError(e);
         _loading = false;
@@ -103,6 +115,8 @@ class _UserSearchPanelState extends State<UserSearchPanel> {
     if (!mounted) return;
     if (ok) {
       setState(() => _recentlySent.add(user.id));
+      await context.read<FriendsProvider>().fetchRequests(force: true);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Friend request sent to ${user.fullName}')),
       );
@@ -132,49 +146,85 @@ class _UserSearchPanelState extends State<UserSearchPanel> {
       style: FilledButton.styleFrom(
         backgroundColor: AppColors.accent,
         foregroundColor: AppColors.onAccent,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        minimumSize: Size.zero,
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
-      child: const Text('Add'),
+      child: const Text('Add Friend'),
+    );
+  }
+
+  Widget _buildSuggestions(FriendsProvider friends) {
+    return _centeredChild(
+      const EmptyState(
+        icon: Icons.person_search_outlined,
+        title: 'Find people',
+        subtitle: 'Search by name or @username above',
+      ),
+    );
+  }
+
+  Widget _centeredChild(Widget child) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: constraints.maxHeight),
+            child: Center(child: child),
+          ),
+        );
+      },
     );
   }
 
   Widget _buildResults() {
-    if (_query.trim().length < 2) {
-      return const EmptyState(
-        icon: Icons.person_search_outlined,
-        title: 'Find friends',
-        subtitle: 'Type at least 2 characters to search by name or username',
+    if (_normalizedQuery(_query).isEmpty) {
+      return _buildSuggestions(context.watch<FriendsProvider>());
+    }
+
+    if (_normalizedQuery(_query).length < 2) {
+      return _centeredChild(
+        const EmptyState(
+          icon: Icons.person_search_outlined,
+          title: 'Keep typing',
+          subtitle: 'Enter at least 2 characters to search by name or username',
+        ),
       );
     }
 
     if (_loading) {
-      return const Center(
-        child: CircularProgressIndicator(color: AppColors.accent),
+      return _centeredChild(
+        const CircularProgressIndicator(color: AppColors.accent),
       );
     }
 
     if (_error != null) {
-      return Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          EmptyState(
-            icon: Icons.cloud_off_outlined,
-            title: 'Search failed',
-            subtitle: _error,
-          ),
-          TextButton(
-            onPressed: () => _runSearch(_query.trim()),
-            child: const Text('Retry'),
-          ),
-        ],
+      return _centeredChild(
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            EmptyState(
+              icon: Icons.cloud_off_outlined,
+              title: 'Search failed',
+              subtitle: _error,
+            ),
+            TextButton(
+              onPressed: () => _runSearch(_searchController.text.trim()),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
       );
     }
 
     if (_results.isEmpty) {
-      return const EmptyState(
-        icon: Icons.search_off_outlined,
-        title: 'No users found',
-        subtitle: 'Try a different name or username',
+      return _centeredChild(
+        const EmptyState(
+          icon: Icons.search_off_outlined,
+          title: 'No users found',
+          subtitle: 'Try a different name or username',
+        ),
       );
     }
 
@@ -211,10 +261,14 @@ class _UserSearchPanelState extends State<UserSearchPanel> {
             child: TextField(
               controller: _searchController,
               onChanged: _onQueryChanged,
+              onSubmitted: (value) {
+                _debounce?.cancel();
+                _runSearch(value.trim());
+              },
               textInputAction: TextInputAction.search,
               autofocus: widget.autofocus,
               decoration: InputDecoration(
-                hintText: 'Search by name or username',
+                hintText: 'Search name, @username, or role',
                 prefixIcon: const Icon(Icons.search, color: AppColors.accent),
                 suffixIcon: _query.isNotEmpty
                     ? IconButton(

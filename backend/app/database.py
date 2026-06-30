@@ -20,6 +20,9 @@ if not DATABASE_URL.startswith("postgresql+psycopg2://"):
 engine: Engine = create_engine(
     DATABASE_URL,
     pool_pre_ping=True,
+    pool_recycle=300,
+    pool_size=2,
+    max_overflow=2,
     connect_args={"sslmode": "require"} if "sslmode=require" in DATABASE_URL else {},
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

@@ -6,7 +6,7 @@ import '../theme/app_colors.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 
 /// Pending, rejected, or suspended state for restaurant / home chef accounts.
-class BusinessAccountStatusScreen extends StatelessWidget {
+class BusinessAccountStatusScreen extends StatefulWidget {
   const BusinessAccountStatusScreen({
     super.key,
     required this.status,
@@ -18,9 +18,25 @@ class BusinessAccountStatusScreen extends StatelessWidget {
   final String? rejectionReason;
   final String roleLabel;
 
-  bool get _isPending => status == 'pending';
-  bool get _isRejected => status == 'rejected';
-  bool get _isSuspended => status == 'suspended';
+  @override
+  State<BusinessAccountStatusScreen> createState() => _BusinessAccountStatusScreenState();
+}
+
+class _BusinessAccountStatusScreenState extends State<BusinessAccountStatusScreen> {
+  bool _checking = false;
+
+  Future<void> _checkStatus() async {
+    setState(() => _checking = true);
+    try {
+      await context.read<AuthProvider>().refreshUser();
+    } finally {
+      if (mounted) setState(() => _checking = false);
+    }
+  }
+
+  bool get _isPending => widget.status == 'pending';
+  bool get _isRejected => widget.status == 'rejected';
+  bool get _isSuspended => widget.status == 'suspended';
 
   @override
   Widget build(BuildContext context) {
@@ -78,7 +94,7 @@ class BusinessAccountStatusScreen extends StatelessWidget {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'We will notify you once your $roleLabel account is approved.',
+                              'We will notify you once your ${widget.roleLabel} account is approved.',
                               textAlign: TextAlign.center,
                               style: Theme.of(context).textTheme.bodySmall,
                             ),
@@ -86,7 +102,7 @@ class BusinessAccountStatusScreen extends StatelessWidget {
                         ),
                       ),
                     ],
-                    if (_isRejected && rejectionReason != null && rejectionReason!.isNotEmpty) ...[
+                    if (_isRejected && widget.rejectionReason != null && widget.rejectionReason!.isNotEmpty) ...[
                       const SizedBox(height: 16),
                       Container(
                         width: double.infinity,
@@ -106,7 +122,7 @@ class BusinessAccountStatusScreen extends StatelessWidget {
                                   ),
                             ),
                             const SizedBox(height: 4),
-                            Text(rejectionReason!, style: Theme.of(context).textTheme.bodyMedium),
+                            Text(widget.rejectionReason!, style: Theme.of(context).textTheme.bodyMedium),
                           ],
                         ),
                       ),
@@ -122,6 +138,19 @@ class BusinessAccountStatusScreen extends StatelessWidget {
                       ),
                     ],
                     const SizedBox(height: 24),
+                    if (_isPending)
+                      FilledButton.icon(
+                        onPressed: _checking ? null : _checkStatus,
+                        icon: _checking
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                              )
+                            : const Icon(Icons.refresh),
+                        label: Text(_checking ? 'Checking…' : 'Check approval status'),
+                      ),
+                    if (_isPending) const SizedBox(height: 10),
                     OutlinedButton.icon(
                       onPressed: () => context.read<AuthProvider>().logout(),
                       icon: const Icon(Icons.logout),
@@ -142,7 +171,7 @@ class BusinessAccountStatusScreen extends StatelessWidget {
       return (
         Icons.hourglass_top_outlined,
         'Application Submitted',
-        'Your $roleLabel account is currently under review.',
+        'Your ${widget.roleLabel} account is currently under review.',
         AppColors.accent,
       );
     }
@@ -150,14 +179,14 @@ class BusinessAccountStatusScreen extends StatelessWidget {
       return (
         Icons.cancel_outlined,
         'Application Rejected',
-        'Unfortunately we could not approve your $roleLabel application at this time.',
+        'Unfortunately we could not approve your ${widget.roleLabel} application at this time.',
         AppColors.error,
       );
     }
     return (
       Icons.block_outlined,
       'Account Suspended',
-      'Your $roleLabel account has been suspended. Please contact support.',
+        'Your ${widget.roleLabel} account has been suspended. Please contact support.',
       AppColors.error,
     );
   }

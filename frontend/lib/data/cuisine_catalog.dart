@@ -71,6 +71,16 @@ abstract final class CuisineCatalog {
       name: 'Desserts',
       description: 'Cakes, pastries & ice cream',
     ),
+    CuisineDefinition(
+      key: 'bbq',
+      name: 'BBQ',
+      description: 'Grilled meats, kebabs & smoky flavors',
+    ),
+    CuisineDefinition(
+      key: 'beverages',
+      name: 'Beverages',
+      description: 'Juices, shakes, coffee & tea',
+    ),
   ];
 
   static CuisineDefinition? byKey(String key) {
@@ -82,7 +92,8 @@ abstract final class CuisineCatalog {
   }
 
   static String labelFor(String key) {
-    return byKey(key)?.name ?? key.replaceAll('_', ' ').split(' ').map(_titleWord).join(' ');
+    return byKey(key)?.name ??
+        key.replaceAll('_', ' ').split(' ').map(_titleWord).join(' ');
   }
 
   static String _titleWord(String word) {

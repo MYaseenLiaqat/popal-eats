@@ -4,6 +4,7 @@ import 'package:video_player/video_player.dart';
 
 import '../../models/post.dart';
 import '../../theme/app_colors.dart';
+import '../../utils/post_caption.dart';
 import '../../utils/date_display.dart';
 import '../../utils/media_url.dart';
 import '../community_avatar.dart';
@@ -191,7 +192,7 @@ class _PostFullscreenViewerState extends State<PostFullscreenViewer>
       widget.onRepost!(_post);
       return;
     }
-    Clipboard.setData(ClipboardData(text: _post.caption ?? _post.displayTitle));
+    Clipboard.setData(ClipboardData(text: displayPostCaption(_post.caption).isNotEmpty ? displayPostCaption(_post.caption) : _post.displayTitle));
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Caption copied')),
     );
@@ -376,10 +377,10 @@ class _PostFullscreenViewerState extends State<PostFullscreenViewer>
                       ),
                     ],
                   ),
-                  if (_post.caption != null && _post.caption!.isNotEmpty) ...[
+                  if (hasVisibleCaption(_post.caption)) ...[
                     const SizedBox(height: 10),
                     Text(
-                      _post.caption!,
+                      displayPostCaption(_post.caption),
                       maxLines: 4,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(

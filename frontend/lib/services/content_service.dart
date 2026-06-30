@@ -57,6 +57,25 @@ class ContentService {
     return Post.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
   }
 
+  Future<Post> uploadPostVideo({
+    required int postId,
+    required List<int> bytes,
+    required String filename,
+  }) async {
+    final uri = Uri.parse('${ApiConfig.baseUrl}/posts/$postId/video');
+    final request = http.MultipartRequest('POST', uri);
+    final token = _api.accessToken;
+    if (token != null) {
+      request.headers['Authorization'] = 'Bearer $token';
+    }
+    request.files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename));
+
+    final streamed = await request.send().timeout(ApiConfig.timeout);
+    final response = await http.Response.fromStream(streamed);
+    _api.throwIfError(response);
+    return Post.fromJson(jsonDecode(response.body) as Map<String, dynamic>);
+  }
+
   Future<void> likePost(int postId) async {
     final r = await _api.post('/posts/$postId/like');
     _api.throwIfError(r);

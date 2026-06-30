@@ -95,7 +95,7 @@ def _login(client, email: str, password: str) -> str:
     return r.json()["access_token"]
 
 
-def test_customer_cannot_create_story(client):
+def test_customer_can_create_story(client):
     payload, _ = _register_customer(client)
     token = _login(client, payload["email"], payload["password"])
     r = client.post(
@@ -103,7 +103,7 @@ def test_customer_cannot_create_story(client):
         headers={"Authorization": f"Bearer {token}"},
         files={"file": ("story.jpg", b"fake", "image/jpeg")},
     )
-    assert r.status_code == 403
+    assert r.status_code == 201, r.text
 
 
 def test_customer_cannot_create_chef_post(client):

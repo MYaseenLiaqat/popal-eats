@@ -51,6 +51,15 @@ class SocialUserCard extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
+              if (!compact && user.role != null && user.role!.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Text(
+                  user.roleLabel,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                ),
+              ],
               if (!compact && user.bio != null && user.bio!.trim().isNotEmpty) ...[
                 const SizedBox(height: 6),
                 Text(
@@ -65,7 +74,13 @@ class SocialUserCard extends StatelessWidget {
         ),
         if (trailing != null) ...[
           const SizedBox(width: 8),
-          trailing!,
+          Align(
+            alignment: Alignment.centerRight,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 116),
+              child: trailing!,
+            ),
+          ),
         ],
       ],
     );

@@ -11,7 +11,6 @@ Users with no order history use fusion with collaborative_score = 0.
 """
 
 import logging
-from collections import defaultdict
 from typing import Literal
 
 from sqlalchemy import func
@@ -26,9 +25,10 @@ from app.schemas.recommendation_v2 import V2DishRecommendationItem, V2ScoreBreak
 from app.services.recommendation.allergy_filter import filter_dishes_for_user_allergies
 from app.services.recommendation.price_adjustment import apply_price_outlier_penalty
 from app.services.recommendation.v2_collaborative import (
-    build_cooccurrence_matrix,
+    _collaborative_scores_for_user,
     get_collaborative_recommendations,
 )
+from app.services.recommendation.v2_cooccurrence_cache import get_cooccurrence_bundle
 from app.services.recommendation.v2_content import get_content_recommendations
 from app.services.recommendation.v2_feedback import (
     UserFeedbackProfile,
@@ -64,36 +64,14 @@ def _user_has_order_history(db: Session, user_id: int) -> bool:
     )
 
 
-def _collaborative_score_map(db: Session, user_id: int) -> dict[int, float]:
+def _collaborative_score_map(
+    db: Session,
+    user_id: int,
+    *,
+    cooccurrence: dict[int, dict[int, int]] | None = None,
+) -> dict[int, float]:
     """Normalized 0–100 collaborative scores from order co-occurrence."""
-    ordered_dish_ids = {
-        row[0]
-        for row in db.query(OrderItem.dish_id)
-        .join(Order, OrderItem.order_id == Order.id)
-        .filter(Order.user_id == user_id)
-        .distinct()
-        .all()
-    }
-    if not ordered_dish_ids:
-        return {}
-
-    cooccurrence = build_cooccurrence_matrix(db)
-    candidate_scores: dict[int, float] = defaultdict(float)
-
-    for source_id in ordered_dish_ids:
-        for neighbor_id, co_count in cooccurrence.get(source_id, {}).items():
-            if neighbor_id in ordered_dish_ids:
-                continue
-            candidate_scores[neighbor_id] += co_count
-
-    if not candidate_scores:
-        return {}
-
-    max_score = max(candidate_scores.values())
-    return {
-        dish_id: round((raw / max_score) * 100, 1) if max_score > 0 else 0.0
-        for dish_id, raw in candidate_scores.items()
-    }
+    return _collaborative_scores_for_user(db, user_id, cooccurrence=cooccurrence)
 
 
 def _build_fused_item(
@@ -191,7 +169,6 @@ def get_hybrid_recommendations(
     """
     profile = get_user_feedback_profile(db, user_id)
     prefs = load_recommendation_preferences(db, user_id)
-    dish_to_category = load_dish_category_names(db)
 
     log_pipeline_stage("hybrid_start", user_id=user_id)
 
@@ -205,13 +182,15 @@ def get_hybrid_recommendations(
 
     cf_map: dict[int, float] = {}
     cf_by_id: dict[int, V2DishRecommendationItem] = {}
+    cooccurrence: dict[int, dict[int, int]] | None = None
 
     if _user_has_order_history(db, user_id):
-        cf_items = get_collaborative_recommendations(db, user_id, limit=HYBRID_POOL_SIZE)
+        _, cooccurrence, _ = get_cooccurrence_bundle(db)
+        cf_items = get_collaborative_recommendations(
+            db, user_id, limit=HYBRID_POOL_SIZE, cooccurrence=cooccurrence
+        )
         cf_by_id = {item.dish_id: item for item in cf_items}
-        cf_map = _collaborative_score_map(db, user_id)
-        for dish_id, score in cf_map.items():
-            cf_map[dish_id] = max(score, cf_map.get(dish_id, 0.0))
+        cf_map = _collaborative_score_map(db, user_id, cooccurrence=cooccurrence)
         log_pipeline_stage(
             "hybrid_cf_pool",
             user_id=user_id,
@@ -219,7 +198,10 @@ def get_hybrid_recommendations(
             cf_score_entries=len(cf_map),
         )
 
-    all_dish_ids = set(content_by_id) | set(cf_map.keys()) | set(cf_by_id.keys())
+    cf_top_ids = set(
+        sorted(cf_map.keys(), key=lambda d: cf_map.get(d, 0.0), reverse=True)[:HYBRID_POOL_SIZE]
+    )
+    all_dish_ids = set(content_by_id) | cf_top_ids | set(cf_by_id.keys())
 
     if prefs.allergies and all_dish_ids:
         pool_dishes = (
@@ -244,12 +226,29 @@ def get_hybrid_recommendations(
         cf_by_id = {k: v for k, v in cf_by_id.items() if k in safe_ids}
         cf_map = {k: v for k, v in cf_map.items() if k in safe_ids}
 
+    dish_to_category = load_dish_category_names(db, dish_ids=list(all_dish_ids))
+
     log_pipeline_stage(
         "hybrid_fusion_union",
         user_id=user_id,
         candidate_ids=len(all_dish_ids),
     )
     hybrid_rows: list[tuple[float, V2DishRecommendationItem]] = []
+
+    missing_ids = [
+        dish_id
+        for dish_id in all_dish_ids
+        if dish_id not in content_by_id and dish_id not in cf_by_id
+    ]
+    extra_dishes_by_id: dict[int, Dish] = {}
+    if missing_ids:
+        extra_dishes_by_id = {
+            d.id: d
+            for d in db.query(Dish)
+            .options(joinedload(Dish.restaurant))
+            .filter(Dish.id.in_(missing_ids), Dish.is_available.is_(True))
+            .all()
+        }
 
     for dish_id in all_dish_ids:
         content_item = content_by_id.get(dish_id)
@@ -283,12 +282,7 @@ def get_hybrid_recommendations(
                 category_name=dish_to_category.get(dish_id),
             )
         else:
-            dish = (
-                db.query(Dish)
-                .options(joinedload(Dish.restaurant))
-                .filter(Dish.id == dish_id, Dish.is_available.is_(True))
-                .first()
-            )
+            dish = extra_dishes_by_id.get(dish_id)
             if not dish or not is_eligible_dish(dish):
                 continue
             fused = _build_fused_item(

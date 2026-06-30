@@ -85,7 +85,7 @@ class _RestaurantAnalyticsScreenState extends State<RestaurantAnalyticsScreen> {
           _MetricTile(label: 'Post engagement', value: '${data.postEngagement}'),
           _MetricTile(label: 'Total posts', value: '${data.totalPosts}'),
           const SizedBox(height: 16),
-          SectionHeader(title: 'Top selling dishes'),
+          const SectionHeader(title: 'Top selling dishes'),
           if (data.popularDishes.isEmpty)
             const ModernCard(
               child: Text('No order data yet — sales will appear after your first orders.'),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/restaurant.dart';
 import '../../theme/app_colors.dart';
+import '../../utils/restaurant_display.dart';
 import '../../utils/preference_display.dart';
 import '../../utils/profile_image_url.dart';
 import '../feed/feed_shimmer.dart';
@@ -139,6 +140,14 @@ class RestaurantHeroHeader extends StatelessWidget {
                             iconSize: 8,
                             label: restaurant.isOpen ? 'Open now' : 'Closed',
                             color: restaurant.isOpen ? AppColors.accent : AppColors.error,
+                          ),
+                          _MetaChip(
+                            icon: Icons.schedule_outlined,
+                            label: RestaurantDisplay.deliveryEta(restaurant) ?? '25–35 min',
+                          ),
+                          _MetaChip(
+                            icon: Icons.near_me_outlined,
+                            label: RestaurantDisplay.distanceLabel(restaurant),
                           ),
                         ],
                       ),

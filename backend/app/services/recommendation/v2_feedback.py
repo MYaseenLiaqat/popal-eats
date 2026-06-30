@@ -28,12 +28,14 @@ class UserFeedbackProfile:
     preferred_dishes: dict[int, int]
 
 
-def load_dish_category_names(db: Session) -> dict[int, str]:
-    rows = (
-        db.query(Dish.id, Category.name)
-        .join(Category, Dish.category_id == Category.id)
-        .all()
-    )
+def load_dish_category_names(
+    db: Session,
+    dish_ids: list[int] | None = None,
+) -> dict[int, str]:
+    query = db.query(Dish.id, Category.name).join(Category, Dish.category_id == Category.id)
+    if dish_ids:
+        query = query.filter(Dish.id.in_(dish_ids))
+    rows = query.all()
     return {dish_id: name for dish_id, name in rows}
 
 
@@ -45,13 +47,15 @@ def get_user_feedback_profile(db: Session, user_id: int) -> UserFeedbackProfile:
     """
     dish_weights: dict[int, int] = defaultdict(int)
     category_weights: dict[str, int] = defaultdict(int)
-    dish_to_category = load_dish_category_names(db)
 
     event_rows = (
         db.query(RecommendationEvent.dish_id, RecommendationEvent.event_type)
         .filter(RecommendationEvent.user_id == user_id)
         .all()
     )
+    event_dish_ids = [dish_id for dish_id, _ in event_rows]
+    dish_to_category = load_dish_category_names(db, dish_ids=event_dish_ids or None)
+
     for dish_id, event_type in event_rows:
         weight = EVENT_FEEDBACK_WEIGHTS.get(event_type, 0)
         if weight <= 0:
@@ -147,7 +151,7 @@ def apply_feedback_to_items(
     if not profile.preferred_dishes and not profile.preferred_categories:
         return items
 
-    dish_to_category = load_dish_category_names(db)
+    dish_to_category = load_dish_category_names(db, dish_ids=[item.dish_id for item in items])
     boosted = [
         apply_feedback_to_item(item, profile, dish_to_category.get(item.dish_id))
         for item in items

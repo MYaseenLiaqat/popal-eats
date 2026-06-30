@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: popal-eats-api
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt && alembic upgrade head
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 2
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12"
+      - key: DEBUG
+        value: "false"
+      - key: PROCESS_REVIEWS_INLINE
+        value: "false"
+    # Set DATABASE_URL, SECRET_KEY, CORS_ORIGINS, REDIS_URL, GOOGLE_CLIENT_ID in dashboard.

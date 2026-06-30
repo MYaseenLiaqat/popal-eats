@@ -5,6 +5,7 @@ import '../services/order_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/price_formatter.dart';
 import '../utils/recommendation_copy.dart';
+import '../widgets/feed/feed_shimmer.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 import 'order_detail_screen.dart';
 
@@ -65,14 +66,39 @@ class _OrdersScreenState extends State<OrdersScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('My Orders')),
+      appBar: AppBar(
+        title: const Text('My Orders'),
+        centerTitle: false,
+      ),
       body: loading
-          ? const Center(child: CircularProgressIndicator())
+          ? ListView.builder(
+              padding: const EdgeInsets.all(AppColors.screenPadding),
+              itemCount: 5,
+              itemBuilder: (_, __) => const Padding(
+                padding: EdgeInsets.only(bottom: 10),
+                child: FeedSkeletonBlock(height: 88, borderRadius: 16),
+              ),
+            )
           : error != null
               ? Center(
                   child: Padding(
                     padding: const EdgeInsets.all(AppColors.screenPadding),
-                    child: Text(error!, textAlign: TextAlign.center),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        EmptyState(
+                          icon: Icons.cloud_off_outlined,
+                          title: 'Could not load orders',
+                          subtitle: error,
+                        ),
+                        const SizedBox(height: 16),
+                        GoldActionButton(
+                          label: 'Try again',
+                          icon: Icons.refresh,
+                          onPressed: _load,
+                        ),
+                      ],
+                    ),
                   ),
                 )
               : orders.isEmpty

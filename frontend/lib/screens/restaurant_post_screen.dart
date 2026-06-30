@@ -175,7 +175,7 @@ class _RestaurantPostScreenState extends State<RestaurantPostScreen> {
             )
           else ...[
             DropdownButtonFormField<Restaurant>(
-              value: _selected,
+              initialValue: _selected,
               decoration: const InputDecoration(labelText: 'Restaurant'),
               items: _restaurants
                   .map((r) => DropdownMenuItem(value: r, child: Text(r.name)))
@@ -184,7 +184,7 @@ class _RestaurantPostScreenState extends State<RestaurantPostScreen> {
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<RestaurantContentSubtype>(
-              value: _subtype,
+              initialValue: _subtype,
               decoration: const InputDecoration(labelText: 'Post type'),
               items: const [
                 DropdownMenuItem(

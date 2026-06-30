@@ -1,11 +1,10 @@
 import 'package:flutter/foundation.dart';
 
-import '../data/reels_placeholder_data.dart';
 import '../models/reel.dart';
 import '../services/reels_service.dart';
 import '../utils/recommendation_copy.dart';
 
-/// State for recipe & chef reels (placeholder content until video API ships).
+/// State for recipe & chef reels from the discover API.
 class ReelsProvider extends ChangeNotifier {
   ReelsProvider({ReelsService? service}) : _service = service ?? ReelsService();
 
@@ -15,6 +14,8 @@ class ReelsProvider extends ChangeNotifier {
   bool loading = false;
   String? error;
   int currentIndex = 0;
+
+  bool get hasReels => reels.isNotEmpty;
 
   Future<void> reset() async {
     reels = [];
@@ -52,7 +53,4 @@ class ReelsProvider extends ChangeNotifier {
       notifyListeners();
     }
   }
-
-  /// Offline-friendly fallback used by the service layer today.
-  List<Reel> get placeholderCatalog => placeholderReels;
 }

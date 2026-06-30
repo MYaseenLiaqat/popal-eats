@@ -94,11 +94,11 @@ class HomeReelsEntrySkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+    return const Padding(
+      padding: EdgeInsets.fromLTRB(16, 8, 16, 16),
       child: FeedShimmer(
         borderRadius: FeedConstants.cardRadius,
-        child: const SizedBox(height: 120),
+        child: SizedBox(height: 120),
       ),
     );
   }

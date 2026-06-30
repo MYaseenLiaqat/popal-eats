@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/preferences_provider.dart';
+import '../providers/recommendation_provider.dart';
 import '../theme/app_colors.dart';
 import '../utils/preference_display.dart';
+import '../utils/preference_feedback.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 
 /// Nutrition preferences synced with backend GET/PUT /preferences.
@@ -76,9 +78,9 @@ class _NutritionPreferencesScreenState
     );
     if (!mounted) return;
     if (ok) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Preferences saved')),
-      );
+      await context.read<RecommendationProvider>().fetchAll(force: true);
+      if (!mounted) return;
+      showPreferencesSavedFeedback(context);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(provider.error ?? 'Could not save preferences')),

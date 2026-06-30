@@ -7,7 +7,9 @@ import '../data/cuisine_catalog.dart';
 import '../models/onboarding_option.dart';
 import '../providers/onboarding_provider.dart';
 import '../theme/app_colors.dart';
+import '../utils/preference_feedback.dart';
 import '../widgets/onboarding/cuisine_preference_card.dart';
+import '../utils/preference_feedback.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 
 class PreferenceOnboardingScreen extends StatefulWidget {
@@ -99,6 +101,11 @@ class _PreferenceOnboardingScreenState extends State<PreferenceOnboardingScreen>
     if (!mounted) return;
     if (!ok) {
       _showError(provider.error ?? 'Could not save preferences');
+    } else {
+      showPreferencesSavedFeedback(
+        context,
+        message: 'Preferences saved — your feed is personalized',
+      );
     }
   }
 

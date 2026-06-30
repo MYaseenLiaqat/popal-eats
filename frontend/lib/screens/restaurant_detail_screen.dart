@@ -62,6 +62,9 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
   String _searchQuery = '';
   int _selectedCategoryIndex = 0;
 
+  Set<int> get _recommendedDishIds =>
+      restaurantRecommendations.map((r) => r.dishId).toSet();
+
   @override
   void initState() {
     super.initState();
@@ -114,7 +117,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
         loading = false;
       });
       _loadReviews();
-      _loadRecommendations(r.name);
+      _loadRecommendations(r.name, parsedDishes.map((d) => d.id).toSet());
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -139,7 +142,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
     }
   }
 
-  Future<void> _loadRecommendations(String restaurantName) async {
+  Future<void> _loadRecommendations(String restaurantName, Set<int> dishIds) async {
     try {
       final list = await _recommendations.list();
       if (!mounted) return;
@@ -147,8 +150,9 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
         restaurantRecommendations = list
             .where(
               (rec) =>
+                  dishIds.contains(rec.dishId) ||
                   rec.restaurantName.trim().toLowerCase() ==
-                  restaurantName.trim().toLowerCase(),
+                      restaurantName.trim().toLowerCase(),
             )
             .take(8)
             .toList();
@@ -293,6 +297,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                 return RestaurantDishCard(
                   dish: dish,
                   isFavorite: _favoriteDishes.contains(dish.id),
+                  isAiRecommended: _recommendedDishIds.contains(dish.id),
                   onTap: () => _openDish(dish.id),
                   onFavoriteToggle: () {
                     setState(() {
@@ -340,6 +345,7 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                 return RestaurantDishCard(
                   dish: dish,
                   isFavorite: _favoriteDishes.contains(dish.id),
+                  isAiRecommended: _recommendedDishIds.contains(dish.id),
                   onTap: () => _openDish(dish.id),
                   onFavoriteToggle: () {
                     setState(() {

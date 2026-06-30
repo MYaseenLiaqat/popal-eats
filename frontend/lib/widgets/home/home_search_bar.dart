@@ -10,10 +10,16 @@ class HomeSearchBar extends StatefulWidget {
     super.key,
     this.onTap,
     this.onFilterTap,
+    this.controller,
+    this.onChanged,
+    this.editable = false,
   });
 
   final VoidCallback? onTap;
   final VoidCallback? onFilterTap;
+  final TextEditingController? controller;
+  final ValueChanged<String>? onChanged;
+  final bool editable;
 
   @override
   State<HomeSearchBar> createState() => _HomeSearchBarState();
@@ -42,6 +48,38 @@ class _HomeSearchBarState extends State<HomeSearchBar> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.editable && widget.controller != null) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+        child: TextField(
+          controller: widget.controller,
+          onChanged: widget.onChanged,
+          textInputAction: TextInputAction.search,
+          decoration: InputDecoration(
+            hintText: 'Search restaurants, dishes, cuisines…',
+            prefixIcon: Icon(Icons.search_rounded, color: AppColors.accent.withValues(alpha: 0.9)),
+            suffixIcon: widget.onFilterTap != null
+                ? IconButton(
+                    tooltip: 'Filters',
+                    onPressed: widget.onFilterTap,
+                    icon: Icon(Icons.tune_rounded, color: AppColors.accent.withValues(alpha: 0.95)),
+                  )
+                : null,
+            filled: true,
+            fillColor: AppColors.surface,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(HomeConstants.cardRadius),
+              borderSide: BorderSide(color: AppColors.borderStrong.withValues(alpha: 0.6)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(HomeConstants.cardRadius),
+              borderSide: BorderSide(color: AppColors.borderStrong.withValues(alpha: 0.6)),
+            ),
+          ),
+        ),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
       child: Material(
@@ -101,18 +139,6 @@ class _HomeSearchBarState extends State<HomeSearchBar> {
                           ),
                         ),
                       ],
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: 'Voice search',
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Voice search coming soon')),
-                      );
-                    },
-                    icon: Icon(
-                      Icons.mic_none_rounded,
-                      color: AppColors.textSecondary.withValues(alpha: 0.9),
                     ),
                   ),
                   IconButton(

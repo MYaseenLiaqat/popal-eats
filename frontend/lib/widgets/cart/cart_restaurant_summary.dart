@@ -20,11 +20,11 @@ class CartRestaurantSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (loading) {
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+      return const Padding(
+        padding: EdgeInsets.fromLTRB(16, 14, 16, 0),
         child: FeedShimmer(
           borderRadius: CartConstants.cardRadius,
-          child: const SizedBox(height: 88, width: double.infinity),
+          child: SizedBox(height: 88, width: double.infinity),
         ),
       );
     }
@@ -38,7 +38,7 @@ class CartRestaurantSummary extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          gradient: AppColors.headerGradient,
+          gradient: context.popalHeaderGradient,
           borderRadius: BorderRadius.circular(CartConstants.cardRadius),
           border: Border.all(color: AppColors.accent.withValues(alpha: 0.35)),
           boxShadow: AppColors.cardShadow(),
@@ -82,7 +82,7 @@ class CartRestaurantSummary extends StatelessWidget {
                           rating: restaurant!.averageRating,
                           reviews: restaurant!.totalReviews,
                         ),
-                      _Chip(label: 'Delivery', icon: Icons.delivery_dining_outlined),
+                      const _Chip(label: 'Delivery', icon: Icons.delivery_dining_outlined),
                       _Chip(
                         label: restaurant!.isOpen ? 'Open' : 'Closed',
                         icon: Icons.circle,

@@ -9,7 +9,7 @@ from app.core.account_status import normalize_account_status
 from app.core.roles import CUSTOMER, HOME_CHEF, RESTAURANT, SIGNUP_ROLES, normalize_role
 from app.utils.password import validate_password
 from app.utils.phone import normalize_phone
-from app.utils.username import validate_username
+from app.utils.username import suggest_username_from_email, validate_username
 
 SignupRole = Literal["customer", "restaurant", "home_chef"]
 
@@ -19,6 +19,7 @@ class RestaurantRegistrationProfile(BaseModel):
     restaurant_address: str = Field(..., min_length=1, max_length=300)
     cuisine_type: str = Field(..., min_length=1, max_length=100)
     business_registration_number: str | None = Field(None, max_length=100)
+    description: str | None = Field(None, max_length=2000)
     logo_url: str | None = Field(None, max_length=500)
     cover_image_url: str | None = Field(None, max_length=500)
 
@@ -28,19 +29,27 @@ class HomeChefRegistrationProfile(BaseModel):
     cuisine_specialty: str = Field(..., min_length=1, max_length=100)
     kitchen_address: str = Field(..., min_length=1, max_length=300)
     food_license: str | None = Field(None, max_length=100)
+    biography: str | None = Field(None, max_length=2000)
     profile_image_url: str | None = Field(None, max_length=500)
+
+
+def _names_from_title(title: str, *, fallback_last: str) -> tuple[str, str]:
+    parts = title.strip().split(None, 1)
+    first = (parts[0] if parts else "Business")[:100]
+    last = (parts[1] if len(parts) > 1 else fallback_last)[:100]
+    return first, last
 
 
 class UserRegister(BaseModel):
     """Body for POST /register — universal role-based signup."""
 
     role: SignupRole = CUSTOMER
-    first_name: str = Field(..., min_length=1, max_length=100)
-    last_name: str = Field(..., min_length=1, max_length=100)
-    username: str = Field(..., min_length=3, max_length=30)
+    first_name: str | None = Field(None, min_length=1, max_length=100)
+    last_name: str | None = Field(None, min_length=1, max_length=100)
+    username: str | None = Field(None, min_length=3, max_length=30)
     email: EmailStr
-    phone: str = Field(..., min_length=8, max_length=20)
-    date_of_birth: date
+    phone: str | None = Field(None, min_length=8, max_length=20)
+    date_of_birth: date | None = None
     password: str = Field(..., min_length=8, max_length=128)
     confirm_password: str = Field(..., min_length=8, max_length=128)
     city: str | None = Field(None, max_length=100)
@@ -52,7 +61,9 @@ class UserRegister(BaseModel):
 
     @field_validator("username")
     @classmethod
-    def _validate_username(cls, value: str) -> str:
+    def _validate_username(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
         return validate_username(value)
 
     @field_validator("email")
@@ -82,7 +93,9 @@ class UserRegister(BaseModel):
 
     @field_validator("phone")
     @classmethod
-    def _normalize_phone(cls, value: str) -> str:
+    def _normalize_phone(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
         return normalize_phone(value)
 
     @field_validator("password")
@@ -92,7 +105,9 @@ class UserRegister(BaseModel):
 
     @field_validator("first_name", "last_name")
     @classmethod
-    def _strip_names(cls, value: str) -> str:
+    def _strip_names(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
         trimmed = value.strip()
         if not trimmed:
             raise ValueError("Name fields cannot be empty.")
@@ -100,7 +115,9 @@ class UserRegister(BaseModel):
 
     @field_validator("date_of_birth")
     @classmethod
-    def _validate_dob(cls, value: date) -> date:
+    def _validate_dob(cls, value: date | None) -> date | None:
+        if value is None:
+            return None
         today = date.today()
         age = today.year - value.year - ((today.month, today.day) < (value.month, value.day))
         if age < 13:
@@ -135,12 +152,57 @@ class UserRegister(BaseModel):
         if role == CUSTOMER and (self.restaurant_profile or self.home_chef_profile):
             raise ValueError("Customer registration cannot include business profiles.")
 
+        if role == CUSTOMER:
+            missing = [
+                label
+                for label, value in (
+                    ("first name", self.first_name),
+                    ("last name", self.last_name),
+                    ("phone", self.phone),
+                    ("date of birth", self.date_of_birth),
+                )
+                if not value
+            ]
+            if missing:
+                raise ValueError(f"Customer registration requires: {', '.join(missing)}.")
+            if not self.username:
+                self.username = suggest_username_from_email(self.email)
+        elif role == RESTAURANT and self.restaurant_profile:
+            profile = self.restaurant_profile
+            if not self.phone:
+                raise ValueError("Business phone is required.")
+            if not self.first_name or not self.last_name:
+                first, last = _names_from_title(profile.restaurant_name, fallback_last="Owner")
+                self.first_name = self.first_name or first
+                self.last_name = self.last_name or last
+            if not self.username:
+                self.username = suggest_username_from_email(self.email)
+            if not self.date_of_birth:
+                self.date_of_birth = date(1990, 1, 1)
+        elif role == HOME_CHEF and self.home_chef_profile:
+            profile = self.home_chef_profile
+            if not self.phone:
+                raise ValueError("Phone number is required.")
+            if not self.first_name or not self.last_name:
+                first, last = _names_from_title(profile.chef_display_name, fallback_last="Chef")
+                self.first_name = self.first_name or first
+                self.last_name = self.last_name or last
+            if not self.username:
+                self.username = suggest_username_from_email(self.email)
+            if not self.date_of_birth:
+                self.date_of_birth = date(1990, 1, 1)
+
         return self
 
     @property
     def resolved_full_name(self) -> str:
         if self.full_name and self.full_name.strip():
             return self.full_name.strip()
+        role = normalize_role(self.role)
+        if role == RESTAURANT and self.restaurant_profile:
+            return self.restaurant_profile.restaurant_name.strip()
+        if role == HOME_CHEF and self.home_chef_profile:
+            return self.home_chef_profile.chef_display_name.strip()
         return f"{self.first_name} {self.last_name}".strip()
 
 

@@ -33,7 +33,8 @@ from app.services.group_recommendation.consensus import (
     should_mark_agreed,
     summarize_votes,
 )
-from app.services.group_recommendation.context import load_group_context
+from app.services.group_recommendation.context import GroupRecommendationContext, load_group_context
+from app.services.group_recommendation.explainability import group_match_percent
 from app.services.group_recommendation.scoring import compute_group_centroid
 from app.services.group_recommendation_service import get_group_recommendations
 from app.services.group_session_service import _get_session_or_404, _require_member
@@ -113,6 +114,24 @@ def _active_snapshots(db: Session, session_id: int) -> list[GroupRecommendation]
     )
 
 
+def _snapshot_reasons(
+    score: float,
+    context: GroupRecommendationContext,
+) -> list[str]:
+    """Rebuild concise preference-based reasons when reusing stored snapshots."""
+    pct = group_match_percent(score)
+    reasons: list[str] = [f"{pct}% group match"]
+    if context.group_allergies:
+        reasons.append("Safe for group allergies")
+    if context.group_dietary:
+        diets = ", ".join(sorted(context.group_dietary)[:2]).replace("_", " ")
+        reasons.append(f"Fits {diets} preferences")
+    elif context.group_cuisines:
+        top = context.group_cuisines[0].replace("_", " ").title()
+        reasons.append(f"Matches group's {top} taste")
+    return reasons[:3]
+
+
 def _response_from_snapshots(
     db: Session,
     session,
@@ -126,6 +145,7 @@ def _response_from_snapshots(
         if dish is None:
             continue
         restaurant = dish.restaurant
+        score = float(row.recommendation_score)
         items.append(
             GroupDishRecommendation(
                 recommendation_id=row.id,
@@ -133,10 +153,12 @@ def _response_from_snapshots(
                 dish_name=dish.name,
                 restaurant_name=restaurant.name if restaurant else "",
                 price=dish.price,
-                score=float(row.recommendation_score),
+                score=score,
                 consensus_score=float(row.consensus_score),
                 final_score=float(row.final_score),
-                reasons=["A solid pick for your group"],
+                group_match_percent=group_match_percent(score),
+                reasons=_snapshot_reasons(score, context),
+                explanation_bullets=_snapshot_reasons(score, context),
             )
         )
     return GroupRecommendationsResponse(

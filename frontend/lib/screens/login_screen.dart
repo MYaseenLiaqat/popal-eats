@@ -73,7 +73,7 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 12),
             const AuthBrandedHeader(
               title: 'Welcome back',
-              subtitle: 'Discover food you\'ll love',
+              subtitle: 'Discover food you\'ll love from people you trust',
             ),
             const SizedBox(height: 20),
             AuthFormCard(
@@ -85,6 +85,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   TextField(
                     controller: _email,
                     decoration: authInputDecoration(
+                      context,
                       label: 'Email',
                       icon: Icons.email_outlined,
                       hint: 'you@example.com',
@@ -95,6 +96,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   TextField(
                     controller: _password,
                     decoration: authInputDecoration(
+                      context,
                       label: 'Password',
                       icon: Icons.lock_outline,
                     ),

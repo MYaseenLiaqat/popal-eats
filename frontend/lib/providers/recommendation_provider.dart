@@ -152,6 +152,18 @@ class RecommendationProvider extends ChangeNotifier {
     }
   }
 
+  /// Loads personalized recommendations only (Order tab — avoids trending/popular churn).
+  Future<void> fetchPersonalized({bool force = false}) async {
+    if (!ApiClient.instance.isAuthenticated) {
+      reset();
+      return;
+    }
+    if (!force && personalized.isNotEmpty && personalizedError == null) {
+      return;
+    }
+    await refreshPersonalized();
+  }
+
   Future<void> refreshPersonalized() => _refreshSingle(
         loader: () => _service.list(),
         onSuccess: (list) {

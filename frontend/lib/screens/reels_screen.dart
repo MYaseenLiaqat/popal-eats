@@ -7,7 +7,7 @@ import '../widgets/reels/reel_card.dart';
 import '../widgets/reels/reel_recipe_sheet.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 
-/// Vertical reels viewer — full-screen swipe, placeholder content only.
+/// Vertical reels viewer — discover content with video only.
 class ReelsScreen extends StatefulWidget {
   const ReelsScreen({super.key, this.initialIndex = 0});
 
@@ -50,15 +50,6 @@ class _ReelsScreenState extends State<ReelsScreen> with SingleTickerProviderStat
     if (!_showSwipeHint) return;
     setState(() => _showSwipeHint = false);
     _hintController.stop();
-  }
-
-  void _showPreviewNotice() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Video playback will be available in a future update'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
   }
 
   @override
@@ -128,8 +119,8 @@ class _ReelsScreenState extends State<ReelsScreen> with SingleTickerProviderStat
       return const Center(
         child: EmptyState(
           icon: Icons.videocam_outlined,
-          title: 'No reels yet',
-          subtitle: 'Recipe and chef reels will appear here soon.',
+          title: 'No reels',
+          subtitle: 'Reels from restaurants and home chefs will show here when available.',
         ),
       );
     }
@@ -153,7 +144,6 @@ class _ReelsScreenState extends State<ReelsScreen> with SingleTickerProviderStat
               child: ReelCard(
                 key: ValueKey(provider.reels[index].id),
                 reel: provider.reels[index],
-                onPreviewTap: _showPreviewNotice,
                 onRecipeTap: () => showReelRecipeSheet(
                   context,
                   provider.reels[index],

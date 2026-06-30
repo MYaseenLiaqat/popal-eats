@@ -6,9 +6,23 @@ from sqlalchemy.orm import Session
 from app.core.rbac import require_admin
 from app.database import get_db
 from app.models.user import User
+from app.services.admin_platform_service import build_platform_overview
 from app.services.recommendation.v2_catalog import get_recommendation_debug_snapshot
 
 router = APIRouter(prefix="/recommendations", tags=["admin-recommendations"])
+
+
+@router.get("/metrics")
+def recommendations_metrics(
+    db: Session = Depends(get_db),
+    _: User = Depends(require_admin),
+):
+    data = build_platform_overview(db)
+    return {
+        "recommendations": data["recommendations"],
+        "top_entities": data["top_entities"],
+        "debug": get_recommendation_debug_snapshot(db, user_id=None),
+    }
 
 
 @router.get("/debug")

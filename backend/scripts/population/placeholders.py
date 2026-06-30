@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-from app.services.recommendation.v2_candidates import is_placeholder_name
+from app.services.recommendation.v2_placeholders import is_placeholder_name
 
 _PLACEHOLDER_SUBSTRINGS = (
     "lorem ipsum",

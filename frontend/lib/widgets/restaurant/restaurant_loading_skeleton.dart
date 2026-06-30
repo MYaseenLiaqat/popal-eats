@@ -18,23 +18,23 @@ class RestaurantLoadingSkeleton extends StatelessWidget {
             width: double.infinity,
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.all(16),
+        const Padding(
+          padding: EdgeInsets.all(16),
           child: FeedSkeletonBlock(height: 140, borderRadius: RestaurantConstants.cardRadius),
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16),
           child: FeedSkeletonBlock(height: 36, borderRadius: 20),
         ),
         const SizedBox(height: 16),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16),
           child: FeedSkeletonBlock(height: 48, borderRadius: RestaurantConstants.cardRadius),
         ),
         const SizedBox(height: 16),
         for (var i = 0; i < 4; i++)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: FeedSkeletonBlock(height: 118, borderRadius: RestaurantConstants.cardRadius),
           ),
       ],

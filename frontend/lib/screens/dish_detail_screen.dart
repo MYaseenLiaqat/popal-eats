@@ -18,10 +18,10 @@ import '../widgets/dish/dish_info_section.dart';
 import '../widgets/dish/dish_loading_skeleton.dart';
 import '../widgets/dish/dish_nutrition_section.dart';
 import '../widgets/dish/dish_reviews_recommended.dart';
-import '../widgets/dish/dish_sticky_cta.dart';
+import '../utils/cart_prompt.dart';
 import '../widgets/reviews/review_widgets.dart';
 import '../widgets/ui/app_ui_widgets.dart';
-import 'main_shell.dart';
+import '../widgets/dish/dish_sticky_cta.dart';
 import 'restaurant_detail_screen.dart';
 
 /// Dish profile from `GET /dishes/{id}` with add-to-cart.
@@ -165,17 +165,7 @@ class _DishDetailScreenState extends State<DishDetailScreen> {
     setState(() => adding = false);
 
     if (ok) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${d.name} added to cart'),
-          action: SnackBarAction(
-            label: 'Go to Order',
-            onPressed: () {
-              context.findAncestorStateOfType<MainShellState>()?.navigateToTab(MainShellState.orderTab);
-            },
-          ),
-        ),
-      );
+      CartPrompt.showAddedToCart(context, itemName: d.name);
     } else {
       final msg = context.read<CartProvider>().error ?? 'Could not add to cart';
       ScaffoldMessenger.of(context).showSnackBar(

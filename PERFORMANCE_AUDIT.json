@@ -2,41 +2,41 @@
   {
     "endpoint": "GET /health",
     "status": 200,
-    "avg_ms": 6.8,
-    "min_ms": 4.5,
-    "max_ms": 9.0,
+    "avg_ms": 312.2,
+    "min_ms": 7.8,
+    "max_ms": 875.8,
     "samples": 5
   },
   {
     "endpoint": "GET /feed/home",
     "status": 200,
-    "avg_ms": 1423.2,
-    "min_ms": 1171.5,
-    "max_ms": 1659.0,
+    "avg_ms": 1082.5,
+    "min_ms": 954.7,
+    "max_ms": 1141.6,
     "samples": 5
   },
   {
     "endpoint": "GET /stories",
     "status": 200,
-    "avg_ms": 1382.3,
-    "min_ms": 1117.0,
-    "max_ms": 1542.6,
+    "avg_ms": 902.1,
+    "min_ms": 617.7,
+    "max_ms": 1247.0,
     "samples": 5
   },
   {
     "endpoint": "GET /discover/reels",
     "status": 200,
-    "avg_ms": 580.9,
-    "min_ms": 498.9,
-    "max_ms": 696.5,
+    "avg_ms": 1139.0,
+    "min_ms": 886.6,
+    "max_ms": 1644.4,
     "samples": 5
   },
   {
     "endpoint": "GET /recommendations/v2",
     "status": 200,
-    "avg_ms": 17966.0,
-    "min_ms": 11389.8,
-    "max_ms": 24579.2,
+    "avg_ms": 42631.9,
+    "min_ms": 14592.2,
+    "max_ms": 86233.3,
     "samples": 5
   }
 ]

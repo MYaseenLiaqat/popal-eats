@@ -13,18 +13,41 @@ from app.models.restaurant import Restaurant
 from app.models.user import User
 from app.schemas.user import UserRegister
 from app.utils.phone import normalize_phone
+from app.utils.username import suggest_username_from_email, validate_username
+
+
+def _allocate_unique_username(db: Session, base: str) -> str:
+    try:
+        candidate = validate_username(base)
+    except ValueError:
+        candidate = validate_username("biz_user")
+
+    if not db.query(User).filter(User.username == candidate).first():
+        return candidate
+
+    stem = candidate[:26].rstrip("._") or "user"
+    for suffix in range(2, 10_000):
+        attempt = f"{stem}_{suffix}"[:30]
+        try:
+            normalized = validate_username(attempt)
+        except ValueError:
+            continue
+        if not db.query(User).filter(User.username == normalized).first():
+            return normalized
+
+    raise ValueError("Unable to allocate a unique username. Try a different email.")
 
 
 def register_user(db: Session, body: UserRegister) -> User:
     email = body.email.lower()
-    username = body.username.strip().lower()
-    phone = normalize_phone(body.phone)
+    phone = normalize_phone(body.phone or "")
     role = normalize_role(body.role)
+
+    base_username = body.username or suggest_username_from_email(email)
+    username = _allocate_unique_username(db, base_username)
 
     if db.query(User).filter(User.email == email).first():
         raise ValueError("Email already registered")
-    if db.query(User).filter(User.username == username).first():
-        raise ValueError("Username is already taken")
     if db.query(User).filter(User.phone == phone).first():
         raise ValueError("Phone number is already registered")
 
@@ -56,7 +79,9 @@ def register_user(db: Session, body: UserRegister) -> User:
         restaurant = Restaurant(
             owner_id=user.id,
             name=profile.restaurant_name.strip(),
+            description=profile.description.strip() if profile.description else None,
             address=profile.restaurant_address.strip(),
+            phone_number=phone,
             image=profile.cover_image_url or profile.logo_url,
             tags=tags,
             approval_status=RESTAURANT_PENDING,
@@ -71,6 +96,7 @@ def register_user(db: Session, body: UserRegister) -> User:
             cuisine_specialty=chef.cuisine_specialty.strip(),
             kitchen_address=chef.kitchen_address.strip(),
             food_license=chef.food_license.strip() if chef.food_license else None,
+            biography=chef.biography.strip() if chef.biography else None,
             profile_image=chef.profile_image_url,
         )
         db.add(profile)

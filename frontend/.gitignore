@@ -43,3 +43,6 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Production dart-defines with secrets (use dart_defines.production.example.json as template)
+dart_defines.production.json

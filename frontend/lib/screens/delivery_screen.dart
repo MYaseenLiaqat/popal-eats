@@ -16,9 +16,7 @@ import '../widgets/delivery/delivery_eta_card.dart';
 import '../widgets/delivery/delivery_header.dart';
 import '../widgets/delivery/delivery_history_card.dart';
 import '../widgets/delivery/delivery_loading_skeleton.dart';
-import '../widgets/delivery/delivery_map.dart';
 import '../widgets/delivery/delivery_order_summary.dart';
-import '../widgets/delivery/delivery_rider_card.dart';
 import '../widgets/delivery/delivery_status_card.dart';
 import '../widgets/delivery/delivery_success_overlay.dart';
 import '../widgets/delivery/delivery_timeline.dart';
@@ -85,13 +83,9 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
 
   void _startTicker() {
     _tickTimer?.cancel();
-    _tickTimer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (!mounted) return;
-      final active = _activeOrder;
-      if (active == null) return;
-      final snap = DeliveryTrackingSnapshot.fromOrder(active);
-      setState(() => _snapshot = snap);
-      _maybeCelebrate(active, snap);
+    _tickTimer = Timer.periodic(const Duration(seconds: 20), (_) {
+      if (!mounted || _activeOrder == null) return;
+      _load();
     });
   }
 
@@ -191,6 +185,19 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
         context,
         order: order,
         restaurantName: _restaurantName(order),
+        onRateFood: () {
+          Navigator.of(context).pop();
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => RestaurantDetailScreen(restaurantId: order.restaurantId),
+            ),
+          );
+        },
+        onRateDelivery: () {
+          Navigator.of(context).pop();
+          _openOrderDetail(order.id);
+        },
         onOrderAgain: () {
           Navigator.of(context).pop();
           _reorder(order);
@@ -203,10 +210,13 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
     });
   }
 
-  void _comingSoon() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Coming soon')),
-    );
+  void _showDeliveryHelp(Order order) {
+    final restaurant = _restaurantsById[order.restaurantId];
+    final phone = restaurant?.phoneNumber?.trim();
+    final message = phone != null && phone.isNotEmpty
+        ? 'Contact $phone for delivery updates.'
+        : 'Open order details or visit the restaurant page for support.';
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 
   void _goOrderTab() {
@@ -234,11 +244,7 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
 
   String? _restaurantImage(Order order) => _restaurantsById[order.restaurantId]?.image;
 
-  String _countdownLabel(DeliveryTrackingSnapshot snap) {
-    if (snap.isDelivered) return 'Delivered';
-    if (snap.remainingMinutes <= 0) return 'Any moment';
-    return '${snap.remainingMinutes} mins';
-  }
+  String _statusLabel(DeliveryTrackingSnapshot snap) => snap.statusLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -285,15 +291,12 @@ class _DeliveryScreenState extends State<DeliveryScreen> {
                                 snapshot: snap,
                                 restaurantName: _restaurantName(active),
                                 restaurantImageUrl: _restaurantImage(active),
-                                countdownLabel: _countdownLabel(snap),
+                                statusLabel: _statusLabel(snap),
                                 itemLabels: _dishLabelsByOrder[active.id] ?? {},
                                 breakdown: DeliveryOrderBreakdown.fromOrder(active),
-                                rider: DeliveryRiderProfile.fromOrder(active),
-                                coordinates: DeliveryCoordinates.demo(
-                                  routeProgress: snap.routeProgress,
-                                ),
                                 isWide: isWide,
-                                onComingSoon: _comingSoon,
+                                onNeedHelp: () => _showDeliveryHelp(active),
+                                onReportIssue: () => _openOrderDetail(active.id),
                               ),
                             )
                           else
@@ -367,30 +370,28 @@ class _ActiveOrderView extends StatelessWidget {
     required this.snapshot,
     required this.restaurantName,
     this.restaurantImageUrl,
-    required this.countdownLabel,
+    required this.statusLabel,
     required this.itemLabels,
     required this.breakdown,
-    required this.rider,
-    required this.coordinates,
     required this.isWide,
-    required this.onComingSoon,
+    required this.onNeedHelp,
+    required this.onReportIssue,
   });
 
   final Order order;
   final DeliveryTrackingSnapshot snapshot;
   final String restaurantName;
   final String? restaurantImageUrl;
-  final String countdownLabel;
+  final String statusLabel;
   final Map<int, String> itemLabels;
   final DeliveryOrderBreakdown breakdown;
-  final DeliveryRiderProfile rider;
-  final DeliveryCoordinates coordinates;
   final bool isWide;
-  final VoidCallback onComingSoon;
+  final VoidCallback onNeedHelp;
+  final VoidCallback onReportIssue;
 
   @override
   Widget build(BuildContext context) {
-    final padding = const EdgeInsets.fromLTRB(
+    const padding = EdgeInsets.fromLTRB(
       AppColors.screenPadding,
       8,
       AppColors.screenPadding,
@@ -412,20 +413,10 @@ class _ActiveOrderView extends StatelessWidget {
                     restaurantName: restaurantName,
                     restaurantImageUrl: restaurantImageUrl,
                     snapshot: snapshot,
-                    countdownLabel: countdownLabel,
+                    countdownLabel: statusLabel,
                   ),
                   const SizedBox(height: 16),
-                  DeliveryMap(
-                    coordinates: coordinates,
-                    routeProgress: snapshot.routeProgress,
-                  ),
-                  const SizedBox(height: 16),
-                  DeliveryRiderCard(
-                    profile: rider,
-                    onCall: onComingSoon,
-                    onChat: onComingSoon,
-                    onShareLocation: onComingSoon,
-                  ),
+                  DeliveryTimeline(current: snapshot.stage),
                 ],
               ),
             ),
@@ -436,8 +427,6 @@ class _ActiveOrderView extends StatelessWidget {
                 children: [
                   DeliveryEtaCard(snapshot: snapshot),
                   const SizedBox(height: 16),
-                  DeliveryTimeline(current: snapshot.stage),
-                  const SizedBox(height: 16),
                   DeliveryOrderSummary(
                     order: order,
                     restaurantName: restaurantName,
@@ -447,11 +436,9 @@ class _ActiveOrderView extends StatelessWidget {
                   const SizedBox(height: 16),
                   DeliveryActionButtons(
                     canCancel: snapshot.canCancel,
-                    onCallRider: onComingSoon,
-                    onChatRider: onComingSoon,
-                    onNeedHelp: onComingSoon,
-                    onCancel: onComingSoon,
-                    onReportIssue: onComingSoon,
+                    riderFeaturesEnabled: false,
+                    onNeedHelp: onNeedHelp,
+                    onReportIssue: onReportIssue,
                   ),
                 ],
               ),
@@ -470,22 +457,10 @@ class _ActiveOrderView extends StatelessWidget {
             restaurantName: restaurantName,
             restaurantImageUrl: restaurantImageUrl,
             snapshot: snapshot,
-            countdownLabel: countdownLabel,
+            countdownLabel: statusLabel,
           ),
           const SizedBox(height: 16),
           DeliveryEtaCard(snapshot: snapshot),
-          const SizedBox(height: 16),
-          DeliveryMap(
-            coordinates: coordinates,
-            routeProgress: snapshot.routeProgress,
-          ),
-          const SizedBox(height: 16),
-          DeliveryRiderCard(
-            profile: rider,
-            onCall: onComingSoon,
-            onChat: onComingSoon,
-            onShareLocation: onComingSoon,
-          ),
           const SizedBox(height: 16),
           DeliveryTimeline(current: snapshot.stage),
           const SizedBox(height: 16),
@@ -498,11 +473,9 @@ class _ActiveOrderView extends StatelessWidget {
           const SizedBox(height: 16),
           DeliveryActionButtons(
             canCancel: snapshot.canCancel,
-            onCallRider: onComingSoon,
-            onChatRider: onComingSoon,
-            onNeedHelp: onComingSoon,
-            onCancel: onComingSoon,
-            onReportIssue: onComingSoon,
+            riderFeaturesEnabled: false,
+            onNeedHelp: onNeedHelp,
+            onReportIssue: onReportIssue,
           ),
           const SizedBox(height: 8),
         ],

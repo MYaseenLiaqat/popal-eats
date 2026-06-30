@@ -114,13 +114,21 @@ class _RestaurantDashboardScreenState extends State<RestaurantDashboardScreen> {
                     children: [
                       if (_restaurants.length > 1) ...[
                         DropdownButtonFormField<int>(
-                          value: _selected?.id,
+                          value: _selected != null &&
+                                  _restaurants.any((r) => r.id == _selected!.id)
+                              ? _selected!.id
+                              : null,
+                          isExpanded: true,
                           decoration: const InputDecoration(labelText: 'Restaurant'),
                           items: _restaurants
                               .map(
                                 (r) => DropdownMenuItem(
                                   value: r.id,
-                                  child: Text(r.name),
+                                  child: Text(
+                                    r.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
                               )
                               .toList(),

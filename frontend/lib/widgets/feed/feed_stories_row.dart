@@ -40,14 +40,21 @@ class FeedStoriesRow extends StatelessWidget {
         separatorBuilder: (_, __) => const SizedBox(width: 12),
         itemBuilder: (context, index) {
           if (showOwnStorySlot && index == 0) {
+            final hasStories = ownGroup != null && ownGroup!.stories.isNotEmpty;
             return _StoryBubble(
-              label: 'Your story',
+              label: hasStories ? 'Your story' : 'Add story',
               isOwn: true,
               hasUnviewed: ownGroup?.hasUnviewed ?? false,
-              imageUrl: ownGroup?.stories.isNotEmpty == true
+              imageUrl: hasStories
                   ? resolveMediaUrl(ownGroup!.stories.last.imageUrl)
                   : null,
-              onTap: onCreateTap,
+              onTap: () {
+                if (hasStories) {
+                  onGroupTap?.call(ownGroup!);
+                } else {
+                  onCreateTap?.call();
+                }
+              },
             );
           }
           final group = others[showOwnStorySlot ? index - 1 : index];

@@ -21,7 +21,11 @@ def is_lahore_market_restaurant(restaurant: Restaurant | None) -> bool:
     if restaurant is None:
         return False
 
-    city = normalize_city(restaurant.city)
+    try:
+        city = normalize_city(restaurant.city)
+    except Exception:
+        city = ""
+
     if city and ("karachi" in city or city == "khi"):
         return False
     if city and ("lahore" in city or city == "lhr"):

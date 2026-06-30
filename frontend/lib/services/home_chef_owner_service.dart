@@ -94,6 +94,24 @@ class HomeChefOwnerService {
     return jsonDecode(response.body) as Map<String, dynamic>;
   }
 
+  Future<Map<String, dynamic>> uploadFoodLicense({
+    required List<int> bytes,
+    required String filename,
+  }) async {
+    final uri = Uri.parse('${ApiConfig.baseUrl}/home-chef/me/profile/license');
+    final request = http.MultipartRequest('POST', uri);
+    final token = _api.accessToken;
+    if (token != null) {
+      request.headers['Authorization'] = 'Bearer $token';
+    }
+    request.files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename));
+
+    final streamed = await request.send().timeout(ApiConfig.timeout);
+    final response = await http.Response.fromStream(streamed);
+    _api.throwIfError(response);
+    return jsonDecode(response.body) as Map<String, dynamic>;
+  }
+
   // Recipe CRUD — delegates to kitchen restaurant dish APIs.
   Future<List<dynamic>> listRecipes() async {
     final kitchenId = await kitchenRestaurantId();

@@ -136,14 +136,14 @@ class RestaurantRecommendedSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (items.isEmpty) {
-      return Column(
+      return const Column(
         children: [
-          const HomeSectionHeader(
+          HomeSectionHeader(
             title: 'Recommended for You',
             subtitle: 'Personalized picks from this restaurant',
             icon: Icons.auto_awesome_outlined,
           ),
-          const Padding(
+          Padding(
             padding: EdgeInsets.symmetric(horizontal: 16),
             child: _InlineEmpty(
               icon: Icons.restaurant_menu_outlined,
@@ -151,7 +151,7 @@ class RestaurantRecommendedSection extends StatelessWidget {
               subtitle: 'Check back for personalized dish picks',
             ),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
         ],
       );
     }
@@ -238,17 +238,49 @@ class _RecCardState extends State<_RecCard> {
             children: [
               SizedBox(
                 height: 110,
-                child: widget.imageUrl != null
-                    ? Image.network(
-                        widget.imageUrl!,
-                        fit: BoxFit.cover,
-                        loadingBuilder: (context, child, progress) {
-                          if (progress == null) return child;
-                          return const FeedShimmer(child: SizedBox.expand());
-                        },
-                        errorBuilder: (_, __, ___) => _fallback(),
-                      )
-                    : _fallback(),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    widget.imageUrl != null
+                        ? Image.network(
+                            widget.imageUrl!,
+                            fit: BoxFit.cover,
+                            loadingBuilder: (context, child, progress) {
+                              if (progress == null) return child;
+                              return const FeedShimmer(child: SizedBox.expand());
+                            },
+                            errorBuilder: (_, __, ___) => _fallback(),
+                          )
+                        : _fallback(),
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          gradient: AppColors.accentGradient,
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: AppColors.cardShadow(),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.auto_awesome, size: 12, color: AppColors.onAccent),
+                            SizedBox(width: 4),
+                            Text(
+                              'AI Recommended',
+                              style: TextStyle(
+                                color: AppColors.onAccent,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
               Padding(
                 padding: const EdgeInsets.all(12),

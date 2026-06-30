@@ -1,3 +1,4 @@
+import com.android.build.gradle.BaseExtension
 import com.android.build.gradle.LibraryExtension
 
 allprojects {
@@ -8,6 +9,10 @@ allprojects {
 }
 
 subprojects {
+    afterEvaluate {
+        extensions.findByType<LibraryExtension>()?.compileSdk = 36
+        extensions.findByType<BaseExtension>()?.compileSdkVersion(36)
+    }
     plugins.withId("com.android.library") {
         extensions.configure<LibraryExtension>("android") {
             compileSdk = 36

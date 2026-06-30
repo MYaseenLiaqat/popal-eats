@@ -15,6 +15,7 @@ class UserPublicProfile(BaseModel):
     username: str | None = None
     bio: str | None = None
     profile_image: str | None = None
+    role: str | None = None
 
 
 class FriendRequestCreate(BaseModel):

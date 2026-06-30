@@ -211,7 +211,7 @@ class _OwnerDishFormScreenState extends State<OwnerDishFormScreen> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<int>(
-                  value: _categoryId,
+                  initialValue: _categoryId,
                   decoration: const InputDecoration(labelText: 'Category *'),
                   items: _categoryOptions
                       .map(

@@ -12,6 +12,8 @@ abstract final class CuisineAssets {
   static const persian = '$basePath/persian.jpg';
   static const fastFood = '$basePath/fast food.jpg';
   static const desserts = '$basePath/desert.jpg';
+  static const bbq = '$basePath/bbq.jpg';
+  static const beverages = '$basePath/beverages.jpg';
 
   static const _byKey = <String, String>{
     'pakistani': pakistani,
@@ -24,6 +26,8 @@ abstract final class CuisineAssets {
     'persian': persian,
     'fast_food': fastFood,
     'desserts': desserts,
+    'bbq': bbq,
+    'beverages': beverages,
   };
 
   static String pathFor(String key) {

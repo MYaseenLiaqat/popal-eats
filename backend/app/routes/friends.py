@@ -16,6 +16,7 @@ from app.schemas.friend import (
 )
 from app.services.friends_service import (
     accept_friend_request,
+    cancel_friend_request,
     list_friend_requests,
     list_friends,
     reject_friend_request,
@@ -88,6 +89,19 @@ def reject_request(
 
 
 @router.delete(
+    "/friends/request/{request_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Cancel a sent friend request",
+)
+def cancel_request(
+    request_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_customer),
+) -> None:
+    cancel_friend_request(db, current_user.id, request_id)
+
+
+@router.delete(
     "/friends/{friend_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     summary="Remove a friend",
@@ -104,6 +118,17 @@ def delete_friend(
 def search_users_endpoint(
     q: str,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_customer),
+    current_user: User = Depends(get_current_user),
 ) -> UserSearchResponse:
     return search_users(db, current_user_id=current_user.id, query=q)
+
+
+@router.get("/users/suggestions", response_model=UserSearchResponse, summary="Suggested users to follow")
+def suggested_users_endpoint(
+    limit: int = 20,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> UserSearchResponse:
+    from app.services.user_search_service import list_suggested_users
+
+    return list_suggested_users(db, current_user_id=current_user.id, limit=limit)

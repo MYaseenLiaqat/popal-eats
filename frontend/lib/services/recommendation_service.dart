@@ -9,9 +9,11 @@ class RecommendationService {
   Future<List<Recommendation>> list({
     String strategy = 'hybrid',
   }) async {
-    final r = await _api.get('/recommendations/v2', query: {
-      'strategy': strategy,
-    });
+    final r = await _api.get(
+      '/recommendations/v2',
+      query: {'strategy': strategy},
+      timeout: const Duration(seconds: 45),
+    );
     _api.throwIfError(r);
     return _parseItems(_api.decodeJson(r), strategy: strategy);
   }

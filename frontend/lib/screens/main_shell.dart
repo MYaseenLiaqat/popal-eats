@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../providers/cart_provider.dart';
 import '../providers/friends_provider.dart';
 import '../providers/group_provider.dart';
 import '../theme/app_colors.dart';
@@ -38,6 +39,7 @@ class MainShellState extends State<MainShell> {
       if (!mounted) return;
       context.read<FriendsProvider>().fetchAll(force: true);
       context.read<GroupProvider>().fetchAll(force: true);
+      context.read<CartProvider>().load();
     });
   }
 
@@ -52,7 +54,7 @@ class MainShellState extends State<MainShell> {
       body: IndexedStack(
         index: _index,
         children: [
-          const HomeScreen(),
+          HomeScreen(isTabActive: _index == homeTab),
           OrderScreen(isTabActive: _index == orderTab),
           DeliveryScreen(isTabActive: _index == deliveryTab),
           const CommunityScreen(),

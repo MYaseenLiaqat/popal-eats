@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -6,32 +5,28 @@ import 'providers/auth_provider.dart';
 import 'providers/cart_provider.dart';
 import 'providers/friends_provider.dart';
 import 'providers/group_provider.dart';
+import 'providers/home_feed_provider.dart';
 import 'providers/onboarding_provider.dart';
 import 'providers/preferences_provider.dart';
 import 'providers/recommendation_provider.dart';
 import 'providers/reels_provider.dart';
-import 'screens/admin_dashboard_screen.dart';
+import 'providers/theme_mode_provider.dart';
+import 'screens/admin/admin_shell.dart';
 import 'screens/business_account_status_screen.dart';
 import 'screens/location_permission_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_shell.dart';
 import 'screens/preference_onboarding_screen.dart';
 import 'screens/privacy_consent_screen.dart';
-import 'screens/home_chef_shell.dart';
 import 'screens/restaurant_shell.dart';
 import 'services/app_consent_storage.dart';
 import 'services/google_auth_service.dart';
-import 'services/google_maps_web_loader.dart';
 import 'theme/app_colors.dart';
 import 'theme/app_theme.dart';
 import 'utils/app_roles.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  if (kIsWeb) {
-    await GoogleMapsWebLoader.ensureLoaded();
-    GoogleMapsWebLoader.logStartupReport();
-  }
   if (GoogleAuthService.isConfigured) {
     try {
       await GoogleAuthService.instance.ensureInitialized();
@@ -49,6 +44,7 @@ class PopalEatsApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => ThemeModeProvider()..init()),
         ChangeNotifierProvider(create: (_) => AuthProvider()..init()),
         ChangeNotifierProvider(create: (_) => OnboardingProvider()),
         ChangeNotifierProvider(create: (_) => PreferencesProvider()),
@@ -57,11 +53,19 @@ class PopalEatsApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => CartProvider()),
         ChangeNotifierProvider(create: (_) => RecommendationProvider()),
         ChangeNotifierProvider(create: (_) => ReelsProvider()),
+        ChangeNotifierProvider(create: (_) => HomeFeedProvider()),
       ],
-      child: MaterialApp(
-        title: 'Popal Eats',
-        theme: AppTheme.dark,
-        home: const _Root(),
+      child: Consumer<ThemeModeProvider>(
+        builder: (context, themeMode, _) {
+          return MaterialApp(
+            title: 'Popal Eats',
+            theme: AppTheme.light,
+            darkTheme: AppTheme.dark,
+            themeMode: themeMode.mode,
+            builder: (context, child) => child ?? const SizedBox.shrink(),
+            home: const _Root(),
+          );
+        },
       ),
     );
   }
@@ -74,7 +78,7 @@ class _Root extends StatelessWidget {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     if (auth.initializing) {
-      return const Scaffold(
+      return Scaffold(
         body: Center(
           child: CircularProgressIndicator(color: AppColors.accent),
         ),
@@ -135,7 +139,7 @@ class _AuthenticatedGateState extends State<_AuthenticatedGate> {
   @override
   Widget build(BuildContext context) {
     if (_checkingConsent || _privacyAccepted == null || _locationOnboardingDone == null) {
-      return const Scaffold(
+      return Scaffold(
         body: Center(child: CircularProgressIndicator(color: AppColors.accent)),
       );
     }
@@ -159,15 +163,11 @@ class _AuthenticatedGateState extends State<_AuthenticatedGate> {
     }
 
     if (AppRoles.isAdmin(user)) {
-      return const AdminDashboardScreen();
+      return const AdminShell();
     }
 
-    if (AppRoles.isActiveRestaurantOwner(user)) {
+    if (AppRoles.isActiveRestaurantOwner(user) || AppRoles.isActiveHomeChef(user)) {
       return const RestaurantShell();
-    }
-
-    if (AppRoles.isActiveHomeChef(user)) {
-      return const HomeChefShell();
     }
 
     final onboarding = context.watch<OnboardingProvider>();
@@ -180,7 +180,7 @@ class _AuthenticatedGateState extends State<_AuthenticatedGate> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.lock_outline, size: 48, color: AppColors.accent),
+                Icon(Icons.lock_outline, size: 48, color: AppColors.accent),
                 const SizedBox(height: 16),
                 Text(
                   'This account cannot use the customer app.',
@@ -208,7 +208,7 @@ class _AuthenticatedGateState extends State<_AuthenticatedGate> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.cloud_off_outlined, size: 48, color: AppColors.accent),
+                  Icon(Icons.cloud_off_outlined, size: 48, color: AppColors.accent),
                   const SizedBox(height: 16),
                   Text(
                     'Could not verify onboarding status',
@@ -232,7 +232,7 @@ class _AuthenticatedGateState extends State<_AuthenticatedGate> {
           ),
         );
       }
-      return const Scaffold(
+      return Scaffold(
         body: Center(child: CircularProgressIndicator(color: AppColors.accent)),
       );
     }

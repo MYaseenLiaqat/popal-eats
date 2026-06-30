@@ -44,8 +44,8 @@ class GroupDecision {
   bool get isOrdered => status == GroupDecisionStatus.ordered;
 
   int? get consensusPercent =>
-      consensusScore != null ? consensusScore!.round().clamp(0, 100) : null;
-  int? get finalPercent => finalScore != null ? finalScore!.round().clamp(0, 100) : null;
+      consensusScore?.round().clamp(0, 100);
+  int? get finalPercent => finalScore?.round().clamp(0, 100);
 
   String get bannerMessage {
     switch (status) {

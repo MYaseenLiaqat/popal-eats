@@ -5,6 +5,7 @@ import '../models/group_session.dart';
 import '../models/social_user.dart';
 import '../providers/friends_provider.dart';
 import '../providers/group_provider.dart';
+import '../providers/home_feed_provider.dart';
 import '../theme/app_colors.dart';
 import '../utils/date_display.dart';
 import '../widgets/community_avatar.dart';
@@ -62,6 +63,8 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen>
     final ok = await provider.acceptRequest(requestId);
     if (!mounted) return;
     if (ok) {
+      await context.read<HomeFeedProvider>().fetch(force: true);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('You are now friends with $name')),
       );
@@ -398,13 +401,18 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen>
         controller: _tabController,
         children: [
           _buildActivityTab(),
-          const UserSearchPanel(
-            autofocus: false,
-            padding: EdgeInsets.fromLTRB(
-              AppColors.screenPadding,
-              12,
-              AppColors.screenPadding,
-              8,
+          SizedBox.expand(
+            child: Scaffold(
+              backgroundColor: AppColors.background,
+              body: UserSearchPanel(
+                autofocus: false,
+                padding: const EdgeInsets.fromLTRB(
+                  AppColors.screenPadding,
+                  12,
+                  AppColors.screenPadding,
+                  8,
+                ),
+              ),
             ),
           ),
         ],

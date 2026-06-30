@@ -5,24 +5,35 @@ import 'package:provider/provider.dart';
 import '../models/post.dart';
 import '../models/story.dart';
 import '../providers/auth_provider.dart';
+import '../providers/home_feed_provider.dart';
+import '../providers/reels_provider.dart';
 import '../services/content_service.dart';
+import '../services/restaurant_follow_store.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_logo.dart';
+import '../utils/app_roles.dart';
+import 'reels_screen.dart';
+import '../utils/post_caption.dart';
 import '../utils/recommendation_copy.dart';
 import '../widgets/feed/feed_loading_skeleton.dart';
-import '../widgets/feed/feed_stories_row.dart';
-import '../widgets/feed/home_reels_entry.dart';
 import '../widgets/feed/post_comments_sheet.dart';
 import '../widgets/feed/social_post_card.dart';
+import '../widgets/home/home_create_sheet.dart';
+import '../widgets/home/home_reels_section.dart';
+import '../widgets/home/home_stories_section.dart';
 import '../widgets/social/notification_hub_button.dart';
+import '../widgets/ui/app_ui_widgets.dart';
 import 'dish_detail_screen.dart';
 import 'main_shell.dart';
-import 'reels_screen.dart';
 import 'restaurant_detail_screen.dart';
+import 'search_users_screen.dart';
 import 'story_viewer_screen.dart';
 
-/// Social content discovery — reels, stories, and restaurant posts only.
+/// Social home feed — stories, reels, friend posts, restaurant dishes, chef recipes.
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({super.key, this.isTabActive = true});
+
+  final bool isTabActive;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -31,47 +42,59 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final _content = ContentService();
 
-  List<Post> posts = [];
-  List<StoryGroup> storyGroups = [];
-  bool loading = true;
-  String? error;
-
   @override
   void initState() {
     super.initState();
-    _load();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load(force: false));
   }
 
-  Future<void> _load() async {
-    setState(() {
-      loading = true;
-      error = null;
-    });
-
-    try {
-      final results = await Future.wait([
-        _content.fetchHomeFeed(limit: 20),
-        _content.fetchStories().catchError((_) => <StoryGroup>[]),
-      ]);
-      if (!mounted) return;
-      setState(() {
-        posts = results[0] as List<Post>;
-        storyGroups = results[1] as List<StoryGroup>;
-        loading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        error = RecommendationCopy.friendlyError(e);
-        loading = false;
-      });
+  @override
+  void didUpdateWidget(covariant HomeScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.isTabActive && widget.isTabActive) {
+      _load(force: true);
     }
   }
 
+  Future<void> _load({required bool force}) async {
+    final feed = context.read<HomeFeedProvider>();
+    final reels = context.read<ReelsProvider>();
+    await Future.wait([
+      feed.fetch(force: force),
+      reels.fetch(force: force),
+    ]);
+  }
+
+  void _openReels() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ReelsScreen()),
+    );
+  }
+
+  Future<void> _openCreate() async {
+    final created = await showHomeCreateSheet(context);
+    if (!mounted || !created) return;
+    await _load(force: true);
+    if (!mounted) return;
+    context.read<ReelsProvider>().fetch(force: true);
+  }
+
+  Future<void> _createStory() async {
+    final created = await showCreateStorySheet(context);
+    if (!mounted || created != true) return;
+    await _load(force: true);
+  }
+
+  void _openFindFriends() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const SearchUsersScreen()),
+    );
+  }
+
   void _updatePost(Post updated) {
-    setState(() {
-      posts = posts.map((p) => p.id == updated.id ? updated : p).toList();
-    });
+    context.read<HomeFeedProvider>().updatePost(updated);
   }
 
   Future<void> _toggleLike(Post post) async {
@@ -115,17 +138,18 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _sharePost(Post post) {
-    final text = '${post.authorName}: ${post.caption ?? post.displayTitle}';
+    final caption = displayPostCaption(post.caption);
+    final text = '${post.authorName}: ${caption.isNotEmpty ? caption : post.displayTitle}';
     Clipboard.setData(ClipboardData(text: text));
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Link copied to clipboard')),
     );
   }
 
-  void _followRestaurant(Post post) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Following ${post.restaurantName ?? 'restaurant'}')),
-    );
+  Future<void> _followRestaurant(Post post) async {
+    final id = post.restaurantId;
+    if (id == null) return;
+    await RestaurantFollowStore.toggle(id);
   }
 
   void _viewRestaurant(Post post) {
@@ -150,13 +174,6 @@ class _HomeScreenState extends State<HomeScreen> {
     showPostCommentsSheet(context, post);
   }
 
-  void _openReels() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const ReelsScreen()),
-    );
-  }
-
   void _openStoryGroup(StoryGroup group) {
     Navigator.push(
       context,
@@ -178,22 +195,60 @@ class _HomeScreenState extends State<HomeScreen> {
         onViewDish: post.dishId != null ? _viewDish : null,
       );
 
+  Widget _postsEmptySliver() {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 32, 24, 16),
+        child: Column(
+          children: [
+            const EmptyState(
+              icon: Icons.people_outline,
+              title: 'No posts yet',
+              subtitle: 'Follow friends, restaurants, and home chefs to see food in your feed.',
+            ),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: _openCreate,
+              icon: const Icon(Icons.add),
+              label: const Text('Create your first post'),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.accent,
+                foregroundColor: AppColors.onAccent,
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextButton.icon(
+              onPressed: _openFindFriends,
+              icon: const Icon(Icons.person_add_alt_1_outlined),
+              label: const Text('Find Friends'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
+    final feed = context.watch<HomeFeedProvider>();
     final userId = auth.user?['id'] as int?;
+    final isCustomer = AppRoles.isCustomer(auth.user);
+    final posts = feed.posts;
+    final initialLoad = feed.loadingFeed && posts.isEmpty && feed.storyGroups.isEmpty;
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Popal Eats'),
+        title: Row(
+          children: [
+            const AppLogo(size: 32, showShadow: false),
+            const SizedBox(width: 10),
+            const Text('Popal Eats'),
+          ],
+        ),
         centerTitle: false,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.slow_motion_video_outlined),
-            tooltip: 'Reels',
-            onPressed: _openReels,
-          ),
           IconButton(
             icon: const Icon(Icons.person_outline),
             onPressed: _openProfile,
@@ -201,75 +256,82 @@ class _HomeScreenState extends State<HomeScreen> {
           const NotificationHubButton(),
         ],
       ),
-      body: loading
+      body: initialLoad
           ? const FeedLoadingSkeleton()
-          : error != null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(error!, textAlign: TextAlign.center),
-                        const SizedBox(height: 12),
-                        TextButton(onPressed: _load, child: const Text('Retry')),
-                      ],
+          : RefreshIndicator(
+              onRefresh: () => _load(force: true),
+              color: AppColors.accent,
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(
+                  parent: BouncingScrollPhysics(),
+                ),
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: HomeStoriesSection(
+                      groups: feed.storyGroups,
+                      loading: feed.loadingStories,
+                      currentUserId: userId,
+                      showOwnStorySlot: isCustomer,
+                      onCreateTap: isCustomer ? _createStory : null,
+                      onGroupTap: _openStoryGroup,
                     ),
                   ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  color: AppColors.accent,
-                  child: CustomScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(
-                      parent: BouncingScrollPhysics(),
-                    ),
-                    slivers: [
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                          child: FeedStoriesRow(
-                            groups: storyGroups,
-                            currentUserId: userId,
-                            onGroupTap: _openStoryGroup,
-                          ),
+                  SliverToBoxAdapter(
+                    child: HomeReelsSection(onOpenReels: _openReels),
+                  ),
+                  if (feed.feedError != null && posts.isEmpty)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          children: [
+                            Text(feed.feedError!, textAlign: TextAlign.center),
+                            TextButton(
+                              onPressed: () => _load(force: true),
+                              child: const Text('Retry'),
+                            ),
+                          ],
                         ),
                       ),
-                      SliverToBoxAdapter(child: HomeReelsEntry(onTap: _openReels)),
-                      if (posts.isEmpty)
-                        const SliverFillRemaining(
-                          hasScrollBody: false,
-                          child: Center(child: Text('No posts yet — check back soon')),
-                        )
-                      else
-                        SliverList(
-                          delegate: SliverChildBuilderDelegate(
-                            (context, index) {
-                              final post = posts[index];
-                              final handlers = _postHandlers(post);
-                              return SocialPostCard(
-                                post: post,
-                                onLike: handlers.onLike,
-                                onSave: handlers.onSave,
-                                onComment: handlers.onComment,
-                                onShare: handlers.onShare,
-                                onFollow: handlers.onFollow,
-                                onViewRestaurant: handlers.onViewRestaurant,
-                                onViewDish: handlers.onViewDish,
-                              );
-                            },
-                            childCount: posts.length,
-                          ),
-                        ),
-                      const SliverToBoxAdapter(child: SizedBox(height: 24)),
-                    ],
-                  ),
-                ),
+                    )
+                  else if (!feed.loadingFeed && posts.isEmpty)
+                    _postsEmptySliver()
+                  else if (posts.isNotEmpty)
+                    SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final post = posts[index];
+                          final handlers = _postHandlers(post);
+                          return SocialPostCard(
+                            post: post,
+                            onLike: handlers.onLike,
+                            onSave: handlers.onSave,
+                            onComment: handlers.onComment,
+                            onShare: handlers.onShare,
+                            onFollow: handlers.onFollow,
+                            onViewRestaurant: handlers.onViewRestaurant,
+                            onViewDish: handlers.onViewDish,
+                          );
+                        },
+                        childCount: posts.length,
+                      ),
+                    ),
+                  const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                ],
+              ),
+            ),
+      floatingActionButton: isCustomer
+          ? FloatingActionButton(
+              onPressed: _openCreate,
+              backgroundColor: AppColors.accent,
+              foregroundColor: AppColors.onAccent,
+              child: const Icon(Icons.add),
+            )
+          : null,
     );
   }
 }
 
-/// Bundled interaction callbacks for a feed post.
 class PostInteraction {
   const PostInteraction({
     this.onLike,

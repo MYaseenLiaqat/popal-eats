@@ -131,6 +131,45 @@ async def upload_profile_image(
     return _profile_response(db, current_user)
 
 
+LICENSE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".pdf"}
+
+
+@router.post("/me/profile/license", response_model=HomeChefProfileResponse, summary="Upload food license document")
+async def upload_food_license(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_home_chef),
+):
+    assert_active_business_account(current_user)
+    try:
+        profile = get_home_chef_profile_or_404(db, current_user)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    suffix = Path(file.filename or "").suffix.lower()
+    if suffix not in LICENSE_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Allowed types: {', '.join(sorted(LICENSE_EXTENSIONS))}",
+        )
+
+    content = await file.read()
+    if len(content) > MAX_UPLOAD_MB * 1024 * 1024:
+        raise HTTPException(status_code=400, detail=f"Max {MAX_UPLOAD_MB}MB")
+
+    license_dir = UPLOAD_DIR / "home_chefs" / "licenses"
+    license_dir.mkdir(parents=True, exist_ok=True)
+    filename = f"{profile.id}_{uuid.uuid4().hex}{suffix}"
+    dest = license_dir / filename
+    dest.write_bytes(content)
+
+    public_url = _public_profile_url(f"home_chefs/licenses/{filename}")
+    profile.food_license = public_url
+    db.add(profile)
+    db.commit()
+    return _profile_response(db, current_user)
+
+
 @router.get("/dashboard", response_model=HomeChefDashboardResponse, summary="Home chef dashboard metrics")
 def get_dashboard(
     db: Session = Depends(get_db),

@@ -6,7 +6,6 @@ import '../providers/auth_provider.dart';
 import '../services/home_chef_owner_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/recommendation_copy.dart';
-import '../widgets/ui/app_ui_widgets.dart';
 import 'home_chef_content_screen.dart';
 import 'home_chef_profile_screen.dart';
 import 'owner_dishes_screen.dart';

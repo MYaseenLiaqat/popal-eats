@@ -60,18 +60,37 @@ class ModernCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isLight = theme.brightness == Brightness.light;
+    final defaultGradient =
+        isLight ? AppColors.lightSurfaceGradient : AppColors.surfaceGradient;
+    final defaultBorder = isLight ? AppColors.lightBorder : AppColors.border;
+    final onCard = isLight ? AppColors.lightTextOnCard : theme.colorScheme.onSurface;
+
     final content = Container(
-      width: double.infinity,
       padding: padding,
       decoration: BoxDecoration(
-        gradient: gradient ?? AppColors.surfaceGradient,
+        gradient: gradient ?? defaultGradient,
         borderRadius: BorderRadius.circular(AppColors.cardRadius),
         border: Border.all(
-          color: borderColor ?? AppColors.border,
+          color: borderColor ?? defaultBorder,
         ),
         boxShadow: AppColors.cardShadow(),
       ),
-      child: child,
+      child: Theme(
+        data: theme.copyWith(
+          textTheme: theme.textTheme.apply(
+            bodyColor: onCard,
+            displayColor: onCard,
+          ),
+          iconTheme: IconThemeData(color: onCard.withValues(alpha: 0.9)),
+          colorScheme: theme.colorScheme.copyWith(
+            onSurface: onCard,
+            onSurfaceVariant: onCard.withValues(alpha: 0.85),
+          ),
+        ),
+        child: child,
+      ),
     );
 
     if (onTap == null) return content;

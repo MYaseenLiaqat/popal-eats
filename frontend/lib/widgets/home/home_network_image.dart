@@ -33,6 +33,9 @@ class HomeNetworkImage extends StatelessWidget {
     if (url == null || url!.isEmpty) {
       child = _fallback(radius);
     } else {
+      final dpr = MediaQuery.devicePixelRatioOf(context);
+      final cacheW = width != null ? (width! * dpr).round() : null;
+      final cacheH = height != null ? (height! * dpr).round() : null;
       child = ClipRRect(
         borderRadius: radius,
         child: Image.network(
@@ -40,6 +43,8 @@ class HomeNetworkImage extends StatelessWidget {
           fit: fit,
           width: width,
           height: height,
+          cacheWidth: cacheW,
+          cacheHeight: cacheH,
           gaplessPlayback: true,
           filterQuality: FilterQuality.medium,
           loadingBuilder: (context, image, progress) {

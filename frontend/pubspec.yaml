@@ -16,16 +16,13 @@ dependencies:
   firebase_core: ^3.8.1
   firebase_auth: ^5.3.4
   google_sign_in: ^6.2.2
-<<<<<<< HEAD
-  file_picker: 9.2.1
-=======
-  file_picker: ^8.1.4
+  file_picker: ^9.2.1
   video_player: ^2.9.2
-  google_maps_flutter: ^2.12.1
->>>>>>> 2970e9c5eb05b571cc8911dc3d753582cc1bc916
 
 dev_dependencies:
   flutter_test:
+    sdk: flutter
+  integration_test:
     sdk: flutter
   flutter_lints: ^4.0.0
 
@@ -34,3 +31,4 @@ flutter:
   assets:
     - assets/images/cuisines/
     - assets/images/allergies/
+    - assets/images/app_logo.png

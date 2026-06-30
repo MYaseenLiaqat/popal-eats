@@ -232,6 +232,25 @@ def reject_friend_request(db: Session, user_id: int, request_id: int) -> FriendR
     return _to_request_response(request)
 
 
+def cancel_friend_request(db: Session, user_id: int, request_id: int) -> None:
+    """Sender withdraws a pending friend request."""
+    request = db.query(FriendRequest).filter(FriendRequest.id == request_id).first()
+    if not request:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Friend request not found")
+    if request.sender_id != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the sender can cancel this request",
+        )
+    if request.status != PENDING:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Friend request is no longer pending",
+        )
+    db.delete(request)
+    db.commit()
+
+
 def remove_friend(db: Session, user_id: int, friend_id: int) -> None:
     if user_id == friend_id:
         raise HTTPException(

@@ -8,12 +8,14 @@ class DeliveryRiderCard extends StatelessWidget {
   const DeliveryRiderCard({
     super.key,
     required this.profile,
+    this.riderFeaturesEnabled = false,
     this.onCall,
     this.onChat,
     this.onShareLocation,
   });
 
   final DeliveryRiderProfile profile;
+  final bool riderFeaturesEnabled;
   final VoidCallback? onCall;
   final VoidCallback? onChat;
   final VoidCallback? onShareLocation;
@@ -58,7 +60,9 @@ class DeliveryRiderCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${profile.vehicle} · ${profile.plateNumber}',
+                        riderFeaturesEnabled
+                            ? '${profile.vehicle} · ${profile.plateNumber}'
+                            : 'Restaurant-managed delivery',
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                       const SizedBox(height: 6),
@@ -78,13 +82,24 @@ class DeliveryRiderCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
+            if (!riderFeaturesEnabled)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Text(
+                  'Your order is delivered by the restaurant team. Contact them via Need Help for updates.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
             Row(
               children: [
                 Expanded(
                   child: _ActionButton(
                     icon: Icons.phone_outlined,
                     label: 'Call',
-                    onTap: onCall,
+                    onTap: riderFeaturesEnabled ? onCall : null,
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -92,7 +107,7 @@ class DeliveryRiderCard extends StatelessWidget {
                   child: _ActionButton(
                     icon: Icons.chat_bubble_outline,
                     label: 'Chat',
-                    onTap: onChat,
+                    onTap: riderFeaturesEnabled ? onChat : null,
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -100,7 +115,7 @@ class DeliveryRiderCard extends StatelessWidget {
                   child: _ActionButton(
                     icon: Icons.share_location_outlined,
                     label: 'Share',
-                    onTap: onShareLocation,
+                    onTap: riderFeaturesEnabled ? onShareLocation : null,
                   ),
                 ),
               ],

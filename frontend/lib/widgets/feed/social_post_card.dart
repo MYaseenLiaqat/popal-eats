@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../models/post.dart';
 import '../../theme/app_colors.dart';
+import '../../utils/post_caption.dart';
 import '../../utils/date_display.dart';
 import '../../utils/media_url.dart';
 import '../community_avatar.dart';
@@ -282,7 +283,7 @@ class _SocialPostCardState extends State<SocialPostCard>
               style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 15),
             ),
           ),
-        if (post.caption != null && post.caption!.isNotEmpty)
+        if (hasVisibleCaption(post.caption))
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
             child: RichText(
@@ -295,7 +296,7 @@ class _SocialPostCardState extends State<SocialPostCard>
                     text: '${post.authorName} ',
                     style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
-                  TextSpan(text: post.caption),
+                  TextSpan(text: displayPostCaption(post.caption)),
                 ],
               ),
             ),

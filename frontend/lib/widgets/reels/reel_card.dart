@@ -214,17 +214,18 @@ class _PreviewPlayButton extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 10),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(12),
+        if (durationLabel != null)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              'Preview · $durationLabel',
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
+            ),
           ),
-          child: Text(
-            durationLabel != null ? 'Preview · $durationLabel' : 'Preview coming soon',
-            style: const TextStyle(color: Colors.white70, fontSize: 12),
-          ),
-        ),
       ],
     );
   }
@@ -241,31 +242,14 @@ class _SideActions extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _ActionIcon(
-          icon: Icons.favorite_border,
-          label: 'Save',
-          onTap: () => _showPlaceholderSnack(context, 'Save reel — coming soon'),
-        ),
-        const SizedBox(height: 16),
-        _ActionIcon(
-          icon: Icons.bookmark_border,
-          label: 'Recipe',
-          onTap: reel.hasRecipeDetails
-              ? onRecipeTap
-              : () => _showPlaceholderSnack(context, 'Recipe details not available yet'),
-        ),
-        const SizedBox(height: 16),
-        _ActionIcon(
-          icon: Icons.ios_share_outlined,
-          label: 'Share',
-          onTap: () => _showPlaceholderSnack(context, 'Share reel — coming soon'),
-        ),
+        if (reel.hasRecipeDetails)
+          _ActionIcon(
+            icon: Icons.bookmark_border,
+            label: 'Recipe',
+            onTap: onRecipeTap,
+          ),
       ],
     );
-  }
-
-  void _showPlaceholderSnack(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
 }
 

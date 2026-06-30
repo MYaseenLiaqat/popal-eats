@@ -90,12 +90,6 @@ class _DeliverySuccessOverlayState extends State<DeliverySuccessOverlay>
     super.dispose();
   }
 
-  void _comingSoon() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Coming soon')),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Material(
@@ -171,18 +165,22 @@ class _DeliverySuccessOverlayState extends State<DeliverySuccessOverlay>
                         ),
                   ),
                   const SizedBox(height: 28),
-                  _ActionRow(
-                    icon: Icons.delivery_dining_outlined,
-                    label: 'Rate Delivery',
-                    onTap: widget.onRateDelivery ?? _comingSoon,
-                  ),
-                  const SizedBox(height: 10),
-                  _ActionRow(
-                    icon: Icons.restaurant_outlined,
-                    label: 'Rate Food',
-                    onTap: widget.onRateFood ?? _comingSoon,
-                  ),
-                  const SizedBox(height: 10),
+                  if (widget.onRateDelivery != null) ...[
+                    _ActionRow(
+                      icon: Icons.delivery_dining_outlined,
+                      label: 'Rate Delivery',
+                      onTap: widget.onRateDelivery!,
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                  if (widget.onRateFood != null) ...[
+                    _ActionRow(
+                      icon: Icons.restaurant_outlined,
+                      label: 'Rate Food',
+                      onTap: widget.onRateFood!,
+                    ),
+                    const SizedBox(height: 10),
+                  ],
                   FilledButton(
                     onPressed: widget.onOrderAgain,
                     style: FilledButton.styleFrom(

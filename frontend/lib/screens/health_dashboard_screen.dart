@@ -1,270 +1,288 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../providers/preferences_provider.dart';
+import '../services/health_nutrition_service.dart';
 import '../theme/app_colors.dart';
+import '../widgets/health/nutrition_trend_chart.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 
-/// Health dashboard with mock nutrition data (Sprint 5C).
-class HealthDashboardScreen extends StatelessWidget {
+/// Nutrition dashboard built from order history and dish macro data.
+class HealthDashboardScreen extends StatefulWidget {
   const HealthDashboardScreen({super.key});
 
-  static const _weekLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-  static const _weekValues = [1800, 2100, 1950, 2200, 1850, 2300, 1900];
+  @override
+  State<HealthDashboardScreen> createState() => _HealthDashboardScreenState();
+}
 
-  static const _maxCalories = 2300;
-  static const _avgDay = 2014;
-  static const _goal = 2200;
-  static const _progress = 0.92;
+class _HealthDashboardScreenState extends State<HealthDashboardScreen> {
+  final _service = HealthNutritionService();
 
-  static const _insights = [
-    'Calorie intake is close to goal.',
-    'Protein intake is healthy.',
-    'Water intake should be increased.',
-  ];
+  static const _filters = <int, String>{
+    7: '7 days',
+    30: '30 days',
+    90: '3 months',
+  };
+
+  int _days = 7;
+  NutritionMetric _metric = NutritionMetric.calories;
+  bool _loading = true;
+  String? _error;
+  HealthNutritionSummary? _summary;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<PreferencesProvider>().fetch(force: true);
+    });
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final summary = await _service.load(days: _days);
+      if (!mounted) return;
+      setState(() {
+        _summary = summary;
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
+    }
+  }
+
+  void _setDays(int days) {
+    if (_days == days) return;
+    setState(() => _days = days);
+    _load();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final progressPct = (_progress * 100).round();
+    final prefs = context.watch<PreferencesProvider>();
+    final goalLabel = prefs.preferences?.nutritionGoal ?? 'maintain';
 
     return Scaffold(
       appBar: AppBar(title: const Text('Health Dashboard')),
-      body: ListView(
-        padding: const EdgeInsets.all(AppColors.screenPadding),
-        children: [
-          ModernCard(
-            borderColor: AppColors.accent.withValues(alpha: 0.35),
-            child: Row(
-              children: [
-                const Icon(Icons.info_outline, color: AppColors.accent, size: 20),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Preview screen — numbers shown are sample data, not your real intake.',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          ModernCard(
-            gradient: AppColors.headerGradient,
-            borderColor: AppColors.accent.withValues(alpha: 0.4),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: AppColors.accent.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(12),
+      body: _loading
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.accent),
+            )
+          : _error != null
+              ? Center(child: Text(_error!))
+              : RefreshIndicator(
+                  onRefresh: _load,
+                  color: AppColors.accent,
+                  child: ListView(
+                    padding: const EdgeInsets.all(AppColors.screenPadding),
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    children: [
+                      Wrap(
+                        spacing: 8,
+                        children: _filters.entries
+                            .map(
+                              (e) => ChoiceChip(
+                                label: Text(e.value),
+                                selected: _days == e.key,
+                                onSelected: (_) => _setDays(e.key),
+                                selectedColor:
+                                    AppColors.accent.withValues(alpha: 0.25),
+                              ),
+                            )
+                            .toList(),
                       ),
-                      child: const Icon(
-                        Icons.monitor_heart_outlined,
-                        color: AppColors.accent,
-                        size: 28,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Weekly analytics',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleLarge
-                                ?.copyWith(color: AppColors.accent),
+                      const SizedBox(height: 12),
+                      if (_summary?.hasData != true)
+                        const ModernCard(
+                          child: EmptyState(
+                            icon: Icons.restaurant_outlined,
+                            title: 'No nutrition data yet',
+                            subtitle:
+                                'Order dishes with nutrition info to see your trends here.',
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Calorie overview & nutrition trends',
-                            style: Theme.of(context).textTheme.bodyMedium,
+                        )
+                      else if (_summary!.points.where((p) => p.calories > 0).length < 2)
+                        const ModernCard(
+                          child: EmptyState(
+                            icon: Icons.show_chart_outlined,
+                            title: 'Not enough history yet',
+                            subtitle:
+                                'Order on at least two different days to unlock trend charts.',
                           ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  height: 120,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: List.generate(_weekValues.length, (i) {
-                      final factor = _weekValues[i] / _maxCalories;
-                      return Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 3),
+                        )
+                      else ...[
+                        ModernCard(
+                          gradient: AppColors.headerGradient,
+                          borderColor: AppColors.accent.withValues(alpha: 0.4),
                           child: Column(
-                            mainAxisAlignment: MainAxisAlignment.end,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                '${_weekValues[i]}',
-                                style: const TextStyle(
-                                  color: AppColors.textSecondary,
-                                  fontSize: 9,
-                                ),
+                                'Nutrition trends',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleLarge
+                                    ?.copyWith(color: AppColors.accent),
                               ),
                               const SizedBox(height: 4),
-                              Flexible(
-                                child: FractionallySizedBox(
-                                  heightFactor: factor,
-                                  child: Container(
-                                    width: double.infinity,
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        begin: Alignment.bottomCenter,
-                                        end: Alignment.topCenter,
-                                        colors: [
-                                          AppColors.accent
-                                              .withValues(alpha: 0.5),
-                                          AppColors.accent.withValues(alpha: 0.9),
-                                        ],
-                                      ),
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 6),
                               Text(
-                                _weekLabels[i],
-                                style: Theme.of(context).textTheme.bodyMedium,
+                                'Goal: $goalLabel',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                              const SizedBox(height: 12),
+                              Wrap(
+                                spacing: 8,
+                                children: NutritionMetric.values
+                                    .map(
+                                      (m) => ChoiceChip(
+                                        label: Text(_metricLabel(m)),
+                                        selected: _metric == m,
+                                        onSelected: (_) => setState(() => _metric = m),
+                                        selectedColor:
+                                            AppColors.accent.withValues(alpha: 0.25),
+                                      ),
+                                    )
+                                    .toList(),
+                              ),
+                              const SizedBox(height: 12),
+                              NutritionTrendChart(
+                                points: _summary!.points,
+                                metric: _metric,
+                              ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  _legend(_metricColor(_metric), _metricLabel(_metric)),
+                                ],
                               ),
                             ],
                           ),
                         ),
-                      );
-                    }),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          const Row(
-            children: [
-              StatChip(
-                label: 'Avg/Day',
-                value: '$_avgDay kcal',
-              ),
-              SizedBox(width: 8),
-              StatChip(
-                label: 'Goal',
-                value: '$_goal kcal',
-                accent: AppColors.accent,
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          ModernCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Progress',
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    Text(
-                      '$progressPct%',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: AppColors.accent,
-                          ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  height: 10,
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      color: AppColors.surfaceLight,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      widthFactor: _progress,
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          gradient: AppColors.accentGradient,
-                          borderRadius: BorderRadius.circular(6),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: StatChip(
+                                label: 'Total kcal',
+                                value: '${_summary!.totalCalories}',
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: StatChip(
+                                label: 'Protein',
+                                value:
+                                    '${_summary!.totalProtein.toStringAsFixed(0)}g',
+                                accent: AppColors.accent,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: StatChip(
+                                label: 'Health score',
+                                value: '${_summary!.avgHealthScore}',
+                                accent: Colors.greenAccent,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ),
+                        const SizedBox(height: 12),
+                        const SectionHeader(
+                          title: 'Daily breakdown',
+                          subtitle: 'Per-day totals from your orders',
+                        ),
+                        ..._summary!.points.reversed.map((point) {
+                          if (point.calories <= 0) return const SizedBox.shrink();
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: ModernCard(
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      '${point.date.year}-${point.date.month.toString().padLeft(2, '0')}-${point.date.day.toString().padLeft(2, '0')}',
+                                      style:
+                                          Theme.of(context).textTheme.titleSmall,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${point.calories} kcal',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(color: AppColors.accent),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    '${point.protein.toStringAsFixed(0)}g P',
+                                    style:
+                                        Theme.of(context).textTheme.bodySmall,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    '${point.healthScore}',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.copyWith(color: Colors.greenAccent),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }),
+                      ],
+                      const SizedBox(height: 16),
+                    ],
                   ),
                 ),
-              ],
-            ),
-          ),
-          const SectionHeader(
-            title: 'Nutrition summary',
-            subtitle: 'This week',
-          ),
-          const NutritionGrid(
-            protein: 120,
-            carbs: 250,
-            fats: 70,
-          ),
-          ModernCard(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Water', style: Theme.of(context).textTheme.bodyMedium),
-                Text(
-                  '2.3L',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: AppColors.accent,
-                      ),
-                ),
-              ],
-            ),
-          ),
-          const SectionHeader(
-            title: 'Health insights',
-            subtitle: 'Helpful tips for your goals',
-          ),
-          ..._insights.map(
-            (tip) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: ModernCard(
-                borderColor: AppColors.accent.withValues(alpha: 0.3),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColors.accent.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(
-                        Icons.lightbulb_outline,
-                        color: AppColors.accent,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        tip,
-                        style: Theme.of(context).textTheme.bodyLarge,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-        ],
-      ),
+    );
+  }
+
+  String _metricLabel(NutritionMetric metric) {
+    switch (metric) {
+      case NutritionMetric.calories:
+        return 'Calories';
+      case NutritionMetric.protein:
+        return 'Protein';
+      case NutritionMetric.healthScore:
+        return 'Health Score';
+    }
+  }
+
+  Color _metricColor(NutritionMetric metric) {
+    switch (metric) {
+      case NutritionMetric.calories:
+        return AppColors.accent;
+      case NutritionMetric.protein:
+        return Colors.lightBlueAccent;
+      case NutritionMetric.healthScore:
+        return Colors.greenAccent;
+    }
+  }
+
+  Widget _legend(Color color, String label, {bool isSpacer = false}) {
+    if (isSpacer) return const Spacer();
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 4),
+        Text(label, style: const TextStyle(fontSize: 11)),
+      ],
     );
   }
 }

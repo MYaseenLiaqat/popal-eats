@@ -65,7 +65,7 @@ class GroupSessionCard extends StatelessWidget {
                 const SizedBox(height: 6),
                 Row(
                   children: [
-                    Icon(Icons.people_outline, size: 16, color: AppColors.textSecondary),
+                    const Icon(Icons.people_outline, size: 16, color: AppColors.textSecondary),
                     const SizedBox(width: 4),
                     Text(
                       '${session.memberCount} members',

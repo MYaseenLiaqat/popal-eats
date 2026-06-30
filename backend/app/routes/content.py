@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, 
 from sqlalchemy.orm import Session
 
 from app.config import MAX_UPLOAD_MB, UPLOAD_DIR
-from app.core.content_constants import CONTENT_IMAGE_EXTENSIONS
+from app.core.content_constants import CONTENT_IMAGE_EXTENSIONS, CONTENT_VIDEO_EXTENSIONS
 from app.core.dependencies import get_current_user, get_optional_current_user
 from app.database import get_db
 from app.models.user import User
@@ -28,6 +28,7 @@ from app.services.content_service import (
     get_post,
     list_discover_reels,
     list_home_feed,
+    set_post_video,
     update_post,
 )
 from app.services.post_interaction_service import (
@@ -135,6 +136,34 @@ async def upload_post_image(
 
     public_url = _public_content_url(f"posts/{filename}")
     return append_post_image(db, current_user, post_id, public_url)
+
+
+@router.post("/posts/{post_id}/video", response_model=PostResponse, summary="Upload post video")
+async def upload_post_video(
+    post_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> PostResponse:
+    suffix = Path(file.filename or "").suffix.lower()
+    if suffix not in CONTENT_VIDEO_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Allowed types: {', '.join(sorted(CONTENT_VIDEO_EXTENSIONS))}",
+        )
+
+    content = await file.read()
+    if len(content) > MAX_UPLOAD_MB * 1024 * 1024:
+        raise HTTPException(status_code=400, detail=f"Max {MAX_UPLOAD_MB}MB")
+
+    post_dir = UPLOAD_DIR / "posts"
+    post_dir.mkdir(parents=True, exist_ok=True)
+    filename = f"{post_id}_{uuid.uuid4().hex}{suffix}"
+    dest = post_dir / filename
+    dest.write_bytes(content)
+
+    public_url = _public_content_url(f"posts/{filename}")
+    return set_post_video(db, current_user, post_id, public_url)
 
 
 @router.post("/posts/{post_id}/like", status_code=status.HTTP_204_NO_CONTENT)

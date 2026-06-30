@@ -11,11 +11,11 @@ class DeliveryLiveStatusChips extends StatelessWidget {
   final DeliveryLiveStatus active;
 
   static const _items = [
-    (DeliveryLiveStatus.preparing, 'Preparing', Icons.restaurant, Color(0xFF3498DB)),
-    (DeliveryLiveStatus.cooking, 'Cooking', Icons.local_fire_department_outlined, Color(0xFFE67E22)),
-    (DeliveryLiveStatus.pickedUp, 'Picked Up', Icons.shopping_bag_outlined, Color(0xFF9B59B6)),
-    (DeliveryLiveStatus.onTheWay, 'On the way', Icons.delivery_dining_outlined, Color(0xFF2ECC71)),
-    (DeliveryLiveStatus.nearYou, 'Near you', Icons.near_me_outlined, Color(0xFF1ABC9C)),
+    (DeliveryLiveStatus.placed, 'Placed', Icons.receipt_long_outlined, Color(0xFF95A5A6)),
+    (DeliveryLiveStatus.accepted, 'Accepted', Icons.thumb_up_alt_outlined, Color(0xFF3498DB)),
+    (DeliveryLiveStatus.preparing, 'Preparing', Icons.restaurant, Color(0xFFE67E22)),
+    (DeliveryLiveStatus.ready, 'Ready', Icons.done_all_outlined, Color(0xFF9B59B6)),
+    (DeliveryLiveStatus.pickedUp, 'Picked Up', Icons.shopping_bag_outlined, Color(0xFF2ECC71)),
     (DeliveryLiveStatus.delivered, 'Delivered', Icons.check_circle_outline, AppColors.accent),
   ];
 

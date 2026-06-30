@@ -18,3 +18,4 @@ DISCOVER_POST_TYPES = frozenset({RECIPE, CHEF_POST, RESTAURANT_POST})
 STORY_TTL_HOURS = 24
 
 CONTENT_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+CONTENT_VIDEO_EXTENSIONS = {".mp4", ".mov", ".webm", ".m4v"}

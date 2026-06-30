@@ -47,7 +47,12 @@ def build_restaurant_coordinate_map(
 
     coords: dict[int, tuple[float, float]] = {}
     for restaurant in restaurants:
-        if restaurant.source != FOODPANDA_SOURCE or not restaurant.external_code:
+        try:
+            source = restaurant.source
+            external_code = restaurant.external_code
+        except Exception:
+            continue
+        if source != FOODPANDA_SOURCE or not external_code:
             continue
         hit = manifest.get(restaurant.external_code) if manifest else None
         if hit:

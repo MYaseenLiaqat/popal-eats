@@ -11,7 +11,7 @@ class HomeCuisineStrip extends StatefulWidget {
     this.onCuisineTap,
   });
 
-  final ValueChanged<CuisineDefinition>? onCuisineTap;
+  final ValueChanged<CuisineDefinition?>? onCuisineTap;
 
   @override
   State<HomeCuisineStrip> createState() => _HomeCuisineStripState();
@@ -44,8 +44,9 @@ class _HomeCuisineStripState extends State<HomeCuisineStrip> {
                 cuisine: cuisine,
                 selected: selected,
                 onTap: () {
-                  setState(() => _selectedIndex = selected ? null : index);
-                  widget.onCuisineTap?.call(cuisine);
+                  final clearing = selected;
+                  setState(() => _selectedIndex = clearing ? null : index);
+                  widget.onCuisineTap?.call(clearing ? null : cuisine);
                 },
               );
             },

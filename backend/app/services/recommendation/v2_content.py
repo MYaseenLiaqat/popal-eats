@@ -21,6 +21,7 @@ from app.services.recommendation.preference_scoring import (
     score_dietary_preferences,
 )
 from app.services.recommendation.allergy_filter import filter_dishes_for_user_allergies
+from app.services.recommendation.v2_cooccurrence_cache import get_cooccurrence_bundle
 from app.services.recommendation.v2_candidates import load_eligible_dishes
 from app.services.recommendation.price_adjustment import apply_price_outlier_penalty
 from app.services.recommendation.v2_catalog import FOODPANDA_SOURCE, build_tag_maps_from_dishes
@@ -413,7 +414,7 @@ def get_content_recommendations(
         user_id=user_id,
     )
     candidate_ids = [d.id for d in dishes]
-    order_counts = _load_order_counts(db, candidate_ids)
+    _, _, order_counts = get_cooccurrence_bundle(db)
     log_pipeline_stage(
         "content_scoring_start",
         user_id=user_id,

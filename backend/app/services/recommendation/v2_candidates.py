@@ -6,55 +6,19 @@ Swagger/API placeholder rows (e.g. name="string", "Test Dish").
 """
 
 import logging
-import re
 
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, defer, joinedload, load_only
 
 from app.core.restaurant_constants import APPROVED
+from app.models.category import Category
 from app.models.dish import Dish
-from app.services.recommendation.market_filter import filter_dishes_for_market
+from app.models.restaurant import Restaurant
+from app.services.recommendation.v2_dish_pool_cache import get_cached_eligible_dishes
+from app.services.recommendation.v2_eligible_cache import get_eligible_dish_ids
 from app.services.recommendation.v2_debug import log_pipeline_stage
+from app.services.recommendation.v2_placeholders import is_placeholder_name
 
 logger = logging.getLogger("popal.recommendations.v2")
-
-# Common OpenAPI/Swagger and manual test placeholders (lowercase).
-_PLACEHOLDER_EXACT = frozenset(
-    {
-        "string",
-        "test",
-        "test dish",
-        "dish",
-        "name",
-        "food",
-        "item",
-        "restaurant",
-        "sample",
-        "example",
-        "title",
-    }
-)
-
-_TEST_NAME_PATTERN = re.compile(r"^test[\s_-]", re.IGNORECASE)
-
-
-_RESTAURANT_PLACEHOLDER_EXACT = frozenset({"pizza", "restaurant", "string"})
-
-
-def is_placeholder_name(name: str | None, *, entity: str = "dish") -> bool:
-    """True when a dish or restaurant name looks like test/placeholder data."""
-    if name is None:
-        return True
-    stripped = name.strip()
-    if len(stripped) < 2:
-        return True
-    lowered = stripped.lower()
-    if lowered in _PLACEHOLDER_EXACT:
-        return True
-    if entity == "restaurant" and lowered in _RESTAURANT_PLACEHOLDER_EXACT:
-        return True
-    if _TEST_NAME_PATTERN.match(stripped):
-        return True
-    return False
 
 
 def is_eligible_dish(dish: Dish) -> bool:
@@ -82,13 +46,66 @@ def load_eligible_dishes(db: Session, *, user_id: int | None = None) -> list[Dis
 
     Filters out placeholder/test menu rows. Logs excluded ids for debugging.
     """
+    return get_cached_eligible_dishes(db, user_id=user_id)
+
+
+def _load_eligible_dishes_uncached(db: Session, *, user_id: int | None = None) -> list[Dish]:
+    """Internal uncached loader used by the dish pool cache."""
+    eligible_ids = get_eligible_dish_ids(db)
+    if not eligible_ids:
+        log_pipeline_stage(
+            "candidates_filtered",
+            user_id=user_id,
+            total_loaded=0,
+            eligible=0,
+            excluded=0,
+            foodpanda_eligible=0,
+        )
+        return []
+
     dishes = (
         db.query(Dish)
-        .join(Dish.restaurant)
-        .options(joinedload(Dish.restaurant), joinedload(Dish.category))
+        .join(Restaurant, Dish.restaurant_id == Restaurant.id)
+        .options(
+            load_only(
+                Dish.id,
+                Dish.name,
+                Dish.price,
+                Dish.calories,
+                Dish.description,
+                Dish.tags,
+                Dish.source,
+                Dish.cuisine,
+                Dish.protein,
+                Dish.carbs,
+                Dish.is_available,
+                Dish.restaurant_id,
+                Dish.category_id,
+                Dish.allergens,
+                Dish.protein,
+                Dish.carbs,
+            ),
+            joinedload(Dish.restaurant).load_only(
+                Restaurant.id,
+                Restaurant.name,
+                Restaurant.description,
+                Restaurant.tags,
+                Restaurant.average_rating,
+                Restaurant.total_reviews,
+                Restaurant.source,
+                Restaurant.is_open,
+                Restaurant.approval_status,
+                Restaurant.city,
+                Restaurant.external_code,
+            ),
+            joinedload(Dish.category).load_only(Category.id, Category.name),
+            defer(Dish.images),
+            defer(Dish.ingredients),
+        )
+        .filter(Dish.id.in_(eligible_ids))
         .filter(Dish.is_available.is_(True))
-        .filter(Dish.restaurant.has(is_open=True))
-        .filter(Dish.restaurant.has(approval_status=APPROVED))
+        .filter(Restaurant.is_open.is_(True))
+        .filter(Restaurant.approval_status == APPROVED)
         .all()
     )
 
@@ -160,18 +177,8 @@ def load_eligible_dishes(db: Session, *, user_id: int | None = None) -> list[Dis
     if len(eligible) > 30:
         logger.debug("V2 logged 30 of %d eligible candidates (truncated)", len(eligible))
 
-    market_filtered = filter_dishes_for_market(eligible)
-    if eligible and not market_filtered:
-        logger.warning(
-            "V2 Lahore market filter removed all %d eligible dishes — check restaurant.city values",
-            len(eligible),
-        )
-    logger.info(
-        "V2 Lahore market filter: %d of %d eligible dishes",
-        len(market_filtered),
-        len(eligible),
-    )
-    return market_filtered
+    logger.info("V2 Lahore market filter: %d eligible dishes (cached id set)", len(eligible))
+    return eligible
 
 
 def _exclusion_reason(dish: Dish) -> str:

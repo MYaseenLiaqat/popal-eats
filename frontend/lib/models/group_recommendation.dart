@@ -37,6 +37,8 @@ class GroupDishRecommendation {
   List<String> get displayReasons =>
       explanationBullets.isNotEmpty ? explanationBullets : reasons;
 
+  List<String> get topReasons => displayReasons.take(2).toList();
+
   GroupDishRecommendation copyWith({String? dishImageUrl}) {
     return GroupDishRecommendation(
       recommendationId: recommendationId,

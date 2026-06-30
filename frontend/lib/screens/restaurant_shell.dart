@@ -208,8 +208,6 @@ class RestaurantShellState extends State<RestaurantShell> {
         ],
       ),
       bottomNavigationBar: NavigationBar(
-        backgroundColor: AppColors.navBg,
-        indicatorColor: AppColors.accent.withValues(alpha: 0.18),
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         selectedIndex: _index,

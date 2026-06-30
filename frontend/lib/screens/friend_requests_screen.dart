@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/friends_provider.dart';
+import '../providers/home_feed_provider.dart';
 import '../theme/app_colors.dart';
 import '../widgets/social/social_user_card.dart';
 import '../widgets/ui/app_ui_widgets.dart';
@@ -38,6 +39,8 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen>
     final ok = await provider.acceptRequest(requestId);
     if (!mounted) return;
     if (ok) {
+      await context.read<HomeFeedProvider>().fetch(force: true);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('You are now friends with $name')),
       );
@@ -132,6 +135,21 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen>
     );
   }
 
+  Future<void> _cancelOutgoing(int requestId, String name) async {
+    final provider = context.read<FriendsProvider>();
+    final ok = await provider.cancelRequest(requestId);
+    if (!mounted) return;
+    if (ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Cancelled request to $name')),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(provider.actionError ?? 'Could not cancel request')),
+      );
+    }
+  }
+
   Widget _buildOutgoing(FriendsProvider provider) {
     if (provider.loadingRequests && provider.outgoingRequests.isEmpty) {
       return const Center(child: CircularProgressIndicator(color: AppColors.accent));
@@ -160,7 +178,12 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen>
 
         return SocialUserCard(
           user: user,
-          trailing: const PendingBadge(),
+          trailing: OutlinedButton(
+            onPressed: provider.actionLoading
+                ? null
+                : () => _cancelOutgoing(request.id, user.fullName),
+            child: const Text('Cancel'),
+          ),
         );
       },
     );

@@ -19,8 +19,8 @@ class HomeLoadingSkeleton extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16),
           child: FeedSkeletonBlock(height: 56, borderRadius: HomeConstants.cardRadius),
         ),
         const SizedBox(height: 24),
@@ -32,7 +32,7 @@ class HomeLoadingSkeleton extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             itemCount: 5,
             separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemBuilder: (_, __) => FeedSkeletonBlock(
+            itemBuilder: (_, __) => const FeedSkeletonBlock(
               width: 88,
               height: 108,
               borderRadius: HomeConstants.cardRadius,
@@ -40,8 +40,8 @@ class HomeLoadingSkeleton extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 24),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16),
           child: FeedSkeletonBlock(height: 156, borderRadius: HomeConstants.cardRadius),
         ),
         const SizedBox(height: 24),
@@ -63,8 +63,8 @@ class HomeLoadingSkeleton extends StatelessWidget {
         const SizedBox(height: 24),
         _sectionTitle(),
         for (var i = 0; i < 3; i++)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
             child: FeedSkeletonBlock(height: 108, borderRadius: HomeConstants.cardRadius),
           ),
       ],
@@ -72,18 +72,18 @@ class HomeLoadingSkeleton extends StatelessWidget {
   }
 
   Widget _sectionTitle() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+    return const Padding(
+      padding: EdgeInsets.fromLTRB(16, 0, 16, 14),
       child: Row(
         children: [
           FeedSkeletonBlock(width: 36, height: 36, borderRadius: 12),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 FeedSkeletonBlock(height: 18, width: 160, borderRadius: 6),
-                const SizedBox(height: 6),
+                SizedBox(height: 6),
                 FeedSkeletonBlock(height: 12, width: 120, borderRadius: 4),
               ],
             ),

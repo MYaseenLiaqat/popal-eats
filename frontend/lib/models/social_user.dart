@@ -5,6 +5,7 @@ class UserPublicProfile {
     this.username,
     this.bio,
     this.profileImage,
+    this.role,
   });
 
   final int id;
@@ -12,6 +13,20 @@ class UserPublicProfile {
   final String? username;
   final String? bio;
   final String? profileImage;
+  final String? role;
+
+  String get roleLabel {
+    switch (role?.toLowerCase()) {
+      case 'restaurant':
+        return 'Restaurant';
+      case 'home_chef':
+        return 'Home Chef';
+      case 'admin':
+        return 'Admin';
+      default:
+        return 'Customer';
+    }
+  }
 
   String get displayHandle {
     if (username != null && username!.trim().isNotEmpty) {
@@ -28,6 +43,7 @@ class UserPublicProfile {
       username: json['username']?.toString(),
       bio: json['bio']?.toString(),
       profileImage: json['profile_image']?.toString(),
+      role: json['role']?.toString(),
     );
   }
 }

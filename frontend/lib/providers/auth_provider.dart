@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 
 import '../models/username_check_result.dart';
@@ -5,6 +6,8 @@ import '../providers/onboarding_provider.dart';
 import '../services/api_client.dart';
 import '../services/auth_service.dart';
 import '../services/google_auth_service.dart';
+import '../services/home_chef_owner_service.dart';
+import '../services/restaurant_owner_service.dart';
 import '../utils/app_roles.dart';
 import '../utils/auth_validation.dart';
 import '../utils/recommendation_copy.dart';
@@ -36,6 +39,13 @@ class AuthProvider extends ChangeNotifier {
       initializing = false;
       notifyListeners();
     }
+  }
+
+  /// Reload profile from the server (e.g. after admin approval).
+  Future<void> refreshUser() async {
+    if (!isLoggedIn) return;
+    user = await _auth.me();
+    notifyListeners();
   }
 
   Future<bool> login(String email, String password) async {
@@ -81,17 +91,21 @@ class AuthProvider extends ChangeNotifier {
 
   Future<bool> register({
     required SignupRole role,
-    required String firstName,
-    required String lastName,
-    required String username,
+    String? firstName,
+    String? lastName,
+    String? username,
     required String email,
     required String phone,
-    required DateTime dateOfBirth,
+    DateTime? dateOfBirth,
     required String password,
     required String confirmPassword,
     String? city,
     Map<String, dynamic>? restaurantProfile,
     Map<String, dynamic>? homeChefProfile,
+    PlatformFile? restaurantCoverImage,
+    PlatformFile? restaurantLogoImage,
+    PlatformFile? homeChefProfileImage,
+    PlatformFile? homeChefFoodLicense,
   }) async {
     loading = true;
     error = null;
@@ -112,13 +126,69 @@ class AuthProvider extends ChangeNotifier {
         restaurantProfile: restaurantProfile,
         homeChefProfile: homeChefProfile,
       );
-      return await login(email, password);
+      final loggedIn = await login(email, password);
+      if (!loggedIn) return false;
+      await _uploadRegistrationImages(
+        role: role,
+        restaurantCoverImage: restaurantCoverImage,
+        restaurantLogoImage: restaurantLogoImage,
+        homeChefProfileImage: homeChefProfileImage,
+        homeChefFoodLicense: homeChefFoodLicense,
+      );
+      return true;
     } on ApiException catch (e) {
       error = RecommendationCopy.friendlyError(e);
       return false;
     } finally {
       loading = false;
       notifyListeners();
+    }
+  }
+
+  Future<void> _uploadRegistrationImages({
+    required SignupRole role,
+    PlatformFile? restaurantCoverImage,
+    PlatformFile? restaurantLogoImage,
+    PlatformFile? homeChefProfileImage,
+    PlatformFile? homeChefFoodLicense,
+  }) async {
+    try {
+      if (role == SignupRole.restaurant) {
+        final restaurants = await RestaurantOwnerService().listMine();
+        if (restaurants.isEmpty) return;
+        final restaurantId = restaurants.first.id;
+        final owner = RestaurantOwnerService();
+        // Schema stores one hero image; prefer cover, fall back to logo.
+        if (restaurantCoverImage?.bytes != null) {
+          await owner.uploadRestaurantImage(
+            restaurantId: restaurantId,
+            bytes: restaurantCoverImage!.bytes!,
+            filename: restaurantCoverImage.name,
+          );
+        } else if (restaurantLogoImage?.bytes != null) {
+          await owner.uploadRestaurantImage(
+            restaurantId: restaurantId,
+            bytes: restaurantLogoImage!.bytes!,
+            filename: restaurantLogoImage.name,
+          );
+        }
+      } else if (role == SignupRole.homeChef) {
+        final chef = HomeChefOwnerService();
+        if (homeChefProfileImage?.bytes != null) {
+          await chef.uploadProfileImage(
+            bytes: homeChefProfileImage!.bytes!,
+            filename: homeChefProfileImage.name,
+          );
+        }
+        if (homeChefFoodLicense?.bytes != null) {
+          await chef.uploadFoodLicense(
+            bytes: homeChefFoodLicense!.bytes!,
+            filename: homeChefFoodLicense.name,
+          );
+        }
+      }
+    } catch (_) {
+      // Registration succeeded; image upload can be retried from profile settings.
     }
   }
 

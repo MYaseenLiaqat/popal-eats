@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../models/dish.dart';
 import '../../providers/cart_provider.dart';
+import '../../utils/cart_prompt.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/price_formatter.dart';
 import '../../utils/profile_image_url.dart';
@@ -14,12 +15,18 @@ class RestaurantDishCard extends StatefulWidget {
     super.key,
     required this.dish,
     this.isFavorite = false,
+    this.isAiRecommended = false,
+    this.aiExplanation,
+    this.restaurantName,
     this.onTap,
     this.onFavoriteToggle,
   });
 
   final Dish dish;
   final bool isFavorite;
+  final bool isAiRecommended;
+  final String? aiExplanation;
+  final String? restaurantName;
   final VoidCallback? onTap;
   final VoidCallback? onFavoriteToggle;
 
@@ -39,9 +46,7 @@ class _RestaurantDishCardState extends State<RestaurantDishCard> {
     if (!mounted) return;
     setState(() => _adding = false);
     if (ok) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${widget.dish.name} added to cart')),
-      );
+      CartPrompt.showAddedToCart(context, itemName: widget.dish.name);
     }
   }
 
@@ -113,6 +118,30 @@ class _RestaurantDishCardState extends State<RestaurantDishCard> {
                                         ),
                                   ),
                                 ),
+                                if (widget.isAiRecommended)
+                                  Container(
+                                    margin: const EdgeInsets.only(right: 6),
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      gradient: AppColors.accentGradient,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.auto_awesome, size: 12, color: AppColors.onAccent),
+                                        SizedBox(width: 4),
+                                        Text(
+                                          'AI Pick',
+                                          style: TextStyle(
+                                            color: AppColors.onAccent,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 IconButton(
                                   visualDensity: VisualDensity.compact,
                                   padding: EdgeInsets.zero,
@@ -128,6 +157,49 @@ class _RestaurantDishCardState extends State<RestaurantDishCard> {
                                 ),
                               ],
                             ),
+                            if (widget.restaurantName != null &&
+                                widget.restaurantName!.trim().isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                widget.restaurantName!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                      color: AppColors.textSecondary,
+                                    ),
+                              ),
+                            ],
+                            if (widget.aiExplanation != null &&
+                                widget.aiExplanation!.trim().isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.accent.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: AppColors.accent.withValues(alpha: 0.28),
+                                  ),
+                                ),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Icon(Icons.auto_awesome, size: 14, color: AppColors.accent),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        widget.aiExplanation!,
+                                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                              color: AppColors.accent,
+                                              height: 1.3,
+                                            ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                             if (widget.dish.description != null &&
                                 widget.dish.description!.trim().isNotEmpty) ...[
                               const SizedBox(height: 4),
@@ -158,6 +230,40 @@ class _RestaurantDishCardState extends State<RestaurantDishCard> {
                                     fontWeight: FontWeight.w700,
                                   ),
                                 ),
+                              ),
+                            ],
+                            if (widget.dish.allergens.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              Wrap(
+                                spacing: 6,
+                                runSpacing: 4,
+                                children: widget.dish.allergens.take(3).map((a) {
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.error.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: AppColors.error.withValues(alpha: 0.35),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        const Icon(Icons.warning_amber_rounded, size: 11, color: AppColors.error),
+                                        const SizedBox(width: 3),
+                                        Text(
+                                          a,
+                                          style: const TextStyle(
+                                            color: AppColors.error,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
                               ),
                             ],
                             const Spacer(),

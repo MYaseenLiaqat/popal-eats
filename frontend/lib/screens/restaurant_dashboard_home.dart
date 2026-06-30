@@ -6,6 +6,7 @@ import '../services/restaurant_owner_service.dart';
 import '../theme/app_colors.dart';
 import '../utils/price_formatter.dart';
 import '../utils/recommendation_copy.dart';
+import '../widgets/admin/admin_charts.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 
 /// Dashboard home tab for restaurant owners.
@@ -71,7 +72,7 @@ class _RestaurantDashboardHomeState extends State<RestaurantDashboardHome> {
   @override
   Widget build(BuildContext context) {
     if (_loading && _dashboard == null) {
-      return const Center(child: CircularProgressIndicator(color: AppColors.accent));
+      return const Center(child: CircularProgressIndicator());
     }
     if (_error != null && _dashboard == null) {
       return Center(child: Text(_error!));
@@ -127,6 +128,56 @@ class _RestaurantDashboardHomeState extends State<RestaurantDashboardHome> {
             ],
           ),
           const SizedBox(height: 16),
+          SectionHeader(
+            title: 'Revenue snapshot',
+            subtitle: 'Today vs dish performance',
+          ),
+          const SizedBox(height: 8),
+          ModernCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  PriceFormatter.format(dash.revenueToday),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        color: AppColors.accent,
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+                Text("Today's revenue", style: Theme.of(context).textTheme.bodySmall),
+                if (dash.popularDishes.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  AdminBarChart(
+                    title: 'Top dishes by orders',
+                    entries: dash.popularDishes
+                        .take(5)
+                        .map((d) => (label: d.dishName, value: d.orderCount))
+                        .toList(),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _StatCard(
+                  label: 'Menu items',
+                  value: '${dash.totalDishes}',
+                  sub: '${dash.availableDishes} available',
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _StatCard(
+                  label: 'Total orders',
+                  value: '${dash.totalOrders}',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
           Row(
             children: [
               Expanded(
@@ -150,7 +201,7 @@ class _RestaurantDashboardHomeState extends State<RestaurantDashboardHome> {
           ),
           if (dash.recentReviews.isNotEmpty) ...[
             const SizedBox(height: 20),
-            SectionHeader(title: 'Recent reviews', subtitle: 'Latest customer feedback'),
+            const SectionHeader(title: 'Recent reviews', subtitle: 'Latest customer feedback'),
             ...dash.recentReviews.map(
               (review) => Padding(
                 padding: const EdgeInsets.only(bottom: 8),
@@ -187,7 +238,7 @@ class _RestaurantDashboardHomeState extends State<RestaurantDashboardHome> {
             ),
           ],
           const SizedBox(height: 20),
-          SectionHeader(title: 'Quick actions'),
+          const SectionHeader(title: 'Quick actions'),
           const SizedBox(height: 8),
           GoldActionButton(
             label: 'Manage orders',

@@ -86,7 +86,7 @@ class DeliveryHistoryCard extends StatelessWidget {
                       onPressed: onViewDetails,
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.textPrimary,
-                        side: BorderSide(color: AppColors.borderStrong),
+                        side: const BorderSide(color: AppColors.borderStrong),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),

@@ -104,11 +104,17 @@ def test_home_chef_registration_pending(client, db):
 
 def test_username_uniqueness(client):
     payload = _register_payload()
-    assert client.post("/register", json=payload).status_code == 201
+    first = client.post("/register", json=payload)
+    assert first.status_code == 201, first.text
+    first_username = first.json()["username"]
+
     payload["email"] = f"other_{uuid.uuid4().hex[:6]}@example.com"
-    r = client.post("/register", json=payload)
-    assert r.status_code == 400
-    assert "Username" in r.json()["error"]
+    payload["phone"] = f"+92300{uuid.uuid4().int % 10_000_000:07d}"
+    second = client.post("/register", json=payload)
+    assert second.status_code == 201, second.text
+    second_username = second.json()["username"]
+    assert second_username != first_username
+    assert second_username.startswith(first_username[:26].rstrip("._")[:26] or "user")
 
 
 def test_email_uniqueness_case_insensitive(client):
@@ -152,6 +158,67 @@ def test_phone_duplicate_rejected(client):
     r = client.post("/register", json=payload)
     assert r.status_code == 400
     assert "Phone" in r.json()["error"]
+
+
+def test_restaurant_registration_without_personal_fields(client, db):
+    """Business signup — no first name, last name, or username from client."""
+    from tests.conftest import unique_email
+
+    payload = {
+        "role": "restaurant",
+        "email": unique_email("biz_rest"),
+        "phone": f"+92300{uuid.uuid4().int % 10_000_000:07d}",
+        "password": "SecurePass1!",
+        "confirm_password": "SecurePass1!",
+        "restaurant_profile": {
+            "restaurant_name": "Spice Hub",
+            "restaurant_address": "123 Mall Road, Lahore",
+            "cuisine_type": "pakistani",
+            "description": "Authentic Lahori cuisine",
+        },
+    }
+    r = client.post("/register", json=payload)
+    assert r.status_code == 201, r.text
+    body = r.json()
+    assert body["role"] == RESTAURANT
+    assert body["account_status"] == "pending"
+    assert body["full_name"] == "Spice Hub"
+    assert body["username"]
+    assert "full_name" not in payload
+
+    user = db.query(User).filter(User.email == payload["email"]).first()
+    restaurant = db.query(Restaurant).filter(Restaurant.owner_id == user.id).first()
+    assert restaurant is not None
+    assert restaurant.description == "Authentic Lahori cuisine"
+
+
+def test_home_chef_registration_without_personal_fields(client, db):
+    from tests.conftest import unique_email
+
+    payload = {
+        "role": "home_chef",
+        "email": unique_email("biz_chef"),
+        "phone": f"+92300{uuid.uuid4().int % 10_000_000:07d}",
+        "password": "SecurePass1!",
+        "confirm_password": "SecurePass1!",
+        "home_chef_profile": {
+            "chef_display_name": "Chef Sana",
+            "cuisine_specialty": "desserts",
+            "kitchen_address": "45 Garden Town, Lahore",
+            "biography": "Homemade desserts specialist",
+        },
+    }
+    r = client.post("/register", json=payload)
+    assert r.status_code == 201, r.text
+    body = r.json()
+    assert body["role"] == HOME_CHEF
+    assert body["account_status"] == "pending"
+    assert body["full_name"] == "Chef Sana"
+    assert body["username"]
+
+    profile = db.query(HomeChefProfile).filter(HomeChefProfile.user_id == body["id"]).first()
+    assert profile is not None
+    assert profile.biography == "Homemade desserts specialist"
 
 
 def test_register_does_not_require_full_name(client):

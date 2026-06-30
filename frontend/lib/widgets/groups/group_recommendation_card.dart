@@ -4,6 +4,7 @@ import '../../models/group_recommendation.dart';
 import '../../models/group_vote.dart';
 import '../../utils/price_formatter.dart';
 import '../../theme/app_colors.dart';
+import '../auth_screen_widgets.dart';
 import '../ui/app_ui_widgets.dart';
 import 'group_vote_widgets.dart';
 
@@ -93,7 +94,9 @@ class GroupRecommendationCard extends StatelessWidget {
               ),
               Padding(
                 padding: const EdgeInsets.all(14),
-                child: Column(
+                child: CardInnerSurface(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
@@ -109,21 +112,9 @@ class GroupRecommendationCard extends StatelessWidget {
                               ),
                               if (recommendation.restaurantName.isNotEmpty) ...[
                                 const SizedBox(height: 4),
-                                Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.storefront_outlined,
-                                      size: 16,
-                                      color: AppColors.textSecondary,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Expanded(
-                                      child: Text(
-                                        recommendation.restaurantName,
-                                        style: Theme.of(context).textTheme.bodyMedium,
-                                      ),
-                                    ),
-                                  ],
+                                Text(
+                                  recommendation.restaurantName,
+                                  style: Theme.of(context).textTheme.bodyMedium,
                                 ),
                               ],
                             ],
@@ -133,13 +124,12 @@ class GroupRecommendationCard extends StatelessWidget {
                         GroupScoreBadge(percent: recommendation.scorePercent),
                       ],
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 10),
                     Row(
                       children: [
                         Text(
                           PriceFormatter.format(recommendation.price),
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                color: AppColors.accent,
                                 fontWeight: FontWeight.w700,
                               ),
                         ),
@@ -147,41 +137,40 @@ class GroupRecommendationCard extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
-                            color: AppColors.accent.withValues(alpha: 0.12),
+                            color: AppColors.brandGold.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(99),
                           ),
                           child: Text(
-                            'Group match',
+                            '${recommendation.scorePercent}% match',
                             style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                  color: AppColors.accent,
                                   fontWeight: FontWeight.w600,
                                 ),
                           ),
                         ),
                       ],
                     ),
-                    if (recommendation.displayReasons.isNotEmpty) ...[
-                      const SizedBox(height: 14),
+                    if (recommendation.topReasons.isNotEmpty) ...[
+                      const SizedBox(height: 12),
                       Text(
-                        'Recommended because',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 14),
+                        'Why',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 13),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
                       Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: recommendation.displayReasons
-                            .map(_reasonChip)
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: recommendation.topReasons
+                            .map((r) => _reasonChip(context, r))
                             .toList(),
                       ),
                     ],
                     if (_canVote) ...[
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 14),
                       Text(
                         'Your vote',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 14),
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(fontSize: 13),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
                       VoteControls(
                         selectedVote: userVote,
                         pendingVote: pendingVote,
@@ -195,6 +184,7 @@ class GroupRecommendationCard extends StatelessWidget {
                     ),
                   ],
                 ),
+                ),
               ),
             ],
           ),
@@ -203,28 +193,22 @@ class GroupRecommendationCard extends StatelessWidget {
     );
   }
 
-  Widget _reasonChip(String reason) {
+  Widget _reasonChip(BuildContext context, String reason) {
+    final onBg = AppColors.contrastOn(AppColors.brandCardInner);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
-        color: AppColors.surfaceLight.withValues(alpha: 0.8),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.accent.withValues(alpha: 0.35)),
+        color: AppColors.brandCream.withValues(alpha: 0.65),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: onBg.withValues(alpha: 0.15)),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.check_circle_outline, size: 14, color: AppColors.accent),
-          const SizedBox(width: 4),
-          Text(
-            reason,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
+      child: Text(
+        reason,
+        style: TextStyle(
+          color: onBg,
+          fontSize: 11,
+          fontWeight: FontWeight.w500,
+        ),
       ),
     );
   }

@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
-from sqlalchemy import func, or_
+from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.content_constants import (
@@ -164,15 +164,16 @@ def _assert_can_create_post(body: PostCreate, user: User, db: Session) -> None:
         return
 
     if post_type == RECIPE:
-        if role not in (RESTAURANT, HOME_CHEF, ADMIN):
+        if role not in (RESTAURANT, HOME_CHEF, CUSTOMER, ADMIN):
             raise HTTPException(
                 status_code=403,
-                detail="Only restaurants and home chefs can create recipe posts",
+                detail="Only restaurants, home chefs, and customers can create recipe posts",
             )
-        if role != ADMIN:
+        if role not in (CUSTOMER, ADMIN):
             assert_active_business_account(user)
         if not body.title or not str(body.title).strip():
             raise HTTPException(status_code=400, detail="title required for recipe posts")
+        return
 
     if body.restaurant_id is not None:
         restaurant = db.query(Restaurant).filter(Restaurant.id == body.restaurant_id).first()
@@ -257,6 +258,33 @@ def delete_post(db: Session, user: User, post_id: int) -> None:
     db.commit()
 
 
+def _is_seed_post(post: Post) -> bool:
+    caption = (post.caption or "") + (post.title or "")
+    return "fyp_seed" in caption.lower()
+
+
+def _has_food_content(post: Post) -> bool:
+    images = post.images if isinstance(post.images, list) else []
+    has_media = bool(images) or bool(post.video_url and str(post.video_url).strip())
+    has_dish = post.dish_id is not None
+    has_text = bool((post.caption or post.title or "").strip())
+    return has_media or has_dish or has_text
+
+
+def _home_feed_priority(post: Post, user_id: int, friends: set[int]) -> int:
+    """Lower values appear first: friend food, friend other, restaurant dish, chef recipe."""
+    author = post.author_id
+    if author in friends and post.post_type == FOOD_POST:
+        return 0
+    if author in friends:
+        return 1
+    if post.post_type == RESTAURANT_POST:
+        return 2
+    if post.post_type in (RECIPE, CHEF_POST):
+        return 3
+    return 4
+
+
 def list_home_feed(
     db: Session,
     user_id: int,
@@ -264,38 +292,61 @@ def list_home_feed(
     page: int = 1,
     limit: int = 20,
 ) -> tuple[list[PostResponse], int]:
+    from app.core.account_status import ACTIVE
+
     friends = _friend_ids(db, user_id)
     visible_authors = friends | {user_id}
 
-    restaurant_post_ids = (
-        db.query(Post.id)
-        .join(Post.restaurant)
-        .filter(
-            Post.post_type == RESTAURANT_POST,
-            Restaurant.approval_status == APPROVED,
-        )
-    )
-
-    visibility_filter = or_(
+    social_filter = and_(
         Post.author_id.in_(visible_authors),
-        Post.id.in_(restaurant_post_ids),
+        Post.post_type.in_((FOOD_POST, RECIPE, CHEF_POST)),
     )
-
-    total = db.query(func.count(Post.id)).filter(visibility_filter).scalar() or 0
+    restaurant_filter = and_(
+        Post.post_type == RESTAURANT_POST,
+        Restaurant.approval_status == APPROVED,
+    )
+    chef_filter = and_(
+        Post.post_type.in_((RECIPE, CHEF_POST)),
+        User.role == HOME_CHEF,
+        User.account_status == ACTIVE,
+    )
 
     posts = (
         db.query(Post)
+        .outerjoin(Restaurant, Post.restaurant_id == Restaurant.id)
+        .outerjoin(User, Post.author_id == User.id)
         .options(
             joinedload(Post.author),
             joinedload(Post.restaurant),
             joinedload(Post.dish),
         )
-        .filter(visibility_filter)
+        .filter(
+            or_(
+                social_filter,
+                restaurant_filter,
+                chef_filter,
+            )
+        )
         .order_by(Post.created_at.desc())
-        .offset((page - 1) * limit)
-        .limit(limit)
         .all()
     )
+
+    posts = [
+        p
+        for p in posts
+        if not _is_seed_post(p)
+        and _has_food_content(p)
+        and (p.post_type != RESTAURANT_POST or p.restaurant is not None)
+    ]
+    posts.sort(
+        key=lambda p: (
+            _home_feed_priority(p, user_id, friends),
+            -(p.created_at.timestamp() if p.created_at else 0),
+        )
+    )
+    total = len(posts)
+    start = (page - 1) * limit
+    posts = posts[start : start + limit]
     post_ids = [p.id for p in posts]
     liked_ids, saved_ids = _viewer_interaction_ids(db, user_id, post_ids)
     return [
@@ -304,11 +355,21 @@ def list_home_feed(
 
 
 def list_discover_reels(db: Session, *, limit: int = 30) -> list[DiscoverReelResponse]:
+    customer_reel_filter = and_(
+        Post.post_type == FOOD_POST,
+        Post.video_url.isnot(None),
+        Post.video_url != "",
+    )
     posts = (
         db.query(Post)
         .options(joinedload(Post.author), joinedload(Post.restaurant), joinedload(Post.dish))
         .outerjoin(Post.restaurant)
-        .filter(Post.post_type.in_(DISCOVER_POST_TYPES))
+        .filter(
+            or_(
+                Post.post_type.in_(DISCOVER_POST_TYPES),
+                customer_reel_filter,
+            )
+        )
         .filter(
             or_(
                 Post.post_type != RESTAURANT_POST,
@@ -368,6 +429,18 @@ def append_post_image(db: Session, user: User, post_id: int, public_url: str) ->
     if public_url not in images:
         images.append(public_url)
     post.images = images
+    db.commit()
+    db.refresh(post)
+    post = _load_post(db, post.id)
+    return _serialize_post(post, user.id, db)
+
+
+def set_post_video(db: Session, user: User, post_id: int, public_url: str) -> PostResponse:
+    post = _load_post(db, post_id)
+    role = normalize_role(user.role)
+    if role != ADMIN and post.author_id != user.id:
+        raise HTTPException(status_code=403, detail="Not the post author")
+    post.video_url = public_url
     db.commit()
     db.refresh(post)
     post = _load_post(db, post.id)

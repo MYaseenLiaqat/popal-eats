@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../models/review.dart';
+import '../../utils/review_display.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/date_display.dart';
 import '../../utils/recommendation_copy.dart';
@@ -132,10 +133,8 @@ class ReviewListTile extends StatelessWidget {
                 ),
               ),
               RatingBadge(rating: review.rating.toDouble()),
-              if (review.sentiment != null && review.sentiment!.isNotEmpty) ...[
-                const SizedBox(width: 8),
-                SentimentBadge(sentiment: review.sentiment!),
-              ],
+              const SizedBox(width: 8),
+              SentimentBadge(sentiment: effectiveSentiment(review)),
             ],
           ),
           if (review.createdAt != null) ...[
@@ -195,14 +194,20 @@ class RestaurantReviewsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final counts = sentimentCounts(reviews);
+    final uniqueReviews = dedupeReviews(reviews);
+    final counts = sentimentCountsFromRatings(uniqueReviews);
+    final stats = uniqueReviews.isNotEmpty
+        ? reviewStatsFromList(uniqueReviews)
+        : (average: averageRating, total: totalReviews);
+    final displayAverage = stats.average > 0 ? stats.average : averageRating;
+    final displayTotal = stats.total > 0 ? stats.total : totalReviews;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SectionHeader(
           title: 'Reviews',
-          subtitle: totalReviews > 0 ? '$totalReviews total' : 'Share your experience',
+          subtitle: displayTotal > 0 ? '$displayTotal total' : 'Share your experience',
           trailing: TextButton.icon(
             onPressed: onWriteReview,
             icon: const Icon(Icons.rate_review_outlined, size: 18),
@@ -216,15 +221,15 @@ class RestaurantReviewsSection extends StatelessWidget {
           )
         else ...[
           ReviewStatsSummary(
-            averageRating: averageRating,
-            totalReviews: totalReviews,
+            averageRating: displayAverage,
+            totalReviews: displayTotal,
             positiveCount: counts.positive,
             neutralCount: counts.neutral,
             negativeCount: counts.negative,
           ),
-          if (reviews.isNotEmpty) ...[
+          if (uniqueReviews.isNotEmpty) ...[
             const SizedBox(height: 12),
-            ...reviews.map(
+            ...uniqueReviews.map(
               (r) => Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: ReviewListTile(review: r),

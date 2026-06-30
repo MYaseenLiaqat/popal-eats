@@ -33,9 +33,9 @@ class CartAddonsSection extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             itemCount: 3,
             separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemBuilder: (_, __) => FeedShimmer(
+            itemBuilder: (_, __) => const FeedShimmer(
               borderRadius: CartConstants.cardRadius,
-              child: const SizedBox(width: 170, height: 190),
+              child: SizedBox(width: 170, height: 190),
             ),
           ),
         ),
@@ -389,14 +389,14 @@ class CartLoadingSkeleton extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       physics: const NeverScrollableScrollPhysics(),
       children: [
-        FeedShimmer(borderRadius: CartConstants.cardRadius, child: const SizedBox(height: 88)),
+        const FeedShimmer(borderRadius: CartConstants.cardRadius, child: SizedBox(height: 88)),
         const SizedBox(height: 14),
-        FeedShimmer(borderRadius: CartConstants.cardRadius, child: const SizedBox(height: 88)),
+        const FeedShimmer(borderRadius: CartConstants.cardRadius, child: SizedBox(height: 88)),
         const SizedBox(height: 14),
         for (var i = 0; i < 3; i++)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: FeedShimmer(borderRadius: CartConstants.cardRadius, child: const SizedBox(height: 118)),
+          const Padding(
+            padding: EdgeInsets.only(bottom: 12),
+            child: FeedShimmer(borderRadius: CartConstants.cardRadius, child: SizedBox(height: 118)),
           ),
       ],
     );

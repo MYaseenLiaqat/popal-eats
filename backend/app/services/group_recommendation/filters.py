@@ -100,7 +100,11 @@ def _contains_any(blob: str, keywords: tuple[str, ...] | frozenset[str]) -> bool
 
 
 def _dish_allergen_tags(dish: Dish) -> set[str]:
-    raw = dish.allergens if isinstance(dish.allergens, list) else []
+    try:
+        raw = dish.allergens if isinstance(dish.allergens, list) else []
+    except Exception:
+        # Detached ORM rows from the dish pool cache may not lazy-load deferred columns.
+        return set()
     return {str(tag).strip().lower() for tag in raw if tag}
 
 
