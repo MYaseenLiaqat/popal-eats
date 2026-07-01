@@ -9,7 +9,7 @@
         "client_info": {
           "mobilesdk_app_id": "1:427158581376:android:e08914afc33ff7e26f7665",
           "android_client_info": {
-            "package_name": "com.example.popal_eats"
+            "package_name": "com.popaleats.app"
           }
         },
         "oauth_client": [
@@ -17,7 +17,7 @@
             "client_id": "427158581376-m43m9vaig12iaj1j4e98euvmhd22ubo3.apps.googleusercontent.com",
             "client_type": 1,
             "android_info": {
-              "package_name": "com.example.popal_eats",
+              "package_name": "com.popaleats.app",
               "certificate_hash": "5cd366eb4b4010815d528f2feced1c36afeadd6d"
             }
           },

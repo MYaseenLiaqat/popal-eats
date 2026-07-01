@@ -20,7 +20,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.example.popal_eats"
+    namespace = "com.popaleats.app"
     compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
@@ -30,7 +30,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.popal_eats"
+        applicationId = "com.popaleats.app"
         minSdk = maxOf(flutter.minSdkVersion, 23)
         targetSdk = 35
         versionCode = flutter.versionCode
