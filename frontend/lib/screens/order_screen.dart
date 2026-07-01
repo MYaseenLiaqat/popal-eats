@@ -9,6 +9,7 @@ import '../providers/cart_provider.dart';
 import '../providers/recommendation_provider.dart';
 import '../services/restaurant_service.dart';
 import '../theme/app_colors.dart';
+import '../utils/media_url.dart';
 import '../utils/order_recommendation_utils.dart';
 import '../utils/recommendation_copy.dart';
 import '../widgets/home/home_constants.dart';
@@ -22,6 +23,7 @@ import '../services/dish_service.dart';
 import '../models/dish.dart';
 import 'cart_screen.dart';
 import 'dish_detail_screen.dart';
+import 'restaurant_detail_screen.dart';
 
 /// AI-powered ordering hub — hybrid recommendation sections (not a static catalogue).
 class OrderScreen extends StatefulWidget {
@@ -43,6 +45,7 @@ class _OrderScreenState extends State<OrderScreen> {
   String? _restaurantError;
   List<Restaurant> _catalogRestaurants = [];
   List<Dish> _searchDishes = [];
+  List<Restaurant> _searchRestaurants = [];
   String _searchQuery = '';
   String? _selectedCuisineKey;
   String? _selectedCuisineName;
@@ -129,7 +132,36 @@ class _OrderScreenState extends State<OrderScreen> {
     _dishSearchDebounce?.cancel();
     _dishSearchDebounce = Timer(const Duration(milliseconds: 350), () {
       _refreshDishMatches(query);
+      _refreshRestaurantMatches(query);
     });
+  }
+
+  Future<void> _refreshRestaurantMatches(String query) async {
+    final needle = query.trim();
+    if (needle.length < 2) {
+      if (mounted) setState(() => _searchRestaurants = []);
+      return;
+    }
+    try {
+      final raw = await _restaurants.list(search: needle, limit: 12);
+      final parsed = raw
+          .whereType<Map<String, dynamic>>()
+          .map(Restaurant.fromJson)
+          .where((r) => r.approvalStatus == 'approved')
+          .toList();
+      if (!mounted) return;
+      setState(() => _searchRestaurants = parsed);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _searchRestaurants = []);
+    }
+  }
+
+  void _openRestaurant(Restaurant r) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => RestaurantDetailScreen(restaurantId: r.id)),
+    );
   }
 
   Future<void> _refreshDishMatches(String query) async {
@@ -251,6 +283,74 @@ class _OrderScreenState extends State<OrderScreen> {
     );
   }
 
+  Widget _restaurantResultTile(Restaurant r) {
+    final imageUrl = r.image == null || r.image!.isEmpty
+        ? null
+        : resolveMediaUrl(r.image);
+    final subtitle = [
+      if (r.city != null && r.city!.trim().isNotEmpty) r.city!.trim(),
+      if (r.averageRating > 0) '${r.averageRating.toStringAsFixed(1)} \u2605',
+    ].join('  \u00b7  ');
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: ModernCard(
+        onTap: () => _openRestaurant(r),
+        padding: const EdgeInsets.all(10),
+        child: Row(
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: SizedBox(
+                width: 56,
+                height: 56,
+                child: imageUrl != null
+                    ? Image.network(
+                        imageUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const ColoredBox(
+                          color: AppColors.surfaceLight,
+                          child: Icon(Icons.storefront_outlined,
+                              color: AppColors.accent),
+                        ),
+                      )
+                    : const ColoredBox(
+                        color: AppColors.surfaceLight,
+                        child: Icon(Icons.storefront_outlined,
+                            color: AppColors.accent),
+                      ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    r.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  if (subtitle.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final cart = context.watch<CartProvider>();
@@ -361,6 +461,7 @@ class _OrderScreenState extends State<OrderScreen> {
                     )
                   else if (hasActiveFilters &&
                       _searchDishes.isEmpty &&
+                      _searchRestaurants.isEmpty &&
                       _cuisineDishes.isEmpty &&
                       !_loadingCuisineDishes &&
                       recs.isEmpty)
@@ -377,6 +478,15 @@ class _OrderScreenState extends State<OrderScreen> {
                       ),
                     )
                   else ...[
+                    if (_searchRestaurants.isNotEmpty) ...[
+                      const HomeSectionHeader(
+                        title: 'Restaurants',
+                        subtitle: 'Matching your search',
+                        icon: Icons.storefront_outlined,
+                      ),
+                      ..._searchRestaurants.map(_restaurantResultTile),
+                      const SizedBox(height: HomeConstants.sectionSpacing),
+                    ],
                     if (_loadingCuisineDishes)
                       const Padding(
                         padding: EdgeInsets.all(24),

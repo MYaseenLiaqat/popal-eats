@@ -38,7 +38,7 @@ class CartRestaurantSummary extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          gradient: context.popalHeaderGradient,
+          gradient: AppColors.headerGradient,
           borderRadius: BorderRadius.circular(CartConstants.cardRadius),
           border: Border.all(color: AppColors.accent.withValues(alpha: 0.35)),
           boxShadow: AppColors.cardShadow(),

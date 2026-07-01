@@ -142,9 +142,10 @@ class FoodFeedCard extends StatelessWidget {
                       const SizedBox(height: 8),
                       Text(
                         PriceFormatter.format(item.price!),
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
                               color: AppColors.accent,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 18,
                             ),
                       ),
                     ],
@@ -165,7 +166,7 @@ class FoodFeedCard extends StatelessWidget {
       child: Icon(
         Icons.restaurant_outlined,
         size: 48,
-        color: AppColors.textSecondary.withValues(alpha: 0.5),
+        color: AppColors.accent.withValues(alpha: 0.7),
       ),
     );
   }

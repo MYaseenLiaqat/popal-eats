@@ -64,13 +64,24 @@ class ModernCard extends StatelessWidget {
     final isLight = theme.brightness == Brightness.light;
     final defaultGradient =
         isLight ? AppColors.lightSurfaceGradient : AppColors.surfaceGradient;
-    final defaultBorder = isLight ? AppColors.lightBorder : AppColors.border;
-    final onCard = isLight ? AppColors.lightTextOnCard : theme.colorScheme.onSurface;
+    final defaultBorder =
+        isLight ? AppColors.lightBorder : AppColors.darkCardBorder;
+    final resolvedGradient = gradient ?? defaultGradient;
+
+    // Pick black or white text/icons based on this card's actual background
+    // brightness, so content stays readable on gold cards, dark cards, and
+    // custom gradients alike. Secondary copy is a softened version of the same
+    // ink so the title → description hierarchy survives.
+    final cardBg = AppColors.representativeColor(resolvedGradient);
+    final onCard = cardBg.computeLuminance() > 0.5
+        ? const Color(0xFF17110E)
+        : Colors.white;
+    final onCardMuted = onCard.withValues(alpha: 0.74);
 
     final content = Container(
       padding: padding,
       decoration: BoxDecoration(
-        gradient: gradient ?? defaultGradient,
+        gradient: resolvedGradient,
         borderRadius: BorderRadius.circular(AppColors.cardRadius),
         border: Border.all(
           color: borderColor ?? defaultBorder,
@@ -79,14 +90,18 @@ class ModernCard extends StatelessWidget {
       ),
       child: Theme(
         data: theme.copyWith(
-          textTheme: theme.textTheme.apply(
-            bodyColor: onCard,
-            displayColor: onCard,
-          ),
-          iconTheme: IconThemeData(color: onCard.withValues(alpha: 0.9)),
+          iconTheme: IconThemeData(color: onCard),
+          textTheme: theme.textTheme
+              .apply(bodyColor: onCard, displayColor: onCard)
+              .copyWith(
+                bodyMedium: theme.textTheme.bodyMedium?.copyWith(color: onCardMuted),
+                bodySmall: theme.textTheme.bodySmall?.copyWith(color: onCardMuted),
+                labelMedium:
+                    theme.textTheme.labelMedium?.copyWith(color: onCardMuted),
+              ),
           colorScheme: theme.colorScheme.copyWith(
             onSurface: onCard,
-            onSurfaceVariant: onCard.withValues(alpha: 0.85),
+            onSurfaceVariant: onCardMuted,
           ),
         ),
         child: child,
@@ -814,11 +829,15 @@ class EmptyState extends StatelessWidget {
     required this.icon,
     required this.title,
     this.subtitle,
+    this.actionLabel,
+    this.onAction,
   });
 
   final IconData icon;
   final String title;
   final String? subtitle;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -830,14 +849,17 @@ class EmptyState extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  color: AppColors.accent.withValues(alpha: 0.12),
+                  color: AppColors.accent.withValues(alpha: 0.16),
                   shape: BoxShape.circle,
+                  border: Border.all(
+                    color: AppColors.accent.withValues(alpha: 0.35),
+                  ),
                 ),
-                child: Icon(icon, size: 48, color: AppColors.accent),
+                child: Icon(icon, size: 52, color: AppColors.accent),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 18),
               Text(
                 title,
                 style: Theme.of(context).textTheme.titleLarge,
@@ -849,6 +871,13 @@ class EmptyState extends StatelessWidget {
                   subtitle!,
                   style: Theme.of(context).textTheme.bodyMedium,
                   textAlign: TextAlign.center,
+                ),
+              ],
+              if (actionLabel != null && onAction != null) ...[
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: onAction,
+                  child: Text(actionLabel!),
                 ),
               ],
             ],

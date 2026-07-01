@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
 import 'app_theme_extensions.dart';
+import 'app_typography.dart';
 
 abstract final class AppTheme {
   static ThemeData get light => _build(
@@ -52,7 +53,9 @@ abstract final class AppTheme {
     required Gradient surfaceGradient,
   }) {
     final isDark = brightness == Brightness.dark;
-    final onAccent = Colors.white;
+    // The accent is gold in both themes, and near-black text on gold is far
+    // more legible (WCAG AA) than white — so gold buttons/chips use dark ink.
+    const onAccent = AppColors.onAccentDark;
     final borderStrong =
         isDark ? AppColors.darkBorderStrong : AppColors.lightBorderStrong;
     final accentSubtle =
@@ -75,7 +78,7 @@ abstract final class AppTheme {
             outline: border,
             outlineVariant: borderStrong,
             error: AppColors.error,
-            onError: onAccent,
+            onError: Colors.white,
           )
         : ColorScheme.light(
             brightness: Brightness.light,
@@ -91,7 +94,7 @@ abstract final class AppTheme {
             outline: border,
             outlineVariant: AppColors.lightBorder,
             error: AppColors.error,
-            onError: onAccent,
+            onError: Colors.white,
           );
 
     final borderSide = OutlineInputBorder(
@@ -115,47 +118,28 @@ abstract final class AppTheme {
         scrolledUnderElevation: 0,
         centerTitle: false,
         surfaceTintColor: Colors.transparent,
-        iconTheme: IconThemeData(color: textSecondary),
-        actionsIconTheme: IconThemeData(color: textSecondary),
+        titleTextStyle: TextStyle(
+          color: textPrimary,
+          fontWeight: FontWeight.w700,
+          fontSize: 22,
+        ),
+        iconTheme: IconThemeData(color: textPrimary, size: 24),
+        actionsIconTheme: IconThemeData(color: textPrimary, size: 24),
       ),
-      textTheme: TextTheme(
-        headlineLarge: TextStyle(
-          fontWeight: FontWeight.w700,
-          color: textPrimary,
-          letterSpacing: -0.5,
-        ),
-        headlineSmall: TextStyle(
-          fontWeight: FontWeight.w700,
-          color: textPrimary,
-        ),
-        titleLarge: TextStyle(
-          fontWeight: FontWeight.w700,
-          color: textPrimary,
-        ),
-        titleMedium: TextStyle(
-          fontWeight: FontWeight.w600,
-          color: textPrimary,
-        ),
-        titleSmall: TextStyle(
-          fontWeight: FontWeight.w600,
-          color: textPrimary,
-        ),
-        bodyLarge: TextStyle(color: textPrimary),
-        bodyMedium: TextStyle(color: textSecondary),
-        bodySmall: TextStyle(color: textSecondary, fontSize: 12),
-        labelLarge: TextStyle(
-          fontWeight: FontWeight.w600,
-          color: textPrimary,
-        ),
+      textTheme: AppTypography.buildTextTheme(
+        primary: textPrimary,
+        secondary: textSecondary,
       ),
-      iconTheme: IconThemeData(color: textSecondary),
+      iconTheme: IconThemeData(color: textPrimary, size: 22),
       cardTheme: CardThemeData(
         color: surface,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppColors.cardRadius),
-          side: BorderSide(color: border),
+          side: BorderSide(
+            color: isDark ? AppColors.darkCardBorder : border,
+          ),
         ),
         margin: EdgeInsets.zero,
       ),
@@ -173,7 +157,7 @@ abstract final class AppTheme {
           ),
           textStyle: const TextStyle(
             fontWeight: FontWeight.w700,
-            fontSize: 16,
+            fontSize: 15,
           ),
         ).copyWith(
           overlayColor: WidgetStateProperty.resolveWith((states) {
@@ -217,9 +201,10 @@ abstract final class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: textPrimary,
-          side: BorderSide(color: borderStrong),
+          foregroundColor: primary,
+          side: BorderSide(color: primary, width: 1.5),
           minimumSize: const Size.fromHeight(AppColors.buttonHeight),
+          textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppColors.buttonRadius),
           ),
@@ -239,7 +224,7 @@ abstract final class AppTheme {
         labelStyle: TextStyle(
           color: isDark ? textSecondary : AppColors.lightTextOnInner,
         ),
-        prefixIconColor: isDark ? textSecondary : AppColors.lightTextOnInner,
+        prefixIconColor: isDark ? primary : AppColors.lightTextOnInner,
         suffixIconColor: isDark ? textSecondary : AppColors.lightTextOnInner,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: borderSide,
@@ -282,43 +267,49 @@ abstract final class AppTheme {
         }),
       ),
       chipTheme: ChipThemeData(
-        backgroundColor: surface,
+        backgroundColor: surfaceLight,
         selectedColor: accentSubtle,
         disabledColor: surfaceLight,
-        labelStyle: TextStyle(color: textPrimary),
-        secondaryLabelStyle: TextStyle(color: primary),
-        side: BorderSide(color: border),
+        labelStyle: TextStyle(
+          color: textPrimary,
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+        ),
+        secondaryLabelStyle: TextStyle(color: primary, fontWeight: FontWeight.w600),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        side: BorderSide(color: borderStrong),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: border),
+          side: BorderSide(color: borderStrong),
         ),
         checkmarkColor: primary,
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: navBg,
-        indicatorColor: primary.withValues(alpha: 0.18),
+        indicatorColor: primary.withValues(alpha: 0.24),
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        height: 72,
+        height: 76,
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: navActive,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: textPrimary,
             );
           }
           return TextStyle(
-            fontSize: 12,
+            fontSize: 13,
             fontWeight: FontWeight.w500,
             color: textSecondary,
           );
         }),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return IconThemeData(color: navActive, size: 24);
+            return IconThemeData(color: navActive, size: 26);
           }
-          return IconThemeData(color: textSecondary, size: 24);
+          return IconThemeData(color: textSecondary, size: 26);
         }),
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
@@ -401,7 +392,7 @@ abstract final class AppTheme {
         thickness: 1,
       ),
       listTileTheme: ListTileThemeData(
-        iconColor: textSecondary,
+        iconColor: primary,
         textColor: textPrimary,
       ),
       tabBarTheme: TabBarThemeData(

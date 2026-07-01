@@ -31,7 +31,7 @@ class _HomeCuisineStripState extends State<HomeCuisineStrip> {
           icon: Icons.restaurant_menu_outlined,
         ),
         SizedBox(
-          height: 112,
+          height: 122,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -89,13 +89,13 @@ class _CuisineChipState extends State<_CuisineChip> {
           child: AnimatedContainer(
             duration: HomeConstants.animDuration,
             curve: HomeConstants.animCurve,
-            width: 88,
+            width: 96,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(HomeConstants.cardRadius),
               border: Border.all(
                 color: widget.selected
                     ? AppColors.accent
-                    : AppColors.borderStrong.withValues(alpha: 0.7),
+                    : AppColors.cardBorder,
                 width: widget.selected ? 2 : 1,
               ),
               boxShadow: lift ? AppColors.accentGlow(alpha: 0.22) : AppColors.cardShadow(),
@@ -112,7 +112,7 @@ class _CuisineChipState extends State<_CuisineChip> {
                 ),
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
                   color: widget.selected ? AppColors.accentSubtle : AppColors.surface,
                   child: Text(
                     widget.cuisine.name,
@@ -120,8 +120,8 @@ class _CuisineChipState extends State<_CuisineChip> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
                       color: widget.selected ? AppColors.accent : AppColors.textPrimary,
                     ),
                   ),

@@ -40,17 +40,18 @@ class FeedStoriesRow extends StatelessWidget {
         separatorBuilder: (_, __) => const SizedBox(width: 12),
         itemBuilder: (context, index) {
           if (showOwnStorySlot && index == 0) {
-            final hasStories = ownGroup != null && ownGroup!.stories.isNotEmpty;
+            final own = ownGroup;
+            final hasStories = own != null && own.stories.isNotEmpty;
             return _StoryBubble(
               label: hasStories ? 'Your story' : 'Add story',
               isOwn: true,
-              hasUnviewed: ownGroup?.hasUnviewed ?? false,
+              hasUnviewed: own?.hasUnviewed ?? false,
               imageUrl: hasStories
-                  ? resolveMediaUrl(ownGroup!.stories.last.imageUrl)
+                  ? resolveMediaUrl(own.stories.last.imageUrl)
                   : null,
               onTap: () {
                 if (hasStories) {
-                  onGroupTap?.call(ownGroup!);
+                  onGroupTap?.call(own);
                 } else {
                   onCreateTap?.call();
                 }
@@ -91,41 +92,52 @@ class _StoryBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final showRing = !isOwn && hasUnviewed;
+    final showRing = hasUnviewed || isOwn;
 
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: SizedBox(
-        width: 68,
+        width: 72,
         child: Column(
           children: [
             Container(
-              width: 62,
-              height: 62,
-              padding: const EdgeInsets.all(2.5),
+              width: 66,
+              height: 66,
+              padding: const EdgeInsets.all(3),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: showRing
-                    ? LinearGradient(
-                        colors: [AppColors.accent, AppColors.accent.withValues(alpha: 0.85)],
+                    ? const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [AppColors.accentHover, AppColors.accent],
                       )
                     : null,
-                border: isOwn || !showRing
-                    ? Border.all(
-                        color: isOwn ? AppColors.surfaceLight : AppColors.textSecondary.withValues(alpha: 0.35),
+                border: showRing
+                    ? null
+                    : Border.all(
+                        color: AppColors.borderStrong,
                         width: 2,
-                      )
-                    : null,
+                      ),
               ),
-              child: ClipOval(
-                child: imageUrl != null
-                    ? Image.network(
-                        imageUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => _iconFallback(),
-                      )
-                    : _iconFallback(),
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.background,
+                ),
+                child: ClipOval(
+                  child: imageUrl != null
+                      ? Image.network(
+                          imageUrl!,
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          height: double.infinity,
+                          errorBuilder: (_, __, ___) => _iconFallback(),
+                        )
+                      : _iconFallback(),
+                ),
               ),
             ),
             const SizedBox(height: 6),
@@ -134,7 +146,11 @@ class _StoryBubble extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.labelSmall,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: AppColors.textSecondary,
+              ),
             ),
           ],
         ),
