@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.config import MAX_UPLOAD_MB, UPLOAD_DIR
 from app.core.content_constants import CONTENT_IMAGE_EXTENSIONS
 from app.core.dependencies import get_current_user, get_optional_current_user
-from app.core.rbac import promote_to_restaurant_owner, require_restaurant
+from app.core.rbac import promote_to_restaurant_owner, require_customer, require_restaurant
 from app.core.roles import ADMIN, CUSTOMER, RESTAURANT, is_restaurant_role, normalize_role
 from app.core.permissions import assert_restaurant_owner, get_restaurant_or_404
 from app.core.restaurant_constants import APPROVED, PENDING
@@ -24,10 +24,16 @@ from app.schemas.pagination import PaginatedResponse
 from app.schemas.restaurant import (
     RestaurantCreate,
     RestaurantDashboardResponse,
+    RestaurantFollowListResponse,
     RestaurantResponse,
     RestaurantUpdate,
 )
 from app.services.restaurant_dashboard_service import build_restaurant_dashboard
+from app.services.restaurant_follow_service import (
+    follow_restaurant,
+    list_followed_restaurants,
+    unfollow_restaurant,
+)
 from app.utils.pagination import apply_sort, build_paginated_response, paginate_query
 
 router = APIRouter(prefix="/restaurants", tags=["restaurants"])
@@ -139,6 +145,47 @@ def list_restaurants(
     query = apply_sort(query, Restaurant.average_rating, sort)
     items, total = paginate_query(query, page=page, limit=limit)
     return build_paginated_response(items, page=page, limit=limit, total_count=total)
+
+
+    return build_paginated_response(items, page=page, limit=limit, total_count=total)
+
+
+@router.get(
+    "/following",
+    response_model=RestaurantFollowListResponse,
+    summary="List restaurants the current user follows",
+)
+def get_followed_restaurants(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_customer),
+) -> RestaurantFollowListResponse:
+    return list_followed_restaurants(db, current_user.id)
+
+
+@router.post(
+    "/{restaurant_id}/follow",
+    response_model=RestaurantFollowListResponse,
+    summary="Follow a restaurant",
+)
+def follow_restaurant_route(
+    restaurant_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_customer),
+) -> RestaurantFollowListResponse:
+    return follow_restaurant(db, current_user.id, restaurant_id)
+
+
+@router.delete(
+    "/{restaurant_id}/follow",
+    response_model=RestaurantFollowListResponse,
+    summary="Unfollow a restaurant",
+)
+def unfollow_restaurant_route(
+    restaurant_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_customer),
+) -> RestaurantFollowListResponse:
+    return unfollow_restaurant(db, current_user.id, restaurant_id)
 
 
 @router.get("/{restaurant_id}", response_model=RestaurantResponse)

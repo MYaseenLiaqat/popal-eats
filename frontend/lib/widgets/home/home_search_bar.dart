@@ -112,7 +112,7 @@ class _HomeSearchBarState extends State<HomeSearchBar> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'What would you like to eat?',
+                          'Search people & restaurants',
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                 color: AppColors.textSecondary,
                               ),

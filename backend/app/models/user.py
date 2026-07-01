@@ -107,3 +107,8 @@ class User(Base):
         "PostComment", back_populates="user", cascade="all, delete-orphan"
     )
     post_saves = relationship("PostSave", back_populates="user", cascade="all, delete-orphan")
+    restaurant_follows = relationship(
+        "RestaurantFollow",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )

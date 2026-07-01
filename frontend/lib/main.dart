@@ -10,6 +10,7 @@ import 'providers/onboarding_provider.dart';
 import 'providers/preferences_provider.dart';
 import 'providers/recommendation_provider.dart';
 import 'providers/reels_provider.dart';
+import 'providers/restaurant_follow_provider.dart';
 import 'providers/theme_mode_provider.dart';
 import 'screens/admin/admin_shell.dart';
 import 'screens/business_account_status_screen.dart';
@@ -54,6 +55,7 @@ class PopalEatsApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => RecommendationProvider()),
         ChangeNotifierProvider(create: (_) => ReelsProvider()),
         ChangeNotifierProvider(create: (_) => HomeFeedProvider()),
+        ChangeNotifierProvider(create: (_) => RestaurantFollowProvider()),
       ],
       child: Consumer<ThemeModeProvider>(
         builder: (context, themeMode, _) {

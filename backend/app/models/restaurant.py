@@ -47,3 +47,4 @@ class Restaurant(Base):
     menu_uploads = relationship("MenuUpload", back_populates="restaurant")
     orders = relationship("Order", back_populates="restaurant")
     posts = relationship("Post", back_populates="restaurant")
+    followers = relationship("RestaurantFollow", back_populates="restaurant", cascade="all, delete-orphan")

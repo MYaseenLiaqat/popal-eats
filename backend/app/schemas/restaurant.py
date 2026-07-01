@@ -58,6 +58,12 @@ class RestaurantResponse(BaseModel):
         return self.average_rating
 
 
+class RestaurantFollowListResponse(BaseModel):
+    restaurant_ids: list[int] = Field(default_factory=list)
+    restaurants: list[RestaurantResponse] = Field(default_factory=list)
+    total: int = 0
+
+
 class RestaurantApprovalUpdate(BaseModel):
     approval_status: str = Field(..., pattern="^(approved|rejected)$")
     rejection_reason: str | None = Field(None, max_length=500)

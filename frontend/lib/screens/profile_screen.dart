@@ -11,6 +11,7 @@ import '../providers/onboarding_provider.dart';
 import '../providers/preferences_provider.dart';
 import '../providers/recommendation_provider.dart';
 import '../providers/reels_provider.dart';
+import '../providers/restaurant_follow_provider.dart';
 import '../theme/app_colors.dart';
 import '../utils/app_roles.dart';
 import '../utils/preference_display.dart';
@@ -42,6 +43,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<PreferencesProvider>().fetch(force: false);
       context.read<FriendsProvider>().fetchFriends(force: false);
+      context.read<RestaurantFollowProvider>().load();
     });
   }
 
@@ -57,6 +59,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     context.read<RecommendationProvider>().reset();
     context.read<ReelsProvider>().reset();
     context.read<HomeFeedProvider>().reset();
+    context.read<RestaurantFollowProvider>().reset();
   }
 
   String _nutritionSubtitle(PreferencesProvider prefs) {
@@ -117,15 +120,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final user = context.watch<AuthProvider>().user;
     final prefs = context.watch<PreferencesProvider>();
     final friends = context.watch<FriendsProvider>();
+    final follows = context.watch<RestaurantFollowProvider>();
     final name = user?['full_name']?.toString() ?? 'Guest';
     final handle = UserDisplay.handle(
       username: user?['username']?.toString(),
       email: user?['email']?.toString(),
       userId: user?['id'] as int?,
     );
-    final following = friends.loadingFriends && friends.friendsCount == 0
+    final following = friends.loadingFriends && friends.friendsCount == 0 && !follows.loaded
         ? '—'
-        : '${friends.friendsCount}';
+        : '${friends.friendsCount + follows.followedCount}';
 
     return Scaffold(
       appBar: AppBar(
@@ -137,6 +141,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         onRefresh: () async {
           await prefs.fetch(force: true);
           await friends.fetchFriends(force: true);
+          await follows.load();
         },
         child: ListView(
           padding: const EdgeInsets.all(AppColors.screenPadding),

@@ -21,13 +21,14 @@ class _SearchUsersScreenState extends State<SearchUsersScreen> {
       final friends = context.read<FriendsProvider>();
       friends.fetchFriends(force: true);
       friends.fetchRequests(force: true);
+      friends.fetchSuggestions(force: true);
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Search Users')),
+      appBar: AppBar(title: const Text('Find People')),
       body: UserSearchPanel(autofocus: true),
     );
   }

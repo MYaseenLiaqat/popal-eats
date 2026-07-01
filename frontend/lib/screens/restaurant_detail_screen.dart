@@ -7,6 +7,7 @@ import '../models/recommendation.dart';
 import '../models/restaurant.dart';
 import '../models/review.dart';
 import '../providers/cart_provider.dart';
+import '../providers/restaurant_follow_provider.dart';
 import '../services/api_client.dart';
 import '../services/category_service.dart';
 import '../services/dish_service.dart';
@@ -70,7 +71,10 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
     super.initState();
     _load();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.read<CartProvider>().load();
+      if (mounted) {
+        context.read<CartProvider>().load();
+        context.read<RestaurantFollowProvider>().load();
+      }
     });
   }
 
@@ -79,6 +83,18 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
     _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _toggleFollow() async {
+    final provider = context.read<RestaurantFollowProvider>();
+    final nowFollowing = await provider.toggle(widget.restaurantId);
+    if (!mounted) return;
+    final name = restaurant?.name ?? 'restaurant';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(nowFollowing ? 'Following $name' : 'Unfollowed $name'),
+      ),
+    );
   }
 
   Future<void> _load() async {
@@ -421,8 +437,30 @@ class _RestaurantDetailScreenState extends State<RestaurantDetailScreen> {
                                 ),
                               ),
                             ),
-                            actions: const [
-                              Padding(
+                            actions: [
+                              Consumer<RestaurantFollowProvider>(
+                                builder: (context, follows, _) {
+                                  final isFollowing = follows.isFollowing(widget.restaurantId);
+                                  return Padding(
+                                    padding: const EdgeInsets.only(right: 4),
+                                    child: TextButton(
+                                      onPressed: _toggleFollow,
+                                      style: TextButton.styleFrom(
+                                        foregroundColor: Colors.white,
+                                        backgroundColor: isFollowing
+                                            ? Colors.white.withValues(alpha: 0.2)
+                                            : AppColors.accent,
+                                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                                      ),
+                                      child: Text(
+                                        isFollowing ? 'Following' : 'Follow',
+                                        style: const TextStyle(fontWeight: FontWeight.w700),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                              const Padding(
                                 padding: EdgeInsets.only(right: 8),
                                 child: CartIconButton(),
                               ),

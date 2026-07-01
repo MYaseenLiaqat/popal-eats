@@ -24,6 +24,8 @@ class SocialPostCard extends StatefulWidget {
     this.onRepost,
     this.onShare,
     this.onFollow,
+    this.onUnfollow,
+    this.isFollowingRestaurant = false,
     this.onViewRestaurant,
     this.onViewDish,
   });
@@ -35,6 +37,8 @@ class SocialPostCard extends StatefulWidget {
   final PostInteractionCallback? onRepost;
   final PostInteractionCallback? onShare;
   final PostInteractionCallback? onFollow;
+  final void Function(Post post)? onUnfollow;
+  final bool isFollowingRestaurant;
   final PostInteractionCallback? onViewRestaurant;
   final PostInteractionCallback? onViewDish;
 
@@ -345,12 +349,23 @@ class _SocialPostCardState extends State<SocialPostCard>
                     icon: const Icon(Icons.restaurant_menu_outlined, size: 18),
                     label: const Text('View Dish'),
                   ),
-                if (widget.onFollow != null && post.restaurantId != null)
-                  TextButton.icon(
-                    onPressed: () => widget.onFollow!(post),
-                    icon: const Icon(Icons.person_add_outlined, size: 18),
-                    label: const Text('Follow'),
-                  ),
+                if ((widget.onFollow != null || widget.onUnfollow != null) &&
+                    post.restaurantId != null)
+                  widget.isFollowingRestaurant
+                      ? OutlinedButton.icon(
+                          onPressed: widget.onUnfollow == null
+                              ? null
+                              : () => widget.onUnfollow!(post),
+                          icon: const Icon(Icons.check, size: 18),
+                          label: const Text('Following'),
+                        )
+                      : TextButton.icon(
+                          onPressed: widget.onFollow == null
+                              ? null
+                              : () => widget.onFollow!(post),
+                          icon: const Icon(Icons.person_add_outlined, size: 18),
+                          label: const Text('Follow'),
+                        ),
               ],
             ),
           ),

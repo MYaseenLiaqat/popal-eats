@@ -25,6 +25,17 @@ class RestaurantFollowStore {
     } else {
       ids.add(restaurantId);
     }
-    return prefs.setStringList(_key, ids.map((id) => '$id').toList());
+    await prefs.setStringList(_key, ids.map((id) => '$id').toList());
+    return ids.contains(restaurantId);
+  }
+
+  static Future<void> clear() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_key);
+  }
+
+  static Future<void> replace(Set<int> ids) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_key, ids.map((id) => '$id').toList());
   }
 }

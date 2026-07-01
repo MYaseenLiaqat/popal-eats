@@ -7,11 +7,12 @@ import '../models/story.dart';
 import '../providers/auth_provider.dart';
 import '../providers/home_feed_provider.dart';
 import '../providers/reels_provider.dart';
+import '../providers/restaurant_follow_provider.dart';
 import '../services/content_service.dart';
-import '../services/restaurant_follow_store.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_logo.dart';
 import '../utils/app_roles.dart';
+import 'discover_screen.dart';
 import 'reels_screen.dart';
 import '../utils/post_caption.dart';
 import '../utils/recommendation_copy.dart';
@@ -20,13 +21,14 @@ import '../widgets/feed/post_comments_sheet.dart';
 import '../widgets/feed/social_post_card.dart';
 import '../widgets/home/home_create_sheet.dart';
 import '../widgets/home/home_reels_section.dart';
+import '../widgets/home/home_search_bar.dart';
 import '../widgets/home/home_stories_section.dart';
+import '../widgets/home/home_suggested_strip.dart';
 import '../widgets/social/notification_hub_button.dart';
 import '../widgets/ui/app_ui_widgets.dart';
 import 'dish_detail_screen.dart';
 import 'main_shell.dart';
 import 'restaurant_detail_screen.dart';
-import 'search_users_screen.dart';
 import 'story_viewer_screen.dart';
 
 /// Social home feed — stories, reels, friend posts, restaurant dishes, chef recipes.
@@ -45,14 +47,20 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _load(force: false));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<RestaurantFollowProvider>().load();
+      _load(force: false);
+    });
   }
 
   @override
   void didUpdateWidget(covariant HomeScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (!oldWidget.isTabActive && widget.isTabActive) {
-      _load(force: true);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _load(force: true);
+      });
     }
   }
 
@@ -63,6 +71,13 @@ class _HomeScreenState extends State<HomeScreen> {
       feed.fetch(force: force),
       reels.fetch(force: force),
     ]);
+  }
+
+  void _openDiscover() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const DiscoverScreen()),
+    );
   }
 
   void _openReels() {
@@ -84,13 +99,6 @@ class _HomeScreenState extends State<HomeScreen> {
     final created = await showCreateStorySheet(context);
     if (!mounted || created != true) return;
     await _load(force: true);
-  }
-
-  void _openFindFriends() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const SearchUsersScreen()),
-    );
   }
 
   void _updatePost(Post updated) {
@@ -149,7 +157,25 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _followRestaurant(Post post) async {
     final id = post.restaurantId;
     if (id == null) return;
-    await RestaurantFollowStore.toggle(id);
+    final provider = context.read<RestaurantFollowProvider>();
+    final nowFollowing = await provider.toggle(id);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          nowFollowing
+              ? 'Following ${post.restaurantName ?? 'restaurant'}'
+              : 'Unfollowed ${post.restaurantName ?? 'restaurant'}',
+        ),
+      ),
+    );
+    if (nowFollowing) {
+      await context.read<HomeFeedProvider>().fetch(force: true);
+    }
+  }
+
+  Future<void> _unfollowRestaurant(Post post) async {
+    await _followRestaurant(post);
   }
 
   void _viewRestaurant(Post post) {
@@ -191,6 +217,7 @@ class _HomeScreenState extends State<HomeScreen> {
         onComment: _openComments,
         onShare: _sharePost,
         onFollow: _followRestaurant,
+        onUnfollow: _unfollowRestaurant,
         onViewRestaurant: post.restaurantId != null ? _viewRestaurant : null,
         onViewDish: post.dishId != null ? _viewDish : null,
       );
@@ -204,13 +231,13 @@ class _HomeScreenState extends State<HomeScreen> {
             const EmptyState(
               icon: Icons.people_outline,
               title: 'No posts yet',
-              subtitle: 'Follow friends, restaurants, and home chefs to see food in your feed.',
+              subtitle: 'Follow friends and restaurants to fill your feed — tap Search above to discover.',
             ),
             const SizedBox(height: 16),
             FilledButton.icon(
-              onPressed: _openCreate,
-              icon: const Icon(Icons.add),
-              label: const Text('Create your first post'),
+              onPressed: _openDiscover,
+              icon: const Icon(Icons.search),
+              label: const Text('Discover people & restaurants'),
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.accent,
                 foregroundColor: AppColors.onAccent,
@@ -218,9 +245,9 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 10),
             TextButton.icon(
-              onPressed: _openFindFriends,
-              icon: const Icon(Icons.person_add_alt_1_outlined),
-              label: const Text('Find Friends'),
+              onPressed: _openCreate,
+              icon: const Icon(Icons.add),
+              label: const Text('Create your first post'),
             ),
           ],
         ),
@@ -232,6 +259,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final feed = context.watch<HomeFeedProvider>();
+    final follows = context.watch<RestaurantFollowProvider>();
     final userId = auth.user?['id'] as int?;
     final isCustomer = AppRoles.isCustomer(auth.user);
     final posts = feed.posts;
@@ -267,6 +295,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 slivers: [
                   SliverToBoxAdapter(
+                    child: HomeSearchBar(
+                      onTap: _openDiscover,
+                      onFilterTap: _openDiscover,
+                    ),
+                  ),
+                  SliverToBoxAdapter(
                     child: HomeStoriesSection(
                       groups: feed.storyGroups,
                       loading: feed.loadingStories,
@@ -276,6 +310,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       onGroupTap: _openStoryGroup,
                     ),
                   ),
+                  const SliverToBoxAdapter(child: HomeSuggestedStrip()),
                   SliverToBoxAdapter(
                     child: HomeReelsSection(onOpenReels: _openReels),
                   ),
@@ -302,13 +337,17 @@ class _HomeScreenState extends State<HomeScreen> {
                         (context, index) {
                           final post = posts[index];
                           final handlers = _postHandlers(post);
+                          final restaurantId = post.restaurantId;
                           return SocialPostCard(
                             post: post,
+                            isFollowingRestaurant: restaurantId != null &&
+                                follows.isFollowing(restaurantId),
                             onLike: handlers.onLike,
                             onSave: handlers.onSave,
                             onComment: handlers.onComment,
                             onShare: handlers.onShare,
                             onFollow: handlers.onFollow,
+                            onUnfollow: handlers.onUnfollow,
                             onViewRestaurant: handlers.onViewRestaurant,
                             onViewDish: handlers.onViewDish,
                           );
@@ -339,6 +378,7 @@ class PostInteraction {
     this.onComment,
     this.onShare,
     this.onFollow,
+    this.onUnfollow,
     this.onViewRestaurant,
     this.onViewDish,
   });
@@ -348,6 +388,7 @@ class PostInteraction {
   final void Function(Post post)? onComment;
   final void Function(Post post)? onShare;
   final void Function(Post post)? onFollow;
+  final void Function(Post post)? onUnfollow;
   final void Function(Post post)? onViewRestaurant;
   final void Function(Post post)? onViewDish;
 }

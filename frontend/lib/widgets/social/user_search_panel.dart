@@ -47,6 +47,10 @@ class _UserSearchPanelState extends State<UserSearchPanel> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      context.read<FriendsProvider>().fetchSuggestions(force: false);
+    });
   }
 
   @override
@@ -150,17 +154,71 @@ class _UserSearchPanelState extends State<UserSearchPanel> {
         minimumSize: Size.zero,
         tapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
-      child: const Text('Add Friend'),
+      child: const Text('Follow'),
     );
   }
 
   Widget _buildSuggestions(FriendsProvider friends) {
-    return _centeredChild(
-      const EmptyState(
-        icon: Icons.person_search_outlined,
-        title: 'Find people',
-        subtitle: 'Search by name or @username above',
+    if (friends.loadingSuggestions) {
+      return _centeredChild(
+        const CircularProgressIndicator(color: AppColors.accent),
+      );
+    }
+
+    if (friends.suggestionsError != null && friends.suggestions.isEmpty) {
+      return _centeredChild(
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            EmptyState(
+              icon: Icons.cloud_off_outlined,
+              title: 'Could not load suggestions',
+              subtitle: friends.suggestionsError,
+            ),
+            TextButton(
+              onPressed: () => friends.fetchSuggestions(force: true),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (friends.suggestions.isEmpty) {
+      return _centeredChild(
+        const EmptyState(
+          icon: Icons.person_search_outlined,
+          title: 'Find people',
+          subtitle: 'Search by name or @username above',
+        ),
+      );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(
+        AppColors.screenPadding,
+        0,
+        AppColors.screenPadding,
+        AppColors.screenPadding,
       ),
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Text(
+            'Suggested for you',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+        ),
+        ...friends.suggestions.map((user) => Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: SocialUserCard(
+                user: user,
+                trailing: _buildActionButton(user, friends),
+              ),
+            )),
+      ],
     );
   }
 

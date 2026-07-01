@@ -20,6 +20,7 @@ from app.models.order_item import OrderItem
 from app.models.post import Post
 from app.models.post_interaction import PostComment, PostLike, PostSave
 from app.models.restaurant import Restaurant
+from app.models.restaurant_follow import RestaurantFollow
 from app.models.recommendation_event import RecommendationEvent
 from app.models.refresh_token import RefreshToken
 from app.models.review import Review
@@ -42,6 +43,7 @@ __all__ = [
     "HomeChefProfile",
     "Category",
     "Restaurant",
+    "RestaurantFollow",
     "Dish",
     "Review",
     "MenuUpload",

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/cart_provider.dart';
 import '../providers/friends_provider.dart';
 import '../providers/group_provider.dart';
+import '../providers/restaurant_follow_provider.dart';
 import '../theme/app_colors.dart';
 import 'community_screen.dart';
 import 'delivery_screen.dart';
@@ -40,6 +41,7 @@ class MainShellState extends State<MainShell> {
       context.read<FriendsProvider>().fetchAll(force: true);
       context.read<GroupProvider>().fetchAll(force: true);
       context.read<CartProvider>().load();
+      context.read<RestaurantFollowProvider>().load();
     });
   }
 

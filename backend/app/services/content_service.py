@@ -271,18 +271,22 @@ def _has_food_content(post: Post) -> bool:
     return has_media or has_dish or has_text
 
 
-def _home_feed_priority(post: Post, user_id: int, friends: set[int]) -> int:
-    """Lower values appear first: friend food, friend other, restaurant dish, chef recipe."""
+def _home_feed_priority(
+    post: Post, user_id: int, friends: set[int], followed_restaurants: set[int]
+) -> int:
+    """Lower values appear first: friends, followed restaurants, then discovery."""
     author = post.author_id
     if author in friends and post.post_type == FOOD_POST:
         return 0
     if author in friends:
         return 1
-    if post.post_type == RESTAURANT_POST:
+    if post.restaurant_id and post.restaurant_id in followed_restaurants:
         return 2
-    if post.post_type in (RECIPE, CHEF_POST):
+    if post.post_type == RESTAURANT_POST:
         return 3
-    return 4
+    if post.post_type in (RECIPE, CHEF_POST):
+        return 4
+    return 5
 
 
 def list_home_feed(
@@ -293,8 +297,10 @@ def list_home_feed(
     limit: int = 20,
 ) -> tuple[list[PostResponse], int]:
     from app.core.account_status import ACTIVE
+    from app.services.restaurant_follow_service import followed_restaurant_ids
 
     friends = _friend_ids(db, user_id)
+    followed = followed_restaurant_ids(db, user_id)
     visible_authors = friends | {user_id}
 
     social_filter = and_(
@@ -340,7 +346,7 @@ def list_home_feed(
     ]
     posts.sort(
         key=lambda p: (
-            _home_feed_priority(p, user_id, friends),
+            _home_feed_priority(p, user_id, friends, followed),
             -(p.created_at.timestamp() if p.created_at else 0),
         )
     )
