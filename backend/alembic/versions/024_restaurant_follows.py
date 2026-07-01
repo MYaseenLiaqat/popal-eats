@@ -3,12 +3,17 @@
 Revision ID: 024_restaurant_follows
 Revises: 023_cart_and_orders
 Create Date: 2026-07-01
+
+Skips creation when the table already exists (e.g. legacy DBs).
 """
+
+from __future__ import annotations
 
 from typing import Sequence, Union
 
 import sqlalchemy as sa
-from alembic import op
+from alembic import context, op
+from sqlalchemy import inspect
 
 revision: str = "024_restaurant_follows"
 down_revision: Union[str, None] = "023_cart_and_orders"
@@ -16,7 +21,17 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
+def _table_exists(name: str, *, for_downgrade: bool = False) -> bool:
+    if context.is_offline_mode():
+        return for_downgrade
+    bind = op.get_bind()
+    return name in inspect(bind).get_table_names()
+
+
 def upgrade() -> None:
+    if _table_exists("restaurant_follows"):
+        return
+
     op.create_table(
         "restaurant_follows",
         sa.Column("id", sa.Integer(), nullable=False),
@@ -48,6 +63,8 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    if not _table_exists("restaurant_follows", for_downgrade=True):
+        return
     op.drop_index("ix_restaurant_follows_restaurant_id", table_name="restaurant_follows")
     op.drop_index("ix_restaurant_follows_user_id", table_name="restaurant_follows")
     op.drop_index("ix_restaurant_follows_id", table_name="restaurant_follows")
