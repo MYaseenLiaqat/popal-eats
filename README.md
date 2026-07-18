@@ -15,9 +15,8 @@ AI-Powered Food Delivery, Recommendation, Nutrition & Community App
 ## Tech Stack
 - Frontend: Flutter
 - Backend: FastAPI
-- Database: PostgreSQL
+- Database: Supabase
 - AI/NLP: HuggingFace Transformers
-- Cloud: Firebase + Render + Neon
 
 ## Team Members
 - Muhammad Yaseen Liaqat
